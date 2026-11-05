@@ -1,0 +1,126 @@
+{
+  "entities": {
+    "LeaveRecord": {
+      "title": "LeaveRecord",
+      "description": "A record of leave taken, duty worked, or leave credit for a Tamil Nadu Government Medical Officer.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The authenticated user UID owning this leave record."
+        },
+        "leaveType": {
+          "type": "string",
+          "enum": ["CL", "COL", "IN_LIEU", "PL", "GH_WORKED", "ML", "RH", "EL", "ON_DUTY", "WEEK_OFF"],
+          "description": "Category of Tamil Nadu Government leave or duty."
+        },
+        "dateIso": {
+          "type": "string",
+          "description": "Date of leave or duty in YYYY-MM-DD format."
+        },
+        "year": {
+          "type": "integer",
+          "description": "Calendar year of the leave record (e.g., 2022, 2023, 2024, 2025, 2026)."
+        },
+        "pairedDateIso": {
+          "type": "string",
+          "description": "For COL, the In-Lieu-Of duty date; for PL, the GH Worked date; or empty string."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional remarks, highlight status (e.g., Unpaired / Pending Credit, Hospital Duty, Conference)."
+        },
+        "highlightStatus": {
+          "type": "string",
+          "enum": ["NORMAL", "ALERT_RED", "VERIFIED_GREEN", "PENDING_ORANGE"],
+          "description": "Visual badge matching spreadsheet color coding."
+        },
+        "isHalfDay": {
+          "type": "boolean",
+          "description": "Whether this is a half-day Casual Leave."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "leaveType", "dateIso", "year", "pairedDateIso", "notes", "highlightStatus", "isHalfDay", "createdAt", "updatedAt"]
+    },
+    "LeaveEntry": {
+      "title": "LeaveEntry",
+      "description": "Represents a user leave entry with leaveType, startDate, endDate, status, and optional paired GH/duty date.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The authenticated user UID owning this leave entry."
+        },
+        "leaveType": {
+          "type": "string",
+          "enum": ["CL", "COL", "IN_LIEU", "PL", "GH_WORKED", "ML", "RH", "EL", "ON_DUTY", "WEEK_OFF"],
+          "description": "Category of Tamil Nadu Government leave or duty."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date of the leave spell in YYYY-MM-DD format."
+        },
+        "endDate": {
+          "type": "string",
+          "description": "End date of the leave spell in YYYY-MM-DD format."
+        },
+        "totalDays": {
+          "type": "number",
+          "description": "Total number of leave days in the spell (supports 0.5 for half-day CL)."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["APPROVED", "PENDING", "VERIFIED_PAIRED", "UNPAIRED_ALERT", "REJECTED", "CANCELLED"],
+          "description": "Current approval or audit pairing status of the leave entry."
+        },
+        "year": {
+          "type": "integer",
+          "description": "Calendar year of the leave entry."
+        },
+        "pairedDutyDate": {
+          "type": "string",
+          "description": "Optional paired GH Worked or In-Lieu duty date in YYYY-MM-DD format."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Remarks or reason for the leave entry."
+        },
+        "isHalfDay": {
+          "type": "boolean",
+          "description": "Whether this leave entry is a half-day Casual Leave."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "leaveType", "startDate", "endDate", "totalDays", "status", "year", "pairedDutyDate", "reason", "isHalfDay", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/leave_records/{recordId}": {
+      "schema": { "$ref": "#/entities/LeaveRecord" },
+      "description": "User-isolated Tamil Nadu Government leave and credit records."
+    },
+    "/users/{userId}/leave_entries/{entryId}": {
+      "schema": { "$ref": "#/entities/LeaveEntry" },
+      "description": "User-isolated multi-day or single-day LeaveEntry records with start/end dates and status."
+    }
+  }
+}

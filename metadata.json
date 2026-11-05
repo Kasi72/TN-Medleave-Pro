@@ -1,0 +1,6 @@
+{
+  "name": "TN MedLeave Pro",
+  "description": "Ultra-premium leave management, credit tracking, and smart Tamil Nadu Government holiday optimizer for HOD Dept. of Psychiatry, Govt. Erode Medical College.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
