@@ -673,6 +673,7 @@ fun LeaveRecordSquircleRow(
 fun AddLeaveRecordDialog(
   initialYear: Long,
   unusedGhRecords: List<LeaveRecord> = emptyList(),
+  existingRecords: List<LeaveRecord> = emptyList(),
   onDismiss: () -> Unit,
   onConfirm: (leaveType: String, startDate: String, endDate: String, pairedDateIso: String, notes: String, status: String, isHalfDay: Boolean) -> Unit,
   onConfirmWorkingDaysOnly: ((leaveType: String, workingDateIsos: List<String>, pairedDateIso: String, notes: String, isHalfDay: Boolean) -> Unit)? = null
@@ -701,6 +702,49 @@ fun AddLeaveRecordDialog(
 
   val fifoUnusedGhList = remember(unusedGhRecords) {
     ColExpiryRadarEngine.analyzeUnusedGhCredits(unusedGhRecords)
+  }
+
+  // Hyper-Intelligent Live Duplicate & Collision Radar (in scope for both Dialog Body & Confirm Button)
+  val duplicateGuardEval = remember(
+    selectedCat,
+    startDate,
+    endDate,
+    pairedDateIso,
+    notes,
+    selectedSession,
+    autoSkipWeekendsAndGh,
+    existingRecords
+  ) {
+    val candidateDates = if (autoSkipWeekendsAndGh && isMultiDayRange && rangeSplicePreview != null) {
+      rangeSplicePreview.workingDaysToDebit.map { it.dateIso }
+    } else {
+      runCatching {
+        val s = java.time.LocalDate.parse(startDate)
+        val e = java.time.LocalDate.parse(endDate)
+        buildList {
+          var curr = s
+          var safety = 0
+          while (!curr.isAfter(e) && safety < 31) {
+            add(curr.toString())
+            curr = curr.plusDays(1)
+            safety++
+          }
+        }
+      }.getOrElse { listOf(startDate) }
+    }
+    val sessionTagPrefix = when (selectedSession) {
+      HalfDaySession.FORENOON_FN -> "[FN] "
+      HalfDaySession.AFTERNOON_AN -> "[AN] "
+      HalfDaySession.FULL_DAY -> ""
+    }
+    com.example.domain.SmartDuplicateLeaveGuardEngine.evaluateProposedEntry(
+      proposedCategory = selectedCat,
+      candidateDatesIso = candidateDates,
+      pairedDutyDateIso = pairedDateIso,
+      proposedNotes = "$sessionTagPrefix$notes",
+      isHalfDay = isHalfDay,
+      existingRecords = existingRecords
+    )
   }
 
   val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -993,6 +1037,63 @@ fun AddLeaveRecordDialog(
             isHalfDay = isHalfDay
           )
         }
+
+        val dupAccentColor = when (duplicateGuardEval.verdict) {
+          com.example.domain.DuplicateCheckVerdict.CLEAR_TO_LOG -> StatusVerifiedGreen
+          com.example.domain.DuplicateCheckVerdict.PARTIAL_OVERLAP_AUTO_SPLICED -> BadgePlGold
+          com.example.domain.DuplicateCheckVerdict.BLOCKED_DUPLICATE_OR_CONFLICT -> StatusAlertRed
+        }
+
+        Surface(
+          shape = RoundedCornerShape(12.dp),
+          color = dupAccentColor.copy(alpha = 0.13f),
+          border = BorderStroke(1.dp, dupAccentColor.copy(alpha = 0.45f)),
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("smart_duplicate_guard_banner")
+        ) {
+          Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+          ) {
+            Text(
+              text = duplicateGuardEval.headlineTitle,
+              fontSize = 11.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = dupAccentColor
+            )
+            Text(
+              text = duplicateGuardEval.detailedExplanation,
+              fontSize = 10.sp,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val suggestedGh = duplicateGuardEval.suggestedReplacementGhDutyIso
+            if (suggestedGh != null) {
+              Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = BadgeColCyan.copy(alpha = 0.18f),
+                border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.55f)),
+                modifier = Modifier
+                  .clip(RoundedCornerShape(8.dp))
+                  .clickable {
+                    pairedDateIso = suggestedGh
+                    notes = "FIFO Auto-Switched to Unused GH Worked on $suggestedGh"
+                  }
+                  .testTag("switch_to_unused_gh_btn")
+              ) {
+                Text(
+                  text = "⚡ 1-Tap Switch to Unused FIFO GH Duty: $suggestedGh",
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = BadgeColCyan,
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                )
+              }
+            }
+          }
+        }
+
         Surface(
           shape = RoundedCornerShape(12.dp),
           color = if (liveValidation.isCompliant) {
@@ -1055,9 +1156,10 @@ fun AddLeaveRecordDialog(
     },
     confirmButton = {
       Button(
+        enabled = duplicateGuardEval.canProceed,
         onClick = {
           val isoRegex = Regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
-          if (startDate.matches(isoRegex) && endDate.matches(isoRegex)) {
+          if (startDate.matches(isoRegex) && endDate.matches(isoRegex) && duplicateGuardEval.canProceed) {
             val sessionTag = when (selectedSession) {
               HalfDaySession.FORENOON_FN -> "[FN] "
               HalfDaySession.AFTERNOON_AN -> "[AN] "
@@ -1079,14 +1181,12 @@ fun AddLeaveRecordDialog(
               )
             }
 
-            if (autoSkipWeekendsAndGh &&
-              isMultiDayRange &&
-              rangeSplicePreview != null &&
-              onConfirmWorkingDaysOnly != null
+            if ((autoSkipWeekendsAndGh && isMultiDayRange && rangeSplicePreview != null && onConfirmWorkingDaysOnly != null) ||
+              (duplicateGuardEval.verdict == com.example.domain.DuplicateCheckVerdict.PARTIAL_OVERLAP_AUTO_SPLICED && onConfirmWorkingDaysOnly != null)
             ) {
               onConfirmWorkingDaysOnly(
                 selectedCat.code,
-                rangeSplicePreview.workingDaysToDebit.map { it.dateIso },
+                duplicateGuardEval.allowedDatesToLog,
                 pairedDateIso,
                 finalNotes,
                 isHalfDay
@@ -1109,7 +1209,18 @@ fun AddLeaveRecordDialog(
       ) {
         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(6.dp))
-        Text("Save LeaveEntry")
+        Text(
+          text = when (duplicateGuardEval.verdict) {
+            com.example.domain.DuplicateCheckVerdict.BLOCKED_DUPLICATE_OR_CONFLICT ->
+              "Duplicate Blocked"
+            com.example.domain.DuplicateCheckVerdict.PARTIAL_OVERLAP_AUTO_SPLICED ->
+              "Save ${duplicateGuardEval.allowedDatesToLog.size} Non-Duplicate Day(s)"
+            com.example.domain.DuplicateCheckVerdict.CLEAR_TO_LOG ->
+              "Save LeaveEntry"
+          },
+          maxLines = 1,
+          softWrap = false
+        )
       }
     },
     dismissButton = {

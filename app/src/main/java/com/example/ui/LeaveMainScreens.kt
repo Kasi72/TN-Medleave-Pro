@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.InitialLeaveSeedData
@@ -68,6 +69,7 @@ import com.example.domain.ExecutiveDigestShareService
 import com.example.domain.LedgerEnrichmentStore
 import com.example.domain.RecordAttachmentMeta
 import com.example.domain.SrReconciliationState
+import com.example.domain.SmartDuplicateLeaveGuardEngine
 import com.example.domain.TnHolidays2027Catalog
 import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
@@ -920,7 +922,8 @@ fun LedgerTabScreen(
   onUndoDelete: () -> Unit = {},
   onDismissUndo: () -> Unit = {},
   onUpdateRecord: (LeaveRecord) -> Unit = {},
-  onQuickLogLeave: (leaveType: String, dateIso: String, notes: String) -> Unit = { _, _, _ -> }
+  onQuickLogLeave: (leaveType: String, dateIso: String, notes: String) -> Unit = { _, _, _ -> },
+  onScrubDuplicates: () -> Unit = {}
 ) {
   val context = LocalContext.current
   var metaVersion by remember { mutableStateOf(0) }
@@ -1049,6 +1052,102 @@ fun LedgerTabScreen(
     when (activeSubTab) {
       0 -> {
         // SUB-TAB 0: SEARCH & ENTRIES
+        // Live Smart Duplicate & Conflict Shield Banner
+        item {
+          val duplicateGroups = remember(state.allRecords) {
+            SmartDuplicateLeaveGuardEngine.scanLedgerForExistingDuplicates(state.allRecords)
+          }
+          val totalRedundantEntries = duplicateGroups.size
+          Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+              containerColor = if (totalRedundantEntries == 0) {
+                EmeraldOptimal.copy(alpha = 0.08f)
+              } else {
+                StatusAlertRed.copy(alpha = 0.12f)
+              }
+            ),
+            modifier = Modifier
+              .fillMaxWidth()
+              .border(
+                1.dp,
+                if (totalRedundantEntries == 0) EmeraldOptimal.copy(alpha = 0.3f) else StatusAlertRed.copy(alpha = 0.45f),
+                RoundedCornerShape(16.dp)
+              )
+              .testTag("smart_duplicate_shield_banner")
+          ) {
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f)
+              ) {
+                Icon(
+                  imageVector = if (totalRedundantEntries == 0) Icons.Default.Verified else Icons.Default.Info,
+                  contentDescription = "Duplicate Guard Shield",
+                  tint = if (totalRedundantEntries == 0) EmeraldOptimal else StatusAlertRed,
+                  modifier = Modifier.size(18.dp)
+                )
+                Column {
+                  Text(
+                    text = if (totalRedundantEntries == 0) {
+                      "7-LAYER DUPLICATE & CONFLICT GUARD ACTIVE"
+                    } else {
+                      "$totalRedundantEntries DUPLICATE / CONFLICTING ENTRIES DETECTED"
+                    },
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (totalRedundantEntries == 0) EmeraldOptimal else StatusAlertRed,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                  Text(
+                    text = if (totalRedundantEntries == 0) {
+                      "Zero duplicate dates, cross-category collisions, or double-spent COL duty dates."
+                    } else {
+                      "Tap 'Scrub Duplicates' to auto-remove redundant clones while preserving canonical records."
+                    },
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                }
+              }
+
+              Spacer(modifier = Modifier.width(8.dp))
+
+              Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = if (totalRedundantEntries == 0) {
+                  EmeraldOptimal.copy(alpha = 0.16f)
+                } else {
+                  StatusAlertRed
+                },
+                modifier = Modifier
+                  .clip(RoundedCornerShape(10.dp))
+                  .clickable { onScrubDuplicates() }
+                  .testTag("scrub_duplicates_button")
+              ) {
+                Text(
+                  text = if (totalRedundantEntries == 0) "Audit Clean" else "Scrub ($totalRedundantEntries)",
+                  fontSize = 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = if (totalRedundantEntries == 0) EmeraldOptimal else Color.White,
+                  maxLines = 1,
+                  softWrap = false,
+                  modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+              }
+            }
+          }
+        }
+
         // Wave-2 Upgrade #2: Global Instant Search & Multi-Year Cross-Filter Bar
         item {
           GlobalLedgerSearchAndFilterCard(
@@ -1531,7 +1630,8 @@ fun OptimizerTabScreen(
               }
               Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = com.example.ui.theme.NeonAquaAccent.copy(alpha = 0.18f)
+                color = com.example.ui.theme.NeonAquaAccent.copy(alpha = 0.18f),
+                modifier = Modifier.padding(start = 8.dp)
               ) {
                 Text(
                   text = "OPEN M3 →",
@@ -1539,6 +1639,8 @@ fun OptimizerTabScreen(
                   fontSize = 10.sp,
                   fontWeight = FontWeight.ExtraBold,
                   color = com.example.ui.theme.NeonAquaAccent,
+                  maxLines = 1,
+                  softWrap = false,
                   modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
                 )
               }
@@ -1903,18 +2005,26 @@ fun OptimizerTabScreen(
                 ) {
                   Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                   ) {
                     Text(
                       text = "${spec.category.shortLabel} — ${spec.category.fullTitle}",
                       style = MaterialTheme.typography.labelLarge,
                       color = spec.category.accentColor(),
-                      fontWeight = FontWeight.Bold
+                      fontWeight = FontWeight.Bold,
+                      maxLines = 1,
+                      overflow = TextOverflow.Ellipsis,
+                      modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
                     )
                     Text(
                       text = "Max Stretch: ${spec.maxContinuousStretchDays}d",
                       style = MaterialTheme.typography.labelMedium,
-                      fontSize = 11.sp
+                      fontSize = 11.sp,
+                      maxLines = 1,
+                      softWrap = false
                     )
                   }
                   Text(
@@ -1964,19 +2074,27 @@ private fun SmartBridgeCard(
       ) {
         Surface(
           shape = RoundedCornerShape(10.dp),
-          color = EmeraldOptimal.copy(alpha = 0.14f)
+          color = EmeraldOptimal.copy(alpha = 0.14f),
+          modifier = Modifier
+            .weight(1f, fill = false)
+            .padding(end = 8.dp)
         ) {
           Text(
             text = "${bridge.efficiencyRatio}x MULTIPLIER • ${bridge.totalDaysOff} DAYS OFF",
             style = MaterialTheme.typography.labelMedium,
             color = EmeraldOptimal,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
           )
         }
         Text(
           text = "Uses ${bridge.leaveCreditsRequired} credit(s)",
           style = MaterialTheme.typography.labelLarge,
-          color = MaterialTheme.colorScheme.primary
+          color = MaterialTheme.colorScheme.primary,
+          maxLines = 1,
+          softWrap = false
         )
       }
 

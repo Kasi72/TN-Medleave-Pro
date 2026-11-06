@@ -179,30 +179,37 @@ fun AiLeaveRecommendationSection(
                             modifier = Modifier.size(22.dp)
                         )
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
                                 text = "AI Leave Optimizer Engine",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
                             )
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer
                             ) {
                                 Text(
                                     text = "GEMINI AI + DB",
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "Analyzes TN Holiday DB ($totalSyncedHolidays dates) & remaining CL/RH/COL credits to maximize long weekends",
                             style = MaterialTheme.typography.labelSmall,
@@ -304,15 +311,16 @@ fun AiLeaveRecommendationSection(
                 is AiRecommendationUiState.Idle -> {
                     // Show Instant Holiday DB Long-Weekend Scan + CTA for Gemini AI Deep Analysis
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.32f)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -321,7 +329,10 @@ fun AiLeaveRecommendationSection(
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Verified,
@@ -330,28 +341,34 @@ fun AiLeaveRecommendationSection(
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
-                                        text = "HOLIDAY DB LONG-WEEKEND SCANNER (LIVE)",
+                                        text = "HOLIDAY DB LONG-WEEKEND SCANNER",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.primary,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFF2E7D32).copy(alpha = 0.14f)
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFF10B981).copy(alpha = 0.16f),
+                                    border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.45f))
                                 ) {
                                     Text(
-                                        text = "${instantHolidayDbScan.size} Top Bridges Ready",
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        text = "${instantHolidayDbScan.size} Top Bridges",
+                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                                         style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFF2E7D32)
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color(0xFF34D399),
+                                        maxLines = 1,
+                                        softWrap = false
                                     )
                                 }
                             }
                             Text(
                                 text = "Pre-computed from your local TN Govt Holiday Database & remaining leave credits. Tap any card's 'Apply Exact Leave Dates to Ledger' button to book immediately, or run Gemini AI for custom strategy synthesis.",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -367,7 +384,8 @@ fun AiLeaveRecommendationSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("generate_ai_recommendations_btn"),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
@@ -380,7 +398,10 @@ fun AiLeaveRecommendationSection(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Run Gemini AI Deep Leave Optimizer",
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
@@ -492,18 +513,19 @@ fun AiLeaveRecommendationSection(
                 is AiRecommendationUiState.Success -> {
                     // Executive Strategy Summary Banner
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.40f),
                         border = BorderStroke(
                             1.dp,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        )
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.32f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -512,7 +534,10 @@ fun AiLeaveRecommendationSection(
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(end = 8.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.AutoAwesome,
@@ -521,23 +546,34 @@ fun AiLeaveRecommendationSection(
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
-                                        text = "STRATEGIC AI BRIEFING • ${aiState.analyzedHolidayCount} HOLIDAYS ANALYZED",
+                                        text = "STRATEGIC AI BRIEFING (${aiState.analyzedHolidayCount} DATES)",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = MaterialTheme.colorScheme.primary,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                Text(
-                                    text = "Focus: ${aiState.focusGoal.substringBefore(" —")}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+                                ) {
+                                    Text(
+                                        text = aiState.focusGoal.substringBefore(" —").take(22),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                             Text(
                                 text = aiState.executiveSummary,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -733,18 +769,22 @@ private fun AiRecommendationItemCard(
                 // Efficiency & Days Off Badges
                 Column(
                     horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(start = 8.dp)
                 ) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF2E7D32).copy(alpha = 0.14f)
+                        color = Color(0xFF10B981).copy(alpha = 0.16f),
+                        border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.40f))
                     ) {
                         Text(
-                            text = "${rec.totalDaysOff} Days Off • ${rec.efficiencyMultiplier}x",
+                            text = "${rec.totalDaysOff}d Off • ${rec.efficiencyMultiplier}x",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF2E7D32)
+                            color = Color(0xFF34D399),
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                     Row(
@@ -753,14 +793,16 @@ private fun AiRecommendationItemCard(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = badgeColor.copy(alpha = 0.14f)
+                            color = badgeColor.copy(alpha = 0.16f)
                         ) {
                             Text(
-                                text = "Use ${formatCreditCount(rec.leaveCreditsUsed)} Cr (${rec.creditMixSummary})",
+                                text = "Use ${formatCreditCount(rec.leaveCreditsUsed)} Cr",
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = badgeColor
+                                color = badgeColor,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                         if (rec.freeDaysUnlocked > 0) {
@@ -773,7 +815,9 @@ private fun AiRecommendationItemCard(
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }

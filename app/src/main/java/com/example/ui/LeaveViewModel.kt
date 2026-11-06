@@ -20,6 +20,7 @@ import com.example.domain.CustomRangeAnalysis
 import com.example.domain.HolidaySyncStatus
 import com.example.domain.LeaveOptimizerEngine
 import com.example.domain.TnHolidayBackgroundSyncService
+import com.example.domain.TnHolidayRemoteConfigService
 import com.example.domain.TnHolidays2027Catalog
 import com.example.domain.YearCreditSummary
 import com.example.widget.MedLeaveQuotaAppWidget
@@ -110,9 +111,37 @@ class LeaveViewModel(
       }
     }
 
-    // 2. Run automatic background web/API sync if due
+    // 2. Initialize Firebase Remote Config real-time listener & fetch dynamic Tamil Nadu holiday updates
+    TnHolidayRemoteConfigService.ensureInitializedAndObserveRealtimeUpdates(
+      context = appContext,
+      localRepo = localHolidayRepository,
+      coroutineScope = viewModelScope,
+      onRemoteHolidaysUpdated = { rcSnapshot ->
+        _holidaySyncStatus.value = _holidaySyncStatus.value.copy(
+          lastSyncedFormatted = rcSnapshot.lastFetchedFormatted,
+          lastSyncSource = rcSnapshot.fetchSourceLabel,
+          remoteConfigVersion = rcSnapshot.catalogVersion,
+          remoteConfigBanner = rcSnapshot.announcementBanner
+        )
+        _holidayDbVersion.value = System.currentTimeMillis()
+        _statusBanner.value =
+          "Live Firebase Remote Config update applied (${rcSnapshot.catalogVersion} • ${rcSnapshot.upsertedHolidayCount} holidays)!"
+      }
+    )
+
+    // 3. Run initial Firebase Remote Config fetch + automatic background web/API sync if due
     viewModelScope.launch {
       localHolidayRepository.ensureSeededWithDefaultsIfEmpty()
+      val rcInitial = com.example.domain.TnHolidayRemoteConfigService.fetchAndApplyRemoteHolidays(
+        context = appContext,
+        localRepo = localHolidayRepository,
+        forceZeroCacheInterval = false
+      )
+      _holidaySyncStatus.value = _holidaySyncStatus.value.copy(
+        remoteConfigVersion = rcInitial.catalogVersion,
+        remoteConfigBanner = rcInitial.announcementBanner
+      )
+      _holidayDbVersion.value = System.currentTimeMillis()
       if (TnHolidayBackgroundSyncService.shouldRunAutomaticBackgroundSync(appContext)) {
         triggerHolidaySync(customUrlOrFeedNote = "", isAutomaticBackground = true)
       }
@@ -464,7 +493,7 @@ class LeaveViewModel(
         _selectedYear.value = year
         _statusBanner.value = "Logged $leaveType on $dateIso"
       }.onFailure { err ->
-        _statusBanner.value = "Error saving leave: ${err.localizedMessage}"
+        _statusBanner.value = "⛔ ${err.localizedMessage ?: "Duplicate leave entry rejected"}"
       }
     }
   }
@@ -491,15 +520,19 @@ class LeaveViewModel(
         isHalfDay = isHalfDay
       )
       val res = repository.addLeaveEntryWithDailyRecords(entry)
-      res.onSuccess {
+      res.onSuccess { summaryTag ->
         _selectedYear.value = year
-        _statusBanner.value = if (startDate == endDate) {
-          "Logged $leaveType on $startDate ($status)"
-        } else {
-          "Logged $leaveType spell ($startDate → $endDate, $status)"
+        _statusBanner.value = when {
+          summaryTag.contains("_SKIPPED_") -> {
+            val addedNum = summaryTag.substringAfter("ADDED_").substringBefore("_SKIPPED_")
+            val skippedNum = summaryTag.substringAfter("_SKIPPED_")
+            "⚡ Logged $addedNum new $leaveType day(s) ($startDate → $endDate) • Auto-rejected $skippedNum duplicate date(s)!"
+          }
+          startDate == endDate -> "Logged $leaveType on $startDate ($status)"
+          else -> "Logged $leaveType spell ($startDate → $endDate, $status)"
         }
       }.onFailure { err ->
-        _statusBanner.value = "Error saving LeaveEntry: ${err.localizedMessage}"
+        _statusBanner.value = "⛔ ${err.localizedMessage ?: "Duplicate leave entry rejected"}"
       }
     }
   }
@@ -531,48 +564,52 @@ class LeaveViewModel(
   fun applySmartBridgeToLedger(bridge: SmartLeaveBridge) {
     viewModelScope.launch {
       var added = 0
+      var skippedDuplicates = 0
       bridge.dayByDayBreakdown.forEach { step ->
         when (step.badgeType) {
           "RH" -> {
             val year = step.dateIso.take(4).toLongOrNull() ?: 2026L
-            repository.addLeaveRecord(
+            val res = repository.addLeaveRecord(
               leaveType = "RH",
               dateIso = step.dateIso,
               year = year,
               notes = "Smart Bridge (${bridge.title}): ${step.description}"
             )
-            added++
+            if (res.isSuccess) added++ else skippedDuplicates++
           }
           "COL" -> {
             val year = step.dateIso.take(4).toLongOrNull() ?: 2026L
-            repository.addLeaveRecord(
+            val res = repository.addLeaveRecord(
               leaveType = "COL",
               dateIso = step.dateIso,
               year = year,
               notes = "AI Smart Bridge (${bridge.title}): ${step.description}"
             )
-            added++
+            if (res.isSuccess) added++ else skippedDuplicates++
           }
           "LEAVE_CREDIT", "CL" -> {
             if (!step.description.contains("Already Logged", ignoreCase = true) &&
               !step.description.contains("COL Logged", ignoreCase = true)
             ) {
               val year = step.dateIso.take(4).toLongOrNull() ?: 2026L
-              repository.addLeaveRecord(
+              val res = repository.addLeaveRecord(
                 leaveType = "CL",
                 dateIso = step.dateIso,
                 year = year,
                 notes = "Smart Bridge (${bridge.title}): ${step.description}"
               )
-              added++
+              if (res.isSuccess) added++ else skippedDuplicates++
             }
           }
         }
       }
-      _statusBanner.value = if (added > 0) {
-        "Applied $added optimal leave days for '${bridge.title}' to your 2026 Ledger!"
-      } else {
-        "All leave days in '${bridge.title}' are already logged in your ledger."
+      _statusBanner.value = when {
+        added > 0 && skippedDuplicates > 0 ->
+          "⚡ Applied $added new leave day(s) for '${bridge.title}' (Auto-skipped $skippedDuplicates duplicate date(s))!"
+        added > 0 ->
+          "Applied $added optimal leave days for '${bridge.title}' to your Ledger!"
+        else ->
+          "⛔ Duplicate Guard: All leave dates in '${bridge.title}' are already booked in your ledger."
       }
     }
   }
@@ -718,6 +755,8 @@ class LeaveViewModel(
     }
     viewModelScope.launch {
       var saved = 0
+      var skippedDupes = 0
+      var firstRejectionMsg = ""
       workingDateIsos.forEach { dIso ->
         val yr = dIso.take(4).toLongOrNull() ?: _selectedYear.value
         val res = repository.addLeaveRecord(
@@ -729,11 +768,41 @@ class LeaveViewModel(
           highlightStatus = if (pairedDateIso.isNotBlank()) "VERIFIED_GREEN" else "NORMAL",
           isHalfDay = isHalfDay
         )
-        if (res.isSuccess) saved++
+        res.onSuccess {
+          saved++
+        }.onFailure { err ->
+          skippedDupes++
+          if (firstRejectionMsg.isBlank()) {
+            firstRejectionMsg = err.localizedMessage ?: "Duplicate date skipped"
+          }
+        }
       }
       workingDateIsos.firstOrNull()?.take(4)?.toLongOrNull()?.let { _selectedYear.value = it }
+      _statusBanner.value = when {
+        saved > 0 && skippedDupes > 0 ->
+          "⚡ Logged $saved new working day(s) of $leaveType • Auto-rejected $skippedDupes duplicate date(s)!"
+        saved > 0 ->
+          "Logged $saved working day(s) of $leaveType (Weekends & Public Holidays auto-skipped)!"
+        else ->
+          "⛔ $firstRejectionMsg"
+      }
+    }
+  }
+
+  fun scrubExistingDuplicatesFromLedger(allRecords: List<LeaveRecord>) {
+    viewModelScope.launch {
+      val duplicates = com.example.domain.SmartDuplicateLeaveGuardEngine.scanLedgerForExistingDuplicates(allRecords)
+      if (duplicates.isEmpty()) {
+        _statusBanner.value = "✓ Smart Duplicate Audit: 0 duplicate or conflicting leave entries found in your ledger!"
+        return@launch
+      }
+      var removed = 0
+      duplicates.forEach { dupItem ->
+        val delRes = repository.deleteLeaveRecord(dupItem.duplicateRecord.id)
+        if (delRes.isSuccess) removed++
+      }
       _statusBanner.value =
-        "Logged $saved working day(s) of $leaveType (Weekends & Public Holidays auto-skipped)!"
+        "✓ Scrubbed $removed duplicate/conflicting leave record(s) from your ledger while preserving verified master entries!"
     }
   }
 

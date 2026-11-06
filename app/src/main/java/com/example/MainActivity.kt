@@ -439,6 +439,9 @@ fun MainFeatureHost(
                   pairedDateIso = "",
                   notes = notes
                 )
+              },
+              onScrubDuplicates = {
+                viewModel.scrubExistingDuplicatesFromLedger(state.allRecords)
               }
             )
             2 -> ColGhAuditTabScreen(
@@ -525,6 +528,7 @@ fun MainFeatureHost(
             AddLeaveRecordDialog(
               initialYear = state.selectedYear,
               unusedGhRecords = state.colGhAuditYear.unusedGhRecords,
+              existingRecords = state.allRecords,
               onDismiss = { showAddDialog = false },
               onConfirm = { type, startDate, endDate, paired, notes, status, isHalf ->
                 viewModel.addLeaveEntrySpell(

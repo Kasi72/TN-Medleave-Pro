@@ -312,14 +312,30 @@ class LeaveRepository(private val db: FirebaseFirestore) {
     isHalfDay: Boolean = false
   ): Result<String> {
     val uid = requireUserId()
+    val proposedCat = LeaveCategory.fromCode(leaveType)
+    val cleanDate = dateIso.trim()
+
     if (auth.currentUser == null || uid == BIOMETRIC_HOD_USER_ID) {
+      ensureBiometricFallbackSeeded()
+      val eval = com.example.domain.SmartDuplicateLeaveGuardEngine.evaluateProposedEntry(
+        proposedCategory = proposedCat,
+        candidateDatesIso = listOf(cleanDate),
+        pairedDutyDateIso = pairedDateIso,
+        proposedNotes = notes,
+        isHalfDay = isHalfDay,
+        existingRecords = biometricSessionRecordsFlow.value
+      )
+      if (!eval.canProceed) {
+        return Result.failure(IllegalStateException(eval.detailedExplanation))
+      }
+
       val now = Timestamp.now()
       val newId = "rec_${UUID.randomUUID().toString().take(8)}"
       val newRec = LeaveRecord(
         id = newId,
         userId = uid,
         leaveType = leaveType,
-        dateIso = dateIso,
+        dateIso = cleanDate,
         year = year,
         pairedDateIso = pairedDateIso,
         notes = notes,
@@ -331,27 +347,65 @@ class LeaveRepository(private val db: FirebaseFirestore) {
       biometricSessionRecordsFlow.value = biometricSessionRecordsFlow.value + newRec
       return Result.success(newId)
     }
+
     val colRef = db.collection("users").document(uid).collection("leave_records")
-    val docRef = colRef.document()
-    val payload = mapOf(
-      "userId" to uid,
-      "leaveType" to leaveType,
-      "dateIso" to dateIso,
-      "year" to year,
-      "pairedDateIso" to pairedDateIso,
-      "notes" to notes,
-      "highlightStatus" to highlightStatus,
-      "isHalfDay" to isHalfDay,
-      "createdAt" to FieldValue.serverTimestamp(),
-      "updatedAt" to FieldValue.serverTimestamp()
-    )
     return try {
+      // Query same-date or same-paired-duty records to block duplicates atomically at repository level
+      val sameDateSnap = colRef
+        .whereEqualTo("userId", uid)
+        .whereEqualTo("dateIso", cleanDate)
+        .get()
+        .await()
+      val sameDateRecords = sameDateSnap.toObjects(
+        LeaveRecord::class.java,
+        DocumentSnapshot.ServerTimestampBehavior.ESTIMATE
+      )
+      val pairedConflictRecords = if (proposedCat == LeaveCategory.COL && pairedDateIso.isNotBlank()) {
+        val pairedSnap = colRef
+          .whereEqualTo("userId", uid)
+          .whereEqualTo("leaveType", "COL")
+          .whereEqualTo("pairedDateIso", pairedDateIso.trim())
+          .get()
+          .await()
+        pairedSnap.toObjects(
+          LeaveRecord::class.java,
+          DocumentSnapshot.ServerTimestampBehavior.ESTIMATE
+        )
+      } else {
+        emptyList()
+      }
+
+      val eval = com.example.domain.SmartDuplicateLeaveGuardEngine.evaluateProposedEntry(
+        proposedCategory = proposedCat,
+        candidateDatesIso = listOf(cleanDate),
+        pairedDutyDateIso = pairedDateIso,
+        proposedNotes = notes,
+        isHalfDay = isHalfDay,
+        existingRecords = (sameDateRecords + pairedConflictRecords).distinctBy { it.id }
+      )
+      if (!eval.canProceed) {
+        return Result.failure(IllegalStateException(eval.detailedExplanation))
+      }
+
+      val docRef = colRef.document()
+      val payload = mapOf(
+        "userId" to uid,
+        "leaveType" to leaveType,
+        "dateIso" to cleanDate,
+        "year" to year,
+        "pairedDateIso" to pairedDateIso,
+        "notes" to notes,
+        "highlightStatus" to highlightStatus,
+        "isHalfDay" to isHalfDay,
+        "createdAt" to FieldValue.serverTimestamp(),
+        "updatedAt" to FieldValue.serverTimestamp()
+      )
       docRef.set(payload).await()
       Result.success(docRef.id)
     } catch (e: CancellationException) {
       throw e
     } catch (e: Exception) {
-      handleFirestoreError(e, OperationType.CREATE, docRef.path)
+      handleFirestoreError(e, OperationType.CREATE, colRef.path)
       Result.failure(e)
     }
   }
@@ -362,13 +416,6 @@ class LeaveRepository(private val db: FirebaseFirestore) {
    * day-by-day spreadsheet ledger stay in sync.
    */
   suspend fun addLeaveEntryWithDailyRecords(entry: LeaveEntry): Result<String> {
-    val entryCreateResult = if (auth.currentUser != null) {
-      createLeaveEntry(entry)
-    } else {
-      Result.success("entry_${UUID.randomUUID().toString().take(8)}")
-    }
-    if (entryCreateResult.isFailure) return entryCreateResult
-
     return try {
       val fmt = DateTimeFormatter.ISO_LOCAL_DATE
       val start = LocalDate.parse(entry.startDate, fmt)
@@ -382,9 +429,13 @@ class LeaveRepository(private val db: FirebaseFirestore) {
 
       var curr = start
       var safetyCounter = 0
+      var addedCount = 0
+      var skippedDuplicateCount = 0
+      var firstErrorMessage = "Duplicate leave entry rejected."
+
       while (!curr.isAfter(end) && safetyCounter < 31) {
         val iso = curr.format(fmt)
-        addLeaveRecord(
+        val dayRes = addLeaveRecord(
           leaveType = entry.leaveType,
           dateIso = iso,
           year = curr.year.toLong(),
@@ -393,12 +444,33 @@ class LeaveRepository(private val db: FirebaseFirestore) {
           highlightStatus = mappedHighlight,
           isHalfDay = entry.isHalfDay && start == end
         )
+        dayRes.onSuccess {
+          addedCount++
+        }.onFailure { err ->
+          skippedDuplicateCount++
+          if (firstErrorMessage == "Duplicate leave entry rejected.") {
+            firstErrorMessage = err.localizedMessage ?: firstErrorMessage
+          }
+        }
         curr = curr.plusDays(1)
         safetyCounter++
       }
-      entryCreateResult
+
+      if (addedCount == 0) {
+        return Result.failure(IllegalStateException(firstErrorMessage))
+      }
+
+      if (auth.currentUser != null) {
+        createLeaveEntry(entry)
+      }
+      val summaryTag = if (skippedDuplicateCount > 0) {
+        "ADDED_${addedCount}_SKIPPED_${skippedDuplicateCount}"
+      } else {
+        "ADDED_${addedCount}"
+      }
+      Result.success(summaryTag)
     } catch (e: Exception) {
-      entryCreateResult
+      Result.failure(e)
     }
   }
 

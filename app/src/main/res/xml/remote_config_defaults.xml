@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<defaultsMap>
+    <entry>
+        <key>tn_holiday_catalog_version</key>
+        <value>2026.11-GO-Ms-842-DME-Erode</value>
+    </entry>
+    <entry>
+        <key>tn_holiday_announcement_banner</key>
+        <value>G.O. Ms. No. 842 (Public Misc. Dept) &amp; Erode Collectorate 2026–2027 Holiday DB Active via Firebase Remote Config</value>
+    </entry>
+    <entry>
+        <key>tn_holiday_force_refresh_enabled</key>
+        <value>true</value>
+    </entry>
+    <entry>
+        <key>tn_holidays_remote_json</key>
+        <value>[
+  {
+    "dateIso": "2026-03-30",
+    "dayOfWeek": "Monday",
+    "nameEnglish": "Bannari Amman Kundam Festival (Erode Collectorate Local Holiday)",
+    "nameTamil": "பண்ணாரி அம்மன் குண்டம் திருவிழா (ஈரோடு மாவட்ட உள்ளூர் விடுமுறை)",
+    "isRestrictedHoliday": true,
+    "monthNameTamil": "மார்ச்"
+  },
+  {
+    "dateIso": "2026-11-08",
+    "dayOfWeek": "Sunday",
+    "nameEnglish": "Deepavali (TN Govt Public Holiday)",
+    "nameTamil": "தீபாவளி பண்டிகை",
+    "isRestrictedHoliday": false,
+    "monthNameTamil": "நவம்பர்"
+  },
+  {
+    "dateIso": "2026-11-09",
+    "dayOfWeek": "Monday",
+    "nameEnglish": "Deepavali Non-bu / Next Day Bridge (TN Restricted Holiday)",
+    "nameTamil": "தீபாவளி நோன்பு (வரையறுக்கப்பட்ட விடுமுறை)",
+    "isRestrictedHoliday": true,
+    "monthNameTamil": "நவம்பர்"
+  },
+  {
+    "dateIso": "2026-11-24",
+    "dayOfWeek": "Tuesday",
+    "nameEnglish": "Guru Nanak Jayanti (TN Restricted Holiday)",
+    "nameTamil": "குருநானக் ஜெயந்தி",
+    "isRestrictedHoliday": true,
+    "monthNameTamil": "நவம்பர்"
+  },
+  {
+    "dateIso": "2026-12-24",
+    "dayOfWeek": "Thursday",
+    "nameEnglish": "Christmas Eve (TN Restricted Holiday)",
+    "nameTamil": "கிறிஸ்துமஸ் ஈவ் (வரையறுக்கப்பட்ட விடுமுறை)",
+    "isRestrictedHoliday": true,
+    "monthNameTamil": "டிசம்பர்"
+  },
+  {
+    "dateIso": "2026-12-25",
+    "dayOfWeek": "Friday",
+    "nameEnglish": "Christmas (TN Govt Public Holiday)",
+    "nameTamil": "கிறிஸ்துமஸ் பண்டிகை",
+    "isRestrictedHoliday": false,
+    "monthNameTamil": "டிசம்பர்"
+  },
+  {
+    "dateIso": "2026-12-31",
+    "dayOfWeek": "Thursday",
+    "nameEnglish": "New Year's Eve (TN Restricted Holiday)",
+    "nameTamil": "புத்தாண்டுக்கு முந்தைய நாள்",
+    "isRestrictedHoliday": true,
+    "monthNameTamil": "டிசம்பர்"
+  },
+  {
+    "dateIso": "2027-01-01",
+    "dayOfWeek": "Friday",
+    "nameEnglish": "English New Year 2027 (TN Govt Public Holiday)",
+    "nameTamil": "ஆங்கிலப் புத்தாண்டு 2027",
+    "isRestrictedHoliday": false,
+    "monthNameTamil": "ஜனவரி"
+  },
+  {
+    "dateIso": "2027-01-14",
+    "dayOfWeek": "Thursday",
+    "nameEnglish": "Bhogi Festival 2027 (TN Restricted Holiday)",
+    "nameTamil": "போகிப் பண்டிகை 2027",
+    "isRestrictedHoliday": true,
+    "monthNameTamil": "ஜனவரி"
+  },
+  {
+    "dateIso": "2027-01-15",
+    "dayOfWeek": "Friday",
+    "nameEnglish": "Thai Pongal 2027 (TN Govt Public Holiday)",
+    "nameTamil": "தைப் பொங்கல் 2027",
+    "isRestrictedHoliday": false,
+    "monthNameTamil": "ஜனவரி"
+  },
+  {
+    "dateIso": "2027-01-16",
+    "dayOfWeek": "Saturday",
+    "nameEnglish": "Thiruvalluvar Day / Mattu Pongal 2027 (TN Govt Public Holiday)",
+    "nameTamil": "திருவள்ளுவர் தினம் / மாட்டுப் பொங்கல் 2027",
+    "isRestrictedHoliday": false,
+    "monthNameTamil": "ஜனவரி"
+  },
+  {
+    "dateIso": "2027-01-17",
+    "dayOfWeek": "Sunday",
+    "nameEnglish": "Uzhavar Thirunal 2027 (TN Govt Public Holiday)",
+    "nameTamil": "உழவர் திருநாள் 2027",
+    "isRestrictedHoliday": false,
+    "monthNameTamil": "ஜனவரி"
+  },
+  {
+    "dateIso": "2027-01-26",
+    "dayOfWeek": "Tuesday",
+    "nameEnglish": "Republic Day 2027 (TN Govt Public Holiday)",
+    "nameTamil": "குடியரசு தினம் 2027",
+    "isRestrictedHoliday": false,
+    "monthNameTamil": "ஜனவரி"
+  },
+  {
+    "dateIso": "2027-03-29",
+    "dayOfWeek": "Monday",
+    "nameEnglish": "Bannari Amman Kundam Festival 2027 (Erode Collectorate Local Holiday)",
+    "nameTamil": "பண்ணாரி அம்மன் குண்டம் திருவிழா 2027 (ஈரோடு உள்ளூர் விடுமுறை)",
+    "isRestrictedHoliday": true,
+    "monthNameTamil": "மார்ச்"
+  },
+  {
+    "dateIso": "2027-04-14",
+    "dayOfWeek": "Wednesday",
+    "nameEnglish": "Tamil New Year's Day / Dr. B.R. Ambedkar Birthday 2027 (TN Govt Public Holiday)",
+    "nameTamil": "தமிழ்ப் புத்தாண்டு தினம் 2027",
+    "isRestrictedHoliday": false,
+    "monthNameTamil": "ஏப்ரல்"
+  },
+  {
+    "dateIso": "2027-10-29",
+    "dayOfWeek": "Friday",
+    "nameEnglish": "Deepavali 2027 (TN Govt Public Holiday)",
+    "nameTamil": "தீபாவளி பண்டிகை 2027",
+    "isRestrictedHoliday": false,
+    "monthNameTamil": "அக்டோபர்"
+  }
+]</value>
+    </entry>
+</defaultsMap>

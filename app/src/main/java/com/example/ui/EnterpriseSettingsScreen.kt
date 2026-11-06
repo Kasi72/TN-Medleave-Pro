@@ -66,6 +66,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -82,16 +83,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.BuildConfig
 import com.example.data.InitialLeaveSeedData
 import com.example.data.TnHolidayItem
+import com.example.data.local.LocalHolidayRepository
+import com.example.data.local.TnHolidayDatabase
 import com.example.domain.BiometricLockManager
 import com.example.domain.CalendarIcsSyncService
 import com.example.domain.ElMasterPassbookEngine
 import com.example.domain.ExecutiveDigestShareService
+import com.example.domain.GitHubAppUpdaterService
+import com.example.domain.GitHubUpdateCheckResult
 import com.example.domain.HolidaySyncStatus
 import com.example.domain.LeaveNotificationHelper
 import com.example.domain.LedgerEnrichmentStore
+import com.example.domain.RemoteConfigHolidaySnapshot
 import com.example.domain.TnHolidayBackgroundSyncService
+import com.example.domain.TnHolidayRemoteConfigService
 import com.example.domain.TnHolidays2027Catalog
 import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
@@ -99,10 +107,16 @@ import com.example.ui.theme.BadgeOnDutyBlue
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosDarkDockSurface
+import com.example.ui.theme.IosSquircleGlassFill
+import com.example.ui.theme.NeonAquaAccent
+import com.example.ui.theme.NeonCyanBright
+import com.example.ui.theme.NeonCyanText
 import com.example.ui.theme.StatusAlertRed
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 object HodProfileSettingsStore {
   private const val PREFS_NAME = "hod_profile_settings_prefs"
@@ -410,20 +424,59 @@ fun EnterpriseSettingsPageContent(
           }
         }
 
-        if (onClose != null) {
-          IconButton(
-            onClick = onClose,
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = IosDarkDockSurface,
+            border = BorderStroke(1.dp, NeonCyanBright.copy(alpha = 0.65f)),
             modifier = Modifier
-              .size(36.dp)
-              .clip(CircleShape)
-              .background(MaterialTheme.colorScheme.surfaceVariant)
-              .testTag("close_settings_btn")
+              .clip(RoundedCornerShape(12.dp))
+              .clickable {
+                activeSubTab = 2
+                onShowStatusBanner("Opened GitHub APK Release & Sync Updater")
+              }
+              .testTag("header_update_app_btn")
           ) {
-            Icon(
-              imageVector = Icons.Default.Close,
-              contentDescription = "Close Settings",
-              modifier = Modifier.size(18.dp)
-            )
+            Row(
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+              Icon(
+                imageVector = Icons.Default.CloudSync,
+                contentDescription = "Update App from GitHub",
+                tint = NeonAquaAccent,
+                modifier = Modifier.size(15.dp)
+              )
+              Text(
+                text = "Update App",
+                style = MaterialTheme.typography.labelSmall,
+                color = NeonCyanText,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                softWrap = false
+              )
+            }
+          }
+
+          if (onClose != null) {
+            IconButton(
+              onClick = onClose,
+              modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .testTag("close_settings_btn")
+            ) {
+              Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close Settings",
+                modifier = Modifier.size(18.dp)
+              )
+            }
           }
         }
       }
@@ -436,6 +489,14 @@ fun EnterpriseSettingsPageContent(
       contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+      // Prominent GitHub App Update & Release Sync Card (Always accessible at the top of Settings)
+      item {
+        GitHubOtaAppUpdateCard(
+          onTriggerHolidaySync = onTriggerHolidaySync,
+          onShowStatusBanner = onShowStatusBanner
+        )
+      }
+
       // Sub-Tab Switcher
       item {
         EnterpriseSubTabSwitcher(
@@ -1052,6 +1113,13 @@ private fun DataAndCalendarSyncSubTab(
     verticalArrangement = Arrangement.spacedBy(14.dp),
     modifier = Modifier.testTag("settings_data_sync_section")
   ) {
+    // 0. Firebase Remote Config Dynamic Holiday Calendar DB Card (Zero-Store-Update Over-The-Air Sync)
+    FirebaseRemoteConfigHolidayCard(
+      holidaySyncStatus = holidaySyncStatus,
+      onTriggerHolidaySync = onTriggerHolidaySync,
+      onShowStatusBanner = onShowStatusBanner
+    )
+
     // 1. External Calendar Fetching & Synchronization Options Card
     Surface(
       shape = RoundedCornerShape(22.dp),
@@ -1816,3 +1884,873 @@ private fun SettingsMetricPill(
     }
   }
 }
+
+@Composable
+private fun GitHubOtaAppUpdateCard(
+  onTriggerHolidaySync: (String) -> Unit,
+  onShowStatusBanner: (String) -> Unit
+) {
+  val context = LocalContext.current
+  val coroutineScope = rememberCoroutineScope()
+
+  var ghOwner by rememberSaveable {
+    mutableStateOf(GitHubAppUpdaterService.getOwner(context))
+  }
+  var ghRepo by rememberSaveable {
+    mutableStateOf(GitHubAppUpdaterService.getRepo(context))
+  }
+  var ghBranch by rememberSaveable {
+    mutableStateOf(GitHubAppUpdaterService.getBranch(context))
+  }
+  var autoCheckRelease by remember {
+    mutableStateOf(GitHubAppUpdaterService.isAutoCheckOnLaunchEnabled(context))
+  }
+  var showRepoConfigFields by rememberSaveable {
+    mutableStateOf(false)
+  }
+  var isCheckingGitHub by remember {
+    mutableStateOf(false)
+  }
+  var latestCheckResult by remember {
+    mutableStateOf<GitHubUpdateCheckResult?>(null)
+  }
+  var lastSyncedSummary by remember {
+    mutableStateOf(GitHubAppUpdaterService.getLastCheckSummary(context))
+  }
+  var lastSyncedSha by remember {
+    mutableStateOf(GitHubAppUpdaterService.getLastSyncedSha(context))
+  }
+
+  Surface(
+    shape = RoundedCornerShape(22.dp),
+    color = IosDarkDockSurface,
+    tonalElevation = 4.dp,
+    border = BorderStroke(
+      width = 1.3.dp,
+      brush = Brush.linearGradient(
+        listOf(
+          NeonCyanBright.copy(alpha = 0.78f),
+          NeonAquaAccent.copy(alpha = 0.55f),
+          BadgeColCyan.copy(alpha = 0.45f)
+        )
+      )
+    ),
+    modifier = Modifier
+      .fillMaxWidth()
+      .testTag("github_ota_app_update_card")
+  ) {
+    Column(
+      modifier = Modifier.padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+      // Header Row
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(10.dp),
+          modifier = Modifier.weight(1f)
+        ) {
+          Box(
+            modifier = Modifier
+              .size(38.dp)
+              .clip(RoundedCornerShape(12.dp))
+              .background(
+                Brush.linearGradient(
+                  listOf(
+                    NeonCyanBright.copy(alpha = 0.25f),
+                    NeonAquaAccent.copy(alpha = 0.15f)
+                  )
+                )
+              )
+              .border(1.dp, NeonCyanBright.copy(alpha = 0.55f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.CloudSync,
+              contentDescription = "GitHub APK Updater",
+              tint = NeonCyanText,
+              modifier = Modifier.size(20.dp)
+            )
+          }
+          Column {
+            Text(
+              text = "GITHUB RELEASE & APK AUTO-UPDATER",
+              style = MaterialTheme.typography.labelSmall,
+              color = NeonAquaAccent,
+              fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+              text = "Sync & Update App from GitHub",
+              style = MaterialTheme.typography.titleSmall,
+              color = Color.White,
+              fontWeight = FontWeight.ExtraBold
+            )
+          }
+        }
+
+        val badgeResult = latestCheckResult
+        val statusText = when {
+          isCheckingGitHub -> "SYNCING..."
+          badgeResult != null && badgeResult.updateAvailable -> "UPDATE READY"
+          badgeResult != null && badgeResult.isSuccess -> "UP TO DATE"
+          else -> "v${BuildConfig.VERSION_NAME} (#${BuildConfig.VERSION_CODE})"
+        }
+        val statusColor = when {
+          isCheckingGitHub -> BadgePlGold
+          badgeResult != null && badgeResult.updateAvailable -> NeonAquaAccent
+          badgeResult != null && badgeResult.isSuccess -> EmeraldOptimal
+          else -> NeonCyanText
+        }
+
+        Surface(
+          shape = RoundedCornerShape(10.dp),
+          color = statusColor.copy(alpha = 0.16f),
+          border = BorderStroke(1.dp, statusColor.copy(alpha = 0.55f))
+        ) {
+          Text(
+            text = statusText,
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = statusColor,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+          )
+        }
+      }
+
+      // Version & Repository Telemetry Bar
+      Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = IosSquircleGlassFill,
+        border = BorderStroke(1.dp, NeonCyanBright.copy(alpha = 0.24f)),
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        Column(
+          modifier = Modifier.padding(12.dp),
+          verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text(
+              text = "Installed Build: v${BuildConfig.VERSION_NAME} (Code ${BuildConfig.VERSION_CODE})",
+              style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+              color = NeonCyanText,
+              fontWeight = FontWeight.Bold
+            )
+            Text(
+              text = if (ghRepo.isNotBlank()) "$ghOwner/$ghRepo ($ghBranch)" else "$ghOwner (Auto-Detect Repo)",
+              style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+              color = NeonAquaAccent,
+              fontWeight = FontWeight.Bold,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
+
+          val check = latestCheckResult
+          if (check != null) {
+            Text(
+              text = check.statusMessage,
+              style = MaterialTheme.typography.bodySmall,
+              color = if (check.isSuccess) Color(0xFFE2E8F0) else StatusAlertRed,
+              fontWeight = FontWeight.SemiBold
+            )
+            if (check.isSuccess) {
+              Text(
+                text = "Latest Release: ${check.remoteVersionLabel} • Commit #${check.latestCommitShaShort} (${check.publishedAtFormatted})",
+                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                color = NeonCyanText
+              )
+              if (check.latestCommitMessage.isNotBlank()) {
+                Text(
+                  text = "Changelog: ${check.latestCommitMessage}",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = Color(0xFF94A3B8),
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis
+                )
+              }
+            }
+          } else {
+            Text(
+              text = lastSyncedSummary +
+                if (lastSyncedSha.isNotBlank()) " • Commit #$lastSyncedSha" else "",
+              style = MaterialTheme.typography.bodySmall,
+              color = Color(0xFFCBD5E1)
+            )
+          }
+        }
+      }
+
+      // Primary Action Row: 1-Tap Check & Sync + Direct APK Download & Install
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        // Button 1: Check & Sync with GitHub
+        Button(
+          onClick = {
+            if (!isCheckingGitHub) {
+              isCheckingGitHub = true
+              GitHubAppUpdaterService.saveGitHubCoordinates(context, ghOwner, ghRepo, ghBranch)
+              coroutineScope.launch {
+                val result = GitHubAppUpdaterService.checkForUpdatesFromGitHub(
+                  context = context,
+                  ownerInput = ghOwner,
+                  repoInput = ghRepo,
+                  branchInput = ghBranch
+                )
+                isCheckingGitHub = false
+                latestCheckResult = result
+                val savedRepo = GitHubAppUpdaterService.getRepo(context)
+                if (savedRepo.isNotBlank() && ghRepo.isBlank()) {
+                  ghRepo = savedRepo
+                }
+                lastSyncedSummary = GitHubAppUpdaterService.getLastCheckSummary(context)
+                lastSyncedSha = GitHubAppUpdaterService.getLastSyncedSha(context)
+                onTriggerHolidaySync("Fetch and verify 2026 and 2027 Tamil Nadu Government Public Holidays (GH) and Restricted Holidays (RH/RL)")
+                onShowStatusBanner(result.statusMessage)
+              }
+            }
+          },
+          shape = RoundedCornerShape(14.dp),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF0E3A47),
+            contentColor = NeonCyanText
+          ),
+          border = BorderStroke(1.2.dp, NeonCyanBright),
+          modifier = Modifier
+            .weight(1f)
+            .testTag("check_github_apk_update_btn")
+        ) {
+          if (isCheckingGitHub) {
+            CircularProgressIndicator(
+              modifier = Modifier.size(15.dp),
+              strokeWidth = 2.dp,
+              color = NeonAquaAccent
+            )
+          } else {
+            Icon(
+              imageVector = Icons.Default.Refresh,
+              contentDescription = null,
+              tint = NeonAquaAccent,
+              modifier = Modifier.size(16.dp)
+            )
+          }
+          Spacer(modifier = Modifier.width(6.dp))
+          Text(
+            text = if (isCheckingGitHub) "Checking..." else "Sync GitHub",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = NeonCyanText,
+            maxLines = 1,
+            softWrap = false
+          )
+        }
+
+        // Button 2: Download & Update APK Now
+        Button(
+          onClick = {
+            GitHubAppUpdaterService.saveGitHubCoordinates(context, ghOwner, ghRepo, ghBranch)
+            val currentCheck = latestCheckResult
+            if (currentCheck != null && currentCheck.isSuccess && currentCheck.directApkDownloadUrl.isNotBlank()) {
+              GitHubAppUpdaterService.markUpdateDownloadedAndOpenUrl(
+                context = context,
+                apkOrReleaseUrl = currentCheck.directApkDownloadUrl,
+                syncedVersionId = currentCheck.latestCommitShaShort
+              )
+              lastSyncedSummary = GitHubAppUpdaterService.getLastCheckSummary(context)
+              lastSyncedSha = GitHubAppUpdaterService.getLastSyncedSha(context)
+              onShowStatusBanner("Downloading latest APK (${currentCheck.remoteVersionLabel}) from GitHub...")
+            } else {
+              // Auto-check GitHub first and immediately launch APK download once resolved
+              isCheckingGitHub = true
+              coroutineScope.launch {
+                val result = GitHubAppUpdaterService.checkForUpdatesFromGitHub(
+                  context = context,
+                  ownerInput = ghOwner,
+                  repoInput = ghRepo,
+                  branchInput = ghBranch
+                )
+                isCheckingGitHub = false
+                latestCheckResult = result
+                val savedRepo = GitHubAppUpdaterService.getRepo(context)
+                if (savedRepo.isNotBlank() && ghRepo.isBlank()) {
+                  ghRepo = savedRepo
+                }
+                if (result.directApkDownloadUrl.isNotBlank()) {
+                  GitHubAppUpdaterService.markUpdateDownloadedAndOpenUrl(
+                    context = context,
+                    apkOrReleaseUrl = result.directApkDownloadUrl,
+                    syncedVersionId = result.latestCommitShaShort
+                  )
+                  lastSyncedSummary = GitHubAppUpdaterService.getLastCheckSummary(context)
+                  lastSyncedSha = GitHubAppUpdaterService.getLastSyncedSha(context)
+                  onShowStatusBanner("Downloading latest APK (${result.remoteVersionLabel}) from GitHub...")
+                } else {
+                  onShowStatusBanner(result.statusMessage)
+                }
+              }
+            }
+          },
+          shape = RoundedCornerShape(14.dp),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF064E3B),
+            contentColor = NeonAquaAccent
+          ),
+          border = BorderStroke(1.2.dp, NeonAquaAccent),
+          modifier = Modifier
+            .weight(1.15f)
+            .testTag("download_github_apk_update_btn")
+        ) {
+          Icon(
+            imageVector = Icons.Default.CloudSync,
+            contentDescription = null,
+            tint = NeonAquaAccent,
+            modifier = Modifier.size(16.dp)
+          )
+          Spacer(modifier = Modifier.width(6.dp))
+          Text(
+            text = "Update APK Now",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = NeonCyanText,
+            maxLines = 1,
+            softWrap = false
+          )
+        }
+      }
+
+      // Secondary Bar: Configure GitHub Repo / Open Releases Page in Browser
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Surface(
+          shape = RoundedCornerShape(10.dp),
+          color = IosSquircleGlassFill,
+          border = BorderStroke(1.dp, NeonCyanBright.copy(alpha = 0.35f)),
+          modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { showRepoConfigFields = !showRepoConfigFields }
+            .testTag("toggle_github_repo_config_btn")
+        ) {
+          Text(
+            text = if (showRepoConfigFields) "Hide GitHub Repo Settings" else "Configure GitHub Repo ($ghOwner)",
+            style = MaterialTheme.typography.labelSmall,
+            color = NeonCyanText,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+          )
+        }
+
+        val checkForReleasePage = latestCheckResult
+        if (checkForReleasePage != null && checkForReleasePage.releasePageUrl.isNotBlank()) {
+          Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = IosSquircleGlassFill,
+            border = BorderStroke(1.dp, NeonAquaAccent.copy(alpha = 0.35f)),
+            modifier = Modifier
+              .clip(RoundedCornerShape(10.dp))
+              .clickable {
+                GitHubAppUpdaterService.markUpdateDownloadedAndOpenUrl(
+                  context = context,
+                  apkOrReleaseUrl = checkForReleasePage.releasePageUrl
+                )
+              }
+              .testTag("open_github_releases_web_btn")
+          ) {
+            Text(
+              text = "Open GitHub Releases ↗",
+              style = MaterialTheme.typography.labelSmall,
+              color = NeonAquaAccent,
+              fontWeight = FontWeight.Bold,
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            )
+          }
+        }
+      }
+
+      if (showRepoConfigFields) {
+        Column(
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+              value = ghOwner,
+              onValueChange = { newVal ->
+                ghOwner = newVal.trim()
+                GitHubAppUpdaterService.saveGitHubCoordinates(context, ghOwner, ghRepo, ghBranch)
+              },
+              label = { Text("GitHub Owner / Username") },
+              singleLine = true,
+              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier
+                .weight(1f)
+                .testTag("github_owner_input")
+            )
+            OutlinedTextField(
+              value = ghBranch,
+              onValueChange = { newVal ->
+                ghBranch = newVal.trim()
+                GitHubAppUpdaterService.saveGitHubCoordinates(context, ghOwner, ghRepo, ghBranch)
+              },
+              label = { Text("Branch") },
+              singleLine = true,
+              shape = RoundedCornerShape(12.dp),
+              modifier = Modifier
+                .weight(0.7f)
+                .testTag("github_branch_input")
+            )
+          }
+          OutlinedTextField(
+            value = ghRepo,
+            onValueChange = { newVal ->
+              ghRepo = newVal.trim()
+              GitHubAppUpdaterService.saveGitHubCoordinates(context, ghOwner, ghRepo, ghBranch)
+            },
+            label = { Text("Repository Name (leave blank to auto-detect latest repo)") },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+              .fillMaxWidth()
+              .testTag("github_repo_input")
+          )
+
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                text = "Auto-Check GitHub for New APK Releases on Launch",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+              )
+              Text(
+                text = "Automatically checks github.com/$ghOwner for fresh APK builds when the app starts",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF94A3B8)
+              )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Switch(
+              checked = autoCheckRelease,
+              onCheckedChange = { enabled ->
+                autoCheckRelease = enabled
+                GitHubAppUpdaterService.setAutoCheckOnLaunchEnabled(context, enabled)
+                onShowStatusBanner(
+                  if (enabled) "Enabled automatic GitHub APK release check on startup"
+                  else "Disabled automatic GitHub APK release check"
+                )
+              },
+              colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = NeonAquaAccent
+              ),
+              modifier = Modifier.testTag("toggle_auto_check_github_apk")
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun FirebaseRemoteConfigHolidayCard(
+  holidaySyncStatus: HolidaySyncStatus,
+  onTriggerHolidaySync: (String) -> Unit,
+  onShowStatusBanner: (String) -> Unit
+) {
+  val context = LocalContext.current
+  val coroutineScope = rememberCoroutineScope()
+  val localRepo = remember(context) {
+    LocalHolidayRepository(TnHolidayDatabase.getInstance(context).holidayDao())
+  }
+
+  var rcSnapshot by remember {
+    mutableStateOf(TnHolidayRemoteConfigService.getPersistedSnapshot(context))
+  }
+  var isFetchingRc by remember {
+    mutableStateOf(false)
+  }
+  var realtimeListenerEnabled by remember {
+    mutableStateOf(TnHolidayRemoteConfigService.isRealtimeConfigListenerEnabled(context))
+  }
+  var showJsonInspector by rememberSaveable {
+    mutableStateOf(false)
+  }
+  var customJsonText by rememberSaveable {
+    mutableStateOf(rcSnapshot.rawHolidayJsonPreview)
+  }
+  var customVersionTag by rememberSaveable {
+    mutableStateOf("2026.11-GO-Ms-842-LivePatch")
+  }
+
+  Surface(
+    shape = RoundedCornerShape(22.dp),
+    color = IosDarkDockSurface,
+    tonalElevation = 4.dp,
+    border = BorderStroke(
+      width = 1.25.dp,
+      brush = Brush.linearGradient(
+        listOf(
+          NeonAquaAccent.copy(alpha = 0.75f),
+          NeonCyanBright.copy(alpha = 0.55f),
+          EmeraldOptimal.copy(alpha = 0.45f)
+        )
+      )
+    ),
+    modifier = Modifier
+      .fillMaxWidth()
+      .testTag("firebase_remote_config_holiday_card")
+  ) {
+    Column(
+      modifier = Modifier.padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+      // Header Row
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(10.dp),
+          modifier = Modifier.weight(1f)
+        ) {
+          Box(
+            modifier = Modifier
+              .size(38.dp)
+              .clip(RoundedCornerShape(12.dp))
+              .background(
+                Brush.linearGradient(
+                  listOf(
+                    NeonAquaAccent.copy(alpha = 0.25f),
+                    NeonCyanBright.copy(alpha = 0.15f)
+                  )
+                )
+              )
+              .border(1.dp, NeonAquaAccent.copy(alpha = 0.55f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.CloudSync,
+              contentDescription = "Firebase Remote Config",
+              tint = NeonAquaAccent,
+              modifier = Modifier.size(20.dp)
+            )
+          }
+          Column {
+            Text(
+              text = "FIREBASE REMOTE CONFIG • DYNAMIC HOLIDAY DB",
+              style = MaterialTheme.typography.labelSmall,
+              color = NeonAquaAccent,
+              fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+              text = "Zero-Store-Update TN Holiday Calendar Sync",
+              style = MaterialTheme.typography.titleSmall,
+              color = Color.White,
+              fontWeight = FontWeight.ExtraBold
+            )
+          }
+        }
+
+        Surface(
+          shape = RoundedCornerShape(10.dp),
+          color = if (isFetchingRc) BadgePlGold.copy(alpha = 0.16f) else NeonAquaAccent.copy(alpha = 0.16f),
+          border = BorderStroke(
+            1.dp,
+            if (isFetchingRc) BadgePlGold.copy(alpha = 0.55f) else NeonAquaAccent.copy(alpha = 0.55f)
+          )
+        ) {
+          Text(
+            text = if (isFetchingRc) "FETCHING RC..." else "LIVE RC ACTIVE",
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = if (isFetchingRc) BadgePlGold else NeonAquaAccent,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+          )
+        }
+      }
+
+      // 3-Column Telemetry Strip
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        SettingsMetricPill(
+          label = "RC Catalog Version",
+          value = rcSnapshot.catalogVersion.take(18),
+          accent = NeonCyanText,
+          modifier = Modifier
+            .weight(1.25f)
+            .fillMaxHeight()
+        )
+        SettingsMetricPill(
+          label = "RC Dynamic Items",
+          value = "${rcSnapshot.upsertedHolidayCount} Holidays",
+          accent = NeonAquaAccent,
+          modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+        )
+        SettingsMetricPill(
+          label = "Config Stream",
+          value = if (realtimeListenerEnabled) "REAL-TIME" else "MANUAL",
+          accent = EmeraldOptimal,
+          modifier = Modifier
+            .weight(0.9f)
+            .fillMaxHeight()
+        )
+      }
+
+      // Active Remote Config Parameter Summary Box
+      Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = IosSquircleGlassFill,
+        border = BorderStroke(1.dp, NeonCyanBright.copy(alpha = 0.25f)),
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        Column(
+          modifier = Modifier.padding(12.dp),
+          verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+          Text(
+            text = rcSnapshot.announcementBanner.ifBlank { holidaySyncStatus.remoteConfigBanner },
+            style = MaterialTheme.typography.bodySmall,
+            color = Color(0xFFE2E8F0),
+            fontWeight = FontWeight.SemiBold
+          )
+          Text(
+            text = "Source: ${rcSnapshot.fetchSourceLabel} • Last Fetched: ${rcSnapshot.lastFetchedFormatted}",
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = NeonCyanText
+          )
+          Text(
+            text = "Parameter Key: ${TnHolidayRemoteConfigService.KEY_HOLIDAYS_REMOTE_JSON} → Room DB (tn_holidays)",
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = Color(0xFF94A3B8)
+          )
+        }
+      }
+
+      // Primary Action Row: Fetch & Activate Now + Inspect / Test JSON Override
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        Button(
+          onClick = {
+            if (!isFetchingRc) {
+              isFetchingRc = true
+              coroutineScope.launch {
+                val updated = TnHolidayRemoteConfigService.fetchAndApplyRemoteHolidays(
+                  context = context,
+                  localRepo = localRepo,
+                  forceZeroCacheInterval = true
+                )
+                rcSnapshot = updated
+                customJsonText = updated.rawHolidayJsonPreview
+                isFetchingRc = false
+                onTriggerHolidaySync("RemoteConfig Force Sync (${updated.catalogVersion})")
+                onShowStatusBanner(
+                  "Fetched & Activated Firebase Remote Config (${updated.catalogVersion} • ${updated.upsertedHolidayCount} holidays synced to Room DB)!"
+                )
+              }
+            }
+          },
+          shape = RoundedCornerShape(14.dp),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF064E3B),
+            contentColor = NeonAquaAccent
+          ),
+          border = BorderStroke(1.2.dp, NeonAquaAccent),
+          modifier = Modifier
+            .weight(1.2f)
+            .testTag("fetch_remote_config_holidays_btn")
+        ) {
+          if (isFetchingRc) {
+            CircularProgressIndicator(
+              modifier = Modifier.size(15.dp),
+              strokeWidth = 2.dp,
+              color = NeonAquaAccent
+            )
+          } else {
+            Icon(
+              imageVector = Icons.Default.Refresh,
+              contentDescription = null,
+              tint = NeonAquaAccent,
+              modifier = Modifier.size(16.dp)
+            )
+          }
+          Spacer(modifier = Modifier.width(6.dp))
+          Text(
+            text = if (isFetchingRc) "Fetching RC..." else "Fetch & Activate RC",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = NeonCyanText,
+            maxLines = 1,
+            softWrap = false
+          )
+        }
+
+        Button(
+          onClick = { showJsonInspector = !showJsonInspector },
+          shape = RoundedCornerShape(14.dp),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF0E3A47),
+            contentColor = NeonCyanText
+          ),
+          border = BorderStroke(1.2.dp, NeonCyanBright),
+          modifier = Modifier
+            .weight(1f)
+            .testTag("toggle_remote_config_json_inspector_btn")
+        ) {
+          Icon(
+            imageVector = Icons.Default.Tune,
+            contentDescription = null,
+            tint = NeonCyanText,
+            modifier = Modifier.size(16.dp)
+          )
+          Spacer(modifier = Modifier.width(6.dp))
+          Text(
+            text = if (showJsonInspector) "Hide RC JSON" else "Inspect RC JSON",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = NeonCyanText,
+            maxLines = 1,
+            softWrap = false
+          )
+        }
+      }
+
+      // Real-Time ConfigUpdateListener Toggle Row
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+            text = "Real-Time Firebase ConfigUpdateListener",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White,
+            fontWeight = FontWeight.Bold
+          )
+          Text(
+            text = "Automatically pushes new Tamil Nadu G.O. & Erode Collectorate holidays into Room DB the moment they are published in Firebase Console",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color(0xFF94A3B8)
+          )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Switch(
+          checked = realtimeListenerEnabled,
+          onCheckedChange = { enabled ->
+            realtimeListenerEnabled = enabled
+            TnHolidayRemoteConfigService.setRealtimeConfigListenerEnabled(context, enabled)
+            onShowStatusBanner(
+              if (enabled) "Enabled real-time Firebase Remote Config listener for TN Holidays"
+              else "Paused real-time Firebase Remote Config listener"
+            )
+          },
+          colors = SwitchDefaults.colors(
+            checkedThumbColor = Color.White,
+            checkedTrackColor = NeonAquaAccent
+          ),
+          modifier = Modifier.testTag("toggle_realtime_remote_config_listener")
+        )
+      }
+
+      // Expandable JSON Inspector & Live Dynamic Payload Tester
+      if (showJsonInspector) {
+        Column(
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          OutlinedTextField(
+            value = customVersionTag,
+            onValueChange = { customVersionTag = it },
+            label = { Text("Remote Config Version Tag (tn_holiday_catalog_version)") },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+              .fillMaxWidth()
+              .testTag("rc_version_tag_input")
+          )
+          OutlinedTextField(
+            value = customJsonText,
+            onValueChange = { customJsonText = it },
+            label = { Text("tn_holidays_remote_json Payload (Dynamic GH / RL Array)") },
+            minLines = 4,
+            maxLines = 8,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+              .fillMaxWidth()
+              .testTag("rc_holidays_json_input")
+          )
+          Button(
+            onClick = {
+              coroutineScope.launch {
+                val applied = TnHolidayRemoteConfigService.applyCustomRemoteConfigJsonPayload(
+                  context = context,
+                  localRepo = localRepo,
+                  customJsonArrayStr = customJsonText,
+                  customVersionTag = customVersionTag
+                )
+                rcSnapshot = applied
+                onTriggerHolidaySync("RemoteConfig Custom JSON Override (${applied.catalogVersion})")
+                onShowStatusBanner(
+                  "Applied ${applied.upsertedHolidayCount} dynamic holiday(s) from Remote Config JSON into Room DB!"
+                )
+              }
+            },
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+              containerColor = Color(0xFF0E3A47),
+              contentColor = NeonCyanText
+            ),
+            border = BorderStroke(1.dp, NeonCyanBright),
+            modifier = Modifier
+              .fillMaxWidth()
+              .testTag("apply_rc_custom_json_btn")
+          ) {
+            Icon(
+              imageVector = Icons.Default.Save,
+              contentDescription = null,
+              tint = NeonAquaAccent,
+              modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = "Apply Dynamic Remote Config JSON to Holiday DB Now",
+              fontWeight = FontWeight.ExtraBold,
+              color = NeonCyanText
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+
+

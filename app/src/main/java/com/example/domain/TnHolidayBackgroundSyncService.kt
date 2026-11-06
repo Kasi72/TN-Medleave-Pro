@@ -33,10 +33,12 @@ data class HolidaySyncStatus(
   val gh2027Count: Int = 23,
   val rh2027Count: Int = 26,
   val lastSyncedFormatted: String = "Initial 2026–2027 Seed Ready",
-  val lastSyncSource: String = "TN Govt Public (Misc) Dept G.O. (2026 & 2027)",
-  val statusSummary: String = "Local Room Holiday DB synced with 2026 & 2027 TN GH & RL calendars.",
+  val lastSyncSource: String = "Firebase Remote Config + TN G.O. (2026 & 2027)",
+  val statusSummary: String = "Local Room Holiday DB synced with Firebase Remote Config & 2026–2027 TN GH/RL calendars.",
   val newlySyncedItems: List<String> = emptyList(),
-  val hasError: Boolean = false
+  val hasError: Boolean = false,
+  val remoteConfigVersion: String = "2026.11-GO-Ms-842-DME-Erode",
+  val remoteConfigBanner: String = "Dynamic Tamil Nadu 2026–2027 Holiday DB Active via Firebase Remote Config"
 )
 
 object TnHolidayBackgroundSyncService {
@@ -128,6 +130,7 @@ object TnHolidayBackgroundSyncService {
     val lastSummary = prefs.getString(KEY_LAST_SUMMARY, null)
       ?: "Room DB active: 2026 ($gh2026 GH + $rh2026 RL) & 2027 ($gh2027 GH + $rh2027 RL) ready for calculation."
 
+    val rcSnapshot = TnHolidayRemoteConfigService.getPersistedSnapshot(context)
     return HolidaySyncStatus(
       isSyncing = false,
       totalGhCount = totalGh,
@@ -138,7 +141,9 @@ object TnHolidayBackgroundSyncService {
       rh2027Count = rh2027,
       lastSyncedFormatted = lastTime,
       lastSyncSource = lastSource,
-      statusSummary = lastSummary
+      statusSummary = lastSummary,
+      remoteConfigVersion = rcSnapshot.catalogVersion,
+      remoteConfigBanner = rcSnapshot.announcementBanner
     )
   }
 
@@ -171,6 +176,13 @@ object TnHolidayBackgroundSyncService {
     try {
       // Step 1: Ensure Room DB has baseline 2026 AND 2027 TN GH & RH/RL holidays
       localRepo.ensureSeededWithDefaultsIfEmpty()
+
+      // Step 1.5: Fetch & activate dynamic Tamil Nadu holiday updates from Firebase Remote Config
+      val rcSnapshot = TnHolidayRemoteConfigService.fetchAndApplyRemoteHolidays(
+        context = context,
+        localRepo = localRepo,
+        forceZeroCacheInterval = customSourceUrlOrNote.contains("RemoteConfig", ignoreCase = true)
+      )
 
       val currentYear = LocalDate.now().year.coerceAtLeast(2026)
       val nextYear = currentYear + 1
@@ -350,10 +362,12 @@ object TnHolidayBackgroundSyncService {
           gh2027Count = gh2027,
           rh2027Count = rh2027,
           lastSyncedFormatted = timeStr,
-          lastSyncSource = successfulEndpoint,
+          lastSyncSource = "Firebase RC (${rcSnapshot.catalogVersion}) + $successfulEndpoint",
           statusSummary = finalSummary,
-          newlySyncedItems = syncedNames.take(5),
-          hasError = false
+          newlySyncedItems = (rcSnapshot.parsedHolidaySummaries.take(3) + syncedNames).distinct().take(6),
+          hasError = false,
+          remoteConfigVersion = rcSnapshot.catalogVersion,
+          remoteConfigBanner = rcSnapshot.announcementBanner
         )
       )
     } catch (e: CancellationException) {
