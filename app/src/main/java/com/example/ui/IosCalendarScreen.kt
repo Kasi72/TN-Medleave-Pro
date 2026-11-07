@@ -219,7 +219,7 @@ fun IosCalendarTabScreen(
           modifier = Modifier
             .fillMaxSize()
             .testTag("leave_builder_lazy_list"),
-          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+          contentPadding = PaddingValues(start = 16.dp, top = 10.dp, end = 16.dp, bottom = 104.dp),
           verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
           item {
@@ -228,9 +228,6 @@ fun IosCalendarTabScreen(
               onCommitDraftLeaves = onCommitDraftLeaves
             )
           }
-          item {
-            Spacer(modifier = Modifier.height(84.dp))
-          }
         }
       }
       1 -> {
@@ -238,7 +235,7 @@ fun IosCalendarTabScreen(
           modifier = Modifier
             .fillMaxSize()
             .testTag("month_holidays_lazy_list"),
-          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+          contentPadding = PaddingValues(start = 16.dp, top = 10.dp, end = 16.dp, bottom = 104.dp),
           verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
           item {
@@ -343,10 +340,13 @@ fun IosCalendarTabScreen(
                       Spacer(modifier = Modifier.width(10.dp))
                       Column(modifier = Modifier.weight(1f)) {
                         Text(
-                          text = "${hItem.dateIso.substring(5)} (${hItem.dayOfWeek.take(3)}) • ${hItem.nameTamil}",
+                          text = "${ClinicalDateFormatter.formatFriendlyWithDay(hItem.dateIso)} • ${hItem.nameTamil}",
                           style = MaterialTheme.typography.labelLarge,
                           color = Color.White,
-                          fontWeight = FontWeight.Bold
+                          fontWeight = FontWeight.Bold,
+                          maxLines = 1,
+                          softWrap = false,
+                          overflow = TextOverflow.Ellipsis
                         )
                         Text(
                           text = hItem.nameEnglish,
@@ -409,7 +409,7 @@ fun IosCalendarTabScreen(
           modifier = Modifier
             .fillMaxSize()
             .testTag("ios_calendar_lazy_list"),
-          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+          contentPadding = PaddingValues(start = 16.dp, top = 10.dp, end = 16.dp, bottom = 104.dp),
           verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
           // 1. Year Switcher + Luxury Month Scrubber Pill Row
@@ -492,12 +492,45 @@ fun IosCalendarTabScreen(
                     )
                   }
 
-                  Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                  ) {
+                    Surface(
+                      shape = RoundedCornerShape(12.dp),
+                      color = NeonAquaAccent.copy(alpha = 0.16f),
+                      border = BorderStroke(1.dp, NeonAquaAccent.copy(alpha = 0.55f)),
+                      modifier = Modifier
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                          onSelectYear(2026L)
+                          currentMonthValue = 11
+                          selectedDateIso = "2026-11-08"
+                        }
+                        .testTag("calendar_today_quick_jump")
+                    ) {
+                      Box(
+                        modifier = Modifier.padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                      ) {
+                        Text(
+                          text = "Today",
+                          fontFamily = JetBrainsMonoFontFamily,
+                          fontSize = 11.sp,
+                          fontWeight = FontWeight.ExtraBold,
+                          color = NeonAquaAccent,
+                          maxLines = 1,
+                          softWrap = false
+                        )
+                      }
+                    }
+
                     Surface(
                       shape = RoundedCornerShape(13.dp),
                       color = IosSquircleGlassFill,
                       border = BorderStroke(1.dp, NeonCyanText.copy(alpha = 0.45f)),
-                      modifier = Modifier.size(40.dp)
+                      modifier = Modifier.size(38.dp)
                     ) {
                       IconButton(
                         onClick = {
@@ -522,7 +555,7 @@ fun IosCalendarTabScreen(
                       shape = RoundedCornerShape(13.dp),
                       color = IosSquircleGlassFill,
                       border = BorderStroke(1.dp, NeonCyanText.copy(alpha = 0.45f)),
-                      modifier = Modifier.size(40.dp)
+                      modifier = Modifier.size(38.dp)
                     ) {
                       IconButton(
                         onClick = {
@@ -986,6 +1019,27 @@ private fun IosCalendarDayCell(
       .padding(horizontal = 3.dp, vertical = 4.dp)
       .testTag("calendar_day_$dateIso")
   ) {
+    // Multi-Record Count Badge (top-left) when 2+ entries exist on the same date (e.g., GH_WORKED + IN_LIEU or FN + AN)
+    if (dayRecords.size > 1) {
+      Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = NeonAquaAccent.copy(alpha = 0.25f),
+        modifier = Modifier
+          .align(Alignment.TopStart)
+          .padding(top = 1.dp, start = 1.dp)
+      ) {
+        Text(
+          text = "×${dayRecords.size}",
+          fontFamily = JetBrainsMonoFontFamily,
+          fontSize = 7.sp,
+          lineHeight = 8.sp,
+          fontWeight = FontWeight.ExtraBold,
+          color = NeonAquaAccent,
+          modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
+        )
+      }
+    }
+
     // Active Selection Indicator Dot in Top-Right Corner
     if (isSelected) {
       Box(
@@ -1141,7 +1195,7 @@ private fun SelectedDayInspectorCard(
             softWrap = false
           )
           Text(
-            text = "$selectedDateIso • $parsedDayOfWeek",
+            text = "${ClinicalDateFormatter.formatFriendlyDate(selectedDateIso)} • $parsedDayOfWeek",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.ExtraBold,
             color = Color.White,
@@ -1314,7 +1368,7 @@ private fun SelectedDayInspectorCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                      text = "Paired with: ${rec.pairedDateIso}",
+                      text = "Paired with: ${ClinicalDateFormatter.formatFriendlyWithDay(rec.pairedDateIso)}",
                       style = MaterialTheme.typography.labelMedium,
                       color = NeonAquaAccent,
                       fontSize = 11.sp
@@ -1327,7 +1381,7 @@ private fun SelectedDayInspectorCard(
         }
       } else {
         Text(
-          text = "No leave or hospital duty logged on $selectedDateIso yet. Quick-log for this date:",
+          text = "No leave or hospital duty logged on ${ClinicalDateFormatter.formatFriendlyDate(selectedDateIso)} yet. Quick-log for this date:",
           style = MaterialTheme.typography.bodyMedium,
           color = NeonCyanBright.copy(alpha = 0.85f)
         )

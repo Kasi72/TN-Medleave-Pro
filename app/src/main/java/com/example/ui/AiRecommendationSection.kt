@@ -79,6 +79,11 @@ import com.example.domain.AiLeaveRecommendation
 import com.example.domain.AiLeaveRecommendationEngine
 import com.example.domain.AiRecommendationUiState
 import com.example.domain.TnHolidays2027Catalog
+import com.example.ui.theme.BadgeClGreen
+import com.example.ui.theme.BadgeColCyan
+import com.example.ui.theme.BadgePlGold
+import com.example.ui.theme.BadgeRhSlate
+import com.example.ui.theme.EmeraldOptimal
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -245,7 +250,7 @@ fun AiLeaveRecommendationSection(
                 LiveCreditInputPill(
                     label = "RH Left",
                     value = "${summary2026.rhRemaining}/3",
-                    accent = Color(0xFF6A1B9A),
+                    accent = BadgeRhSlate,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -253,7 +258,7 @@ fun AiLeaveRecommendationSection(
                 LiveCreditInputPill(
                     label = "COL Ready",
                     value = "${colGhAudit.availableUnusedGhCount} GH",
-                    accent = Color(0xFF2E7D32),
+                    accent = EmeraldOptimal,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -688,9 +693,9 @@ private fun AiRecommendationItemCard(
     }
 
     val badgeColor = when (primaryTag) {
-        "COL" -> Color(0xFF00796B)
-        "RH" -> Color(0xFF6A1B9A)
-        else -> Color(0xFF1565C0)
+        "COL" -> BadgeColCyan
+        "RH" -> BadgeRhSlate
+        else -> BadgeClGreen
     }
 
     Card(
@@ -752,15 +757,19 @@ private fun AiRecommendationItemCard(
                             Icon(
                                 imageVector = Icons.Default.CalendarMonth,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = badgeColor,
                                 modifier = Modifier.size(13.dp)
                             )
                             Text(
-                                text = "${rec.startDateIso} → ${rec.endDateIso}",
+                                text = ClinicalDateFormatter.formatRangeFriendly(rec.startDateIso, rec.endDateIso),
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontFamily = FontFamily.Monospace
                                 ),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -1007,13 +1016,18 @@ private fun AiRecommendationItemCard(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
+                                tint = Color(0xFF042F2E),
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = "Apply Exact Leave Dates to Ledger",
                                 style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF042F2E),
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
 

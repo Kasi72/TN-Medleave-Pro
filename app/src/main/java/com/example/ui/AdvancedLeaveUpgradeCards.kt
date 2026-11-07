@@ -274,7 +274,7 @@ fun ColSixMonthExpiryRadarCard(
                 softWrap = false
               )
               Text(
-                text = "GH Duty ${fifoOldest.dutyDateIso} (${fifoOldest.holidayName})",
+                text = "GH Duty ${ClinicalDateFormatter.formatFriendlyDate(fifoOldest.dutyDateIso)} (${fifoOldest.holidayName})",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -283,7 +283,7 @@ fun ColSixMonthExpiryRadarCard(
                 overflow = TextOverflow.Ellipsis
               )
               Text(
-                text = "6M Expiry Window: ${fifoOldest.expiryDateIso}",
+                text = "6M Expiry Window: ${ClinicalDateFormatter.formatFriendlyDate(fifoOldest.expiryDateIso)}",
                 fontFamily = JetBrainsMonoFontFamily,
                 fontSize = 10.sp,
                 lineHeight = 13.sp,
@@ -344,11 +344,20 @@ private fun UnusedGhCountdownRow(
     ColExpiryUrgency.ACTIVE_VALID -> EmeraldOptimal
     ColExpiryUrgency.PRIOR_YEAR_CARRY -> BadgePlGold
   }
+  val friendlyDutyDate = ClinicalDateFormatter.formatFriendlyDate(item.dutyDateIso)
+  val friendlyExpiryDate = ClinicalDateFormatter.formatFriendlyDate(item.expiryDateIso)
   val countdownLabel = when {
     item.ghRecord.year < 2026L -> "HISTORICAL (${item.ghRecord.year})"
-    item.daysRemainingToExpiry < 0L -> "6M WINDOW PASSED (${item.expiryDateIso})"
-    item.daysRemainingToExpiry == 0L -> "EXPIRES TODAY"
-    else -> "${item.daysRemainingToExpiry}d LEFT • EXP ${item.expiryDateIso}"
+    item.daysRemainingToExpiry < 0L -> "6M WINDOW PASSED ($friendlyExpiryDate)"
+    item.daysRemainingToExpiry == 0L -> "EXPIRES TODAY ($friendlyExpiryDate)"
+    else -> "${item.daysRemainingToExpiry}d LEFT • EXP $friendlyExpiryDate"
+  }
+  val statutoryProgress = remember(item.daysRemainingToExpiry, item.ghRecord.year) {
+    if (item.ghRecord.year < 2026L) {
+      1f
+    } else {
+      (item.daysRemainingToExpiry.toFloat() / 180f).coerceIn(0.06f, 1f)
+    }
   }
 
   Surface(
@@ -360,71 +369,93 @@ private fun UnusedGhCountdownRow(
       .clip(RoundedCornerShape(14.dp))
       .clickable { onAvailClick() }
   ) {
-    Row(
+    Column(
       modifier = Modifier
         .fillMaxWidth()
         .padding(horizontal = 12.dp, vertical = 9.dp),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically
+      verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
       Row(
-        modifier = Modifier.weight(1f),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
       ) {
+        Row(
+          modifier = Modifier.weight(1f),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = badgeAccent.copy(alpha = 0.16f)
+          ) {
+            Text(
+              text = "#$rank",
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 10.sp,
+              lineHeight = 12.sp,
+              fontWeight = FontWeight.Bold,
+              color = badgeAccent,
+              modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+            )
+          }
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+              text = "$friendlyDutyDate • ${item.holidayName}",
+              style = MaterialTheme.typography.labelLarge,
+              fontWeight = FontWeight.SemiBold,
+              color = MaterialTheme.colorScheme.onSurface,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
+            Text(
+              text = countdownLabel,
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 10.sp,
+              lineHeight = 12.sp,
+              fontWeight = FontWeight.Bold,
+              color = badgeAccent,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
         Surface(
           shape = RoundedCornerShape(8.dp),
-          color = badgeAccent.copy(alpha = 0.16f)
+          color = badgeAccent.copy(alpha = 0.15f),
+          border = BorderStroke(1.dp, badgeAccent.copy(alpha = 0.35f))
         ) {
           Text(
-            text = "#$rank",
+            text = "+ Avail COL",
             fontFamily = JetBrainsMonoFontFamily,
             fontSize = 10.sp,
             lineHeight = 12.sp,
             fontWeight = FontWeight.Bold,
             color = badgeAccent,
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
-          )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = "${item.dutyDateIso} • ${item.holidayName}",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis
-          )
-          Text(
-            text = countdownLabel,
-            fontFamily = JetBrainsMonoFontFamily,
-            fontSize = 10.sp,
-            lineHeight = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = badgeAccent,
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
           )
         }
       }
 
-      Spacer(modifier = Modifier.width(8.dp))
-
-      Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = badgeAccent.copy(alpha = 0.15f),
-        border = BorderStroke(1.dp, badgeAccent.copy(alpha = 0.35f))
+      // 180-Day Statutory Countdown Progress Bar
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(4.dp)
+          .clip(RoundedCornerShape(2.dp))
+          .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f))
       ) {
-        Text(
-          text = "+ Avail COL",
-          fontFamily = JetBrainsMonoFontFamily,
-          fontSize = 10.sp,
-          lineHeight = 12.sp,
-          fontWeight = FontWeight.Bold,
-          color = badgeAccent,
-          modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+        Box(
+          modifier = Modifier
+            .fillMaxWidth(statutoryProgress)
+            .height(4.dp)
+            .clip(RoundedCornerShape(2.dp))
+            .background(badgeAccent)
         )
       }
     }

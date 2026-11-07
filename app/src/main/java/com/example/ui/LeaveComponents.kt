@@ -406,145 +406,191 @@ fun LeaveRecordSquircleRow(
         shape = RoundedCornerShape(22.dp)
       )
   ) {
-    Row(
+    Column(
       modifier = Modifier
         .fillMaxWidth()
         .padding(14.dp),
-      verticalAlignment = Alignment.CenterVertically
+      verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-      // Squircle Category Badge
-      Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = accent.copy(alpha = 0.15f),
-        modifier = Modifier.size(52.dp)
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
       ) {
-        Column(
-          horizontalAlignment = Alignment.CenterHorizontally,
-          verticalArrangement = Arrangement.Center
+        // Squircle Category Badge
+        Surface(
+          shape = RoundedCornerShape(14.dp),
+          color = accent.copy(alpha = 0.15f),
+          border = BorderStroke(1.dp, accent.copy(alpha = 0.32f)),
+          modifier = Modifier.size(50.dp)
         ) {
-          Text(
-            text = cat.shortLabel,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = accent,
-            fontSize = if (cat.shortLabel.length > 4) 10.sp else 13.sp
-          )
-        }
-      }
-
-      Spacer(modifier = Modifier.width(14.dp))
-
-      Column(modifier = Modifier.weight(1f)) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp),
-          modifier = Modifier.horizontalScroll(rememberScrollState())
-        ) {
-          Text(
-            text = record.dateIso,
-            fontFamily = JetBrainsMonoFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            softWrap = false
-          )
-          if (record.isHalfDay || session != HalfDaySession.FULL_DAY) {
-            Surface(
-              shape = RoundedCornerShape(6.dp),
-              color = accent.copy(alpha = 0.2f)
-            ) {
-              Text(
-                text = session.badgeLabel,
-                fontFamily = JetBrainsMonoFontFamily,
-                fontSize = 9.sp,
-                lineHeight = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = accent,
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-              )
-            }
+          Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+          ) {
+            Text(
+              text = cat.shortLabel,
+              style = MaterialTheme.typography.labelLarge,
+              fontWeight = FontWeight.ExtraBold,
+              color = accent,
+              fontSize = if (cat.shortLabel.length > 4) 10.sp else 13.sp,
+              maxLines = 1,
+              softWrap = false
+            )
           }
-          if (status != HighlightStatus.NORMAL) {
-            val (badgeColor, badgeIcon) = when (status) {
-              HighlightStatus.ALERT_RED -> StatusAlertRed to Icons.Default.ErrorOutline
-              HighlightStatus.VERIFIED_GREEN -> StatusVerifiedGreen to Icons.Default.CheckCircle
-              HighlightStatus.PENDING_ORANGE -> StatusPendingOrange to Icons.Default.Schedule
-              else -> accent to Icons.Default.CheckCircle
-            }
-            Surface(
-              shape = RoundedCornerShape(8.dp),
-              color = badgeColor.copy(alpha = 0.14f)
-            ) {
-              Row(
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+          val friendlyDate = remember(record.dateIso) {
+            ClinicalDateFormatter.formatFriendlyDate(record.dateIso)
+          }
+          val dowTag = remember(record.dateIso) {
+            ClinicalDateFormatter.dayOfWeekShort(record.dateIso)
+          }
+
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.horizontalScroll(rememberScrollState())
+          ) {
+            Text(
+              text = friendlyDate,
+              fontFamily = JetBrainsMonoFontFamily,
+              fontWeight = FontWeight.ExtraBold,
+              fontSize = 15.sp,
+              color = MaterialTheme.colorScheme.onSurface,
+              maxLines = 1,
+              softWrap = false
+            )
+            if (dowTag != null) {
+              Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
               ) {
-                Icon(
-                  imageVector = badgeIcon,
-                  contentDescription = null,
-                  tint = badgeColor,
-                  modifier = Modifier.size(12.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                  text = status.label,
-                  fontSize = 10.sp,
-                  fontWeight = FontWeight.SemiBold,
-                  color = badgeColor,
+                  text = dowTag,
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 9.sp,
+                  lineHeight = 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant,
                   maxLines = 1,
-                  softWrap = false
+                  softWrap = false,
+                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
               }
             }
+            if (record.isHalfDay || session != HalfDaySession.FULL_DAY) {
+              Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = accent.copy(alpha = 0.2f)
+              ) {
+                Text(
+                  text = session.badgeLabel,
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 9.sp,
+                  lineHeight = 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = accent,
+                  maxLines = 1,
+                  softWrap = false,
+                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+              }
+            }
+            if (status != HighlightStatus.NORMAL) {
+              val (badgeColor, badgeIcon) = when (status) {
+                HighlightStatus.ALERT_RED -> StatusAlertRed to Icons.Default.ErrorOutline
+                HighlightStatus.VERIFIED_GREEN -> StatusVerifiedGreen to Icons.Default.CheckCircle
+                HighlightStatus.PENDING_ORANGE -> StatusPendingOrange to Icons.Default.Schedule
+                else -> accent to Icons.Default.CheckCircle
+              }
+              Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = badgeColor.copy(alpha = 0.14f)
+              ) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Icon(
+                    imageVector = badgeIcon,
+                    contentDescription = null,
+                    tint = badgeColor,
+                    modifier = Modifier.size(12.dp)
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = status.label,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = badgeColor,
+                    maxLines = 1,
+                    softWrap = false
+                  )
+                }
+              }
+            }
+          }
+
+          Spacer(modifier = Modifier.height(3.dp))
+
+          Text(
+            text = if (record.notes.isNotBlank()) record.notes else cat.fullTitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+          )
+
+          if (record.pairedDateIso.isNotBlank()) {
+            val friendlyPaired = remember(record.pairedDateIso) {
+              ClinicalDateFormatter.formatFriendlyWithDay(record.pairedDateIso)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                imageVector = Icons.Default.Link,
+                contentDescription = null,
+                tint = BadgeColCyan,
+                modifier = Modifier.size(14.dp)
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                text = "Paired Duty / Leave: $friendlyPaired (${record.pairedDateIso})",
+                style = MaterialTheme.typography.labelMedium,
+                color = BadgeColCyan,
+                fontSize = 11.sp,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
           }
         }
+      }
 
-        Spacer(modifier = Modifier.height(3.dp))
-
-        Text(
-          text = if (record.notes.isNotBlank()) record.notes else cat.fullTitle,
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          maxLines = 2,
-          overflow = TextOverflow.Ellipsis
-        )
-
-        if (record.pairedDateIso.isNotBlank()) {
-          Spacer(modifier = Modifier.height(4.dp))
-          Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-              imageVector = Icons.Default.Link,
-              contentDescription = null,
-              tint = BadgeColCyan,
-              modifier = Modifier.size(14.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-              text = "Paired Duty / Leave: ${record.pairedDateIso}",
-              style = MaterialTheme.typography.labelMedium,
-              color = BadgeColCyan,
-              fontSize = 11.sp
-            )
-          }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Upgrade #5 & #6: IFHRMS / SR Verification Toggle Pill + Certificate Vault Badge
+      // Clean Horizontal Action & SR Verification Footer (Replaces cramped 30dp vertical stack)
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(6.dp),
-          modifier = Modifier.horizontalScroll(rememberScrollState())
+          modifier = Modifier
+            .weight(1f)
+            .horizontalScroll(rememberScrollState())
         ) {
           Surface(
-            shape = RoundedCornerShape(8.dp),
+            shape = RoundedCornerShape(9.dp),
             color = srAccent.copy(alpha = 0.13f),
             border = BorderStroke(1.dp, srAccent.copy(alpha = 0.35f)),
             modifier = Modifier
-              .clip(RoundedCornerShape(8.dp))
+              .clip(RoundedCornerShape(9.dp))
               .clickable {
                 if (onToggleSrState != null) {
                   onToggleSrState(resolvedMeta.copy(srState = resolvedMeta.srState.nextToggleState()))
@@ -555,7 +601,7 @@ fun LeaveRecordSquircleRow(
               .testTag("sr_toggle_${record.id}")
           ) {
             Row(
-              modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+              modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -563,7 +609,7 @@ fun LeaveRecordSquircleRow(
                 imageVector = Icons.Default.Verified,
                 contentDescription = null,
                 tint = srAccent,
-                modifier = Modifier.size(11.dp)
+                modifier = Modifier.size(12.dp)
               )
               Text(
                 text = resolvedMeta.srState.shortBadge,
@@ -580,11 +626,11 @@ fun LeaveRecordSquircleRow(
 
           if (resolvedMeta.orderRefNo.isNotBlank() || resolvedMeta.certificatePhotoUri.isNotBlank()) {
             Surface(
-              shape = RoundedCornerShape(8.dp),
+              shape = RoundedCornerShape(9.dp),
               color = BadgeOnDutyBlue.copy(alpha = 0.14f),
               border = BorderStroke(1.dp, BadgeOnDutyBlue.copy(alpha = 0.35f)),
               modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(9.dp))
                 .clickable {
                   onOpenCertificateVault?.invoke(record, resolvedMeta)
                 }
@@ -604,65 +650,107 @@ fun LeaveRecordSquircleRow(
                 color = BadgeOnDutyBlue,
                 maxLines = 1,
                 softWrap = false,
-                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
               )
             }
           }
         }
-      }
 
-      Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-      ) {
-        if (onEditRecord != null) {
-          IconButton(
-            onClick = { onEditRecord(record) },
-            modifier = Modifier
-              .size(30.dp)
-              .testTag("edit_leave_${record.id}")
-          ) {
-            Icon(
-              imageVector = Icons.Default.Edit,
-              contentDescription = "Edit Leave Entry In-Place",
-              tint = BadgeColCyan,
-              modifier = Modifier.size(16.dp)
-            )
-          }
-        }
+        Spacer(modifier = Modifier.width(8.dp))
 
-        if (onOpenCertificateVault != null) {
-          IconButton(
-            onClick = { onOpenCertificateVault(record, resolvedMeta) },
-            modifier = Modifier
-              .size(30.dp)
-              .testTag("vault_btn_${record.id}")
-          ) {
-            Icon(
-              imageVector = Icons.Default.Description,
-              contentDescription = "Certificate Vault & SR Status",
-              tint = if (resolvedMeta.certificatePhotoUri.isNotBlank() || resolvedMeta.orderRefNo.isNotBlank()) {
-                EmeraldOptimal
-              } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-              },
-              modifier = Modifier.size(16.dp)
-            )
-          }
-        }
-
-        IconButton(
-          onClick = { onDelete(record.id) },
-          modifier = Modifier
-            .size(30.dp)
-            .testTag("delete_leave_${record.id}")
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-          Icon(
-            imageVector = Icons.Default.DeleteOutline,
-            contentDescription = "Delete Leave Record",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(16.dp)
-          )
+          if (onEditRecord != null) {
+            Surface(
+              shape = RoundedCornerShape(9.dp),
+              color = BadgeColCyan.copy(alpha = 0.14f),
+              border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.32f)),
+              modifier = Modifier
+                .clip(RoundedCornerShape(9.dp))
+                .clickable { onEditRecord(record) }
+                .testTag("edit_leave_${record.id}")
+            ) {
+              Row(
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+              ) {
+                Icon(
+                  imageVector = Icons.Default.Edit,
+                  contentDescription = "Edit Leave Entry In-Place",
+                  tint = BadgeColCyan,
+                  modifier = Modifier.size(13.dp)
+                )
+                Text(
+                  text = "Edit",
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = BadgeColCyan,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
+            }
+          }
+
+          if (onOpenCertificateVault != null) {
+            val hasVaultData = resolvedMeta.certificatePhotoUri.isNotBlank() || resolvedMeta.orderRefNo.isNotBlank()
+            val vaultTint = if (hasVaultData) EmeraldOptimal else MaterialTheme.colorScheme.onSurfaceVariant
+            Surface(
+              shape = RoundedCornerShape(9.dp),
+              color = if (hasVaultData) EmeraldOptimal.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+              border = BorderStroke(1.dp, vaultTint.copy(alpha = 0.32f)),
+              modifier = Modifier
+                .clip(RoundedCornerShape(9.dp))
+                .clickable { onOpenCertificateVault(record, resolvedMeta) }
+                .testTag("vault_btn_${record.id}")
+            ) {
+              Row(
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+              ) {
+                Icon(
+                  imageVector = Icons.Default.Description,
+                  contentDescription = "Certificate Vault & SR Status",
+                  tint = vaultTint,
+                  modifier = Modifier.size(13.dp)
+                )
+                Text(
+                  text = "Vault",
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = vaultTint,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
+            }
+          }
+
+          Surface(
+            shape = RoundedCornerShape(9.dp),
+            color = StatusAlertRed.copy(alpha = 0.12f),
+            border = BorderStroke(1.dp, StatusAlertRed.copy(alpha = 0.30f)),
+            modifier = Modifier
+              .clip(RoundedCornerShape(9.dp))
+              .clickable { onDelete(record.id) }
+              .testTag("delete_leave_${record.id}")
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Icon(
+                imageVector = Icons.Default.DeleteOutline,
+                contentDescription = "Delete Leave Record",
+                tint = StatusAlertRed,
+                modifier = Modifier.size(14.dp)
+              )
+            }
+          }
         }
       }
     }
@@ -759,10 +847,11 @@ fun AddLeaveRecordDialog(
     onDismissRequest = onDismiss,
     shape = RoundedCornerShape(28.dp),
     title = {
-      Text(
-        text = "Log LeaveEntry (Single / Range & FN/AN)",
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold
+      ExecutiveDialogHeader(
+        icon = Icons.Default.Add,
+        accent = selectedCat.accentColor(),
+        title = "Log Leave / Hospital Duty",
+        subtitle = "SINGLE OR RANGE • FN / AN • 7-LAYER GUARD"
       )
     },
     text = {
@@ -814,25 +903,21 @@ fun AddLeaveRecordDialog(
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          OutlinedTextField(
+          DatePickerOutlinedField(
             value = startDate,
             onValueChange = {
               startDate = it.trim()
               if (endDate < startDate) endDate = startDate
             },
-            label = { Text("Start (YYYY-MM-DD)") },
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            label = "Start Date",
             modifier = Modifier
               .weight(1f)
               .testTag("add_leave_date_input")
           )
-          OutlinedTextField(
+          DatePickerOutlinedField(
             value = endDate,
             onValueChange = { endDate = it.trim() },
-            label = { Text("End (YYYY-MM-DD)") },
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            label = "End Date",
             modifier = Modifier
               .weight(1f)
               .testTag("add_leave_end_date_input")
@@ -952,14 +1037,14 @@ fun AddLeaveRecordDialog(
               ) {
                 Column(modifier = Modifier.weight(1f)) {
                   Text(
-                    text = "★ FIFO #1 OLDEST UNUSED GH CREDIT: ${oldest.dutyDateIso}",
+                    text = "★ FIFO #1 OLDEST UNUSED GH CREDIT: ${ClinicalDateFormatter.formatFriendlyDate(oldest.dutyDateIso)}",
                     fontFamily = JetBrainsMonoFontFamily,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     color = BadgeColCyan
                   )
                   Text(
-                    text = "Tap to auto-fill (${oldest.holidayName} • Exp ${oldest.expiryDateIso})",
+                    text = "Tap to auto-fill (${oldest.holidayName} • Exp ${ClinicalDateFormatter.formatFriendlyDate(oldest.expiryDateIso)})",
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                   )
@@ -974,12 +1059,10 @@ fun AddLeaveRecordDialog(
             }
           }
 
-          OutlinedTextField(
+          DatePickerOutlinedField(
             value = pairedDateIso,
             onValueChange = { pairedDateIso = it.trim() },
-            label = { Text("Paired GH Worked / Duty Date (YYYY-MM-DD)") },
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            label = "Paired GH Worked / Duty Date (YYYY-MM-DD)",
             modifier = Modifier.fillMaxWidth()
           )
         }

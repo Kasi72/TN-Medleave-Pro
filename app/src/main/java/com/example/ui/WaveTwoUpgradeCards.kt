@@ -338,19 +338,12 @@ fun EditLeaveRecordDialog(
     onDismissRequest = onDismiss,
     shape = RoundedCornerShape(26.dp),
     title = {
-      Column {
-        Text(
-          text = "Edit Leave / Duty Entry In-Place",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold
-        )
-        Text(
-          text = "Record ID: ${record.id.take(12)} • ${record.year}",
-          fontFamily = JetBrainsMonoFontFamily,
-          fontSize = 10.sp,
-          color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-      }
+      ExecutiveDialogHeader(
+        icon = Icons.Default.Edit,
+        accent = selectedCat.accentColor(),
+        title = "Edit Leave / Duty Entry",
+        subtitle = "RECORD ${record.id.take(10).uppercase()} • ${ClinicalDateFormatter.formatFriendlyDate(dateIso)}"
+      )
     },
     text = {
       Column(
@@ -393,12 +386,10 @@ fun EditLeaveRecordDialog(
           }
         }
 
-        OutlinedTextField(
+        DatePickerOutlinedField(
           value = dateIso,
           onValueChange = { dateIso = it.trim() },
-          label = { Text("Date (YYYY-MM-DD)") },
-          singleLine = true,
-          shape = RoundedCornerShape(12.dp),
+          label = "Date (YYYY-MM-DD)",
           modifier = Modifier.fillMaxWidth()
         )
 
@@ -445,12 +436,10 @@ fun EditLeaveRecordDialog(
           }
         }
 
-        OutlinedTextField(
+        DatePickerOutlinedField(
           value = pairedDateIso,
           onValueChange = { pairedDateIso = it.trim() },
-          label = { Text("Paired GH Worked / Duty Date (Optional YYYY-MM-DD)") },
-          singleLine = true,
-          shape = RoundedCornerShape(12.dp),
+          label = "Paired GH Worked / Duty Date (Optional)",
           modifier = Modifier.fillMaxWidth()
         )
 
@@ -893,12 +882,10 @@ fun AcademicOdSubQuotaCard(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
           )
-          OutlinedTextField(
+          DatePickerOutlinedField(
             value = odDate,
             onValueChange = { odDate = it.trim() },
-            label = { Text("On-Duty Date (YYYY-MM-DD)") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            label = "On-Duty Date (YYYY-MM-DD)",
             modifier = Modifier.fillMaxWidth()
           )
           OutlinedTextField(
@@ -1018,21 +1005,17 @@ fun DualHolidayDutyColLoggerCard(
       }
 
       Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
+        DatePickerOutlinedField(
           value = dutyDateIso,
           onValueChange = { dutyDateIso = it.trim() },
-          label = { Text("GH / Call Duty Date") },
-          singleLine = true,
-          shape = RoundedCornerShape(12.dp),
+          label = "GH / Call Duty Date",
           modifier = Modifier.weight(1f)
         )
         if (alsoScheduleColNow) {
-          OutlinedTextField(
+          DatePickerOutlinedField(
             value = colDateIso,
             onValueChange = { colDateIso = it.trim() },
-            label = { Text("Paired COL Leave Date") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            label = "Paired COL Leave Date",
             modifier = Modifier.weight(1f)
           )
         }

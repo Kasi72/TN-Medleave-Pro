@@ -155,10 +155,11 @@ object HolidayDashboardAnalyzer {
       val (tier, oppTitle, recipe, stretchDays, creditsReq) = when {
         matchBridge != null -> {
           val freeWeekendOrGhDays = (matchBridge.totalDaysOff - matchBridge.leaveCreditsRequired).coerceAtLeast(0)
+          val friendlySpan = ClinicalDateFormatter.formatRangeFriendly(matchBridge.startDateIso, matchBridge.endDateIso)
           Quintuple(
             HolidayBridgeTier.MEGA_BRIDGE,
             "Leave Bridge Opportunity (${matchBridge.totalDaysOff} Days Off)",
-            "${matchBridge.title}: Uses ${matchBridge.leaveCreditsRequired} credit(s) + $freeWeekendOrGhDays weekend/GH days (${matchBridge.startDateIso} → ${matchBridge.endDateIso}).",
+            "${matchBridge.title}: Uses ${matchBridge.leaveCreditsRequired} credit(s) + $freeWeekendOrGhDays weekend/GH days ($friendlySpan).",
             matchBridge.totalDaysOff,
             matchBridge.leaveCreditsRequired
           )
@@ -455,7 +456,7 @@ fun EnterpriseHolidayDashboardScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("holidays_tab_list"),
-    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    contentPadding = PaddingValues(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 104.dp),
     verticalArrangement = Arrangement.spacedBy(14.dp)
   ) {
     // 1. Enterprise Holiday Dashboard Hero Banner

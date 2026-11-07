@@ -148,11 +148,24 @@ fun OverviewTabScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("overview_tab_list"),
-    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    contentPadding = PaddingValues(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 104.dp),
     verticalArrangement = Arrangement.spacedBy(16.dp)
   ) {
     // Executive HOD Identity & Live Credit Hero Card (Enterprise Mesh & Specular Glass)
     item {
+      val officerName = remember(state.selectedYear, state.allRecords.size) {
+        HodProfileSettingsStore.getOfficerName(context)
+      }
+      val officerRoleAndDept = remember(state.selectedYear, state.allRecords.size) {
+        "${HodProfileSettingsStore.getDesignation(context)} • ${HodProfileSettingsStore.getDepartment(context)}"
+      }
+      val officerCollege = remember(state.selectedYear, state.allRecords.size) {
+        HodProfileSettingsStore.getCollege(context)
+      }
+      val officerIfhrmsId = remember(state.selectedYear, state.allRecords.size) {
+        HodProfileSettingsStore.getIfhrmsId(context)
+      }
+
       EnterpriseMeshHeroContainer(
         cornerRadius = 28.dp,
         primaryGlowColor = Color(0xFF10B981),
@@ -187,20 +200,20 @@ fun OverviewTabScreen(
               Spacer(modifier = Modifier.width(12.dp))
               Column(modifier = Modifier.weight(1f)) {
                 Text(
-                  text = "HOD, Dept. of Psychiatry",
+                  text = officerName,
                   style = MaterialTheme.typography.titleMedium,
                   color = Color.White,
-                  fontWeight = FontWeight.Bold,
+                  fontWeight = FontWeight.ExtraBold,
                   maxLines = 1,
                   softWrap = false,
                   overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
                 Text(
-                  text = "Govt. Erode Medical College & Hospital",
+                  text = "$officerRoleAndDept • $officerCollege",
                   style = MaterialTheme.typography.bodyMedium,
                   color = Color(0xFFBAE6FD),
-                  fontSize = 12.sp,
-                  lineHeight = 15.sp,
+                  fontSize = 11.5.sp,
+                  lineHeight = 14.sp,
                   maxLines = 1,
                   softWrap = false,
                   overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -208,7 +221,7 @@ fun OverviewTabScreen(
               }
             }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(8.dp))
 
             Surface(
               shape = RoundedCornerShape(12.dp),
@@ -229,8 +242,10 @@ fun OverviewTabScreen(
                     .background(Color(0xFF34D399))
                 )
                 Text(
-                  text = "TN MES",
-                  style = MaterialTheme.typography.labelMedium,
+                  text = officerIfhrmsId.ifBlank { "TN MES" },
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.ExtraBold,
                   color = Color(0xFF6EE7B7),
                   maxLines = 1,
                   softWrap = false
@@ -671,35 +686,20 @@ fun OverviewTabScreen(
           }
         }
 
-        // Tamil Nadu Medical Officer Leave Rules Quick Reference Card
+        // Tamil Nadu Medical Officer Leave Rules Quick Reference Card (Tier-3 Collapsible Accordion)
         item {
-          Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 1.dp,
-            modifier = Modifier.fillMaxWidth()
+          ExecutiveCollapsibleAccordionCard(
+            icon = Icons.Default.Verified,
+            accent = EmeraldOptimal,
+            title = "Tamil Nadu Leave Rules (HOD / Medical Service)",
+            subtitle = "Statutory quick-reference for CL, RH, 10-day continuous cap, COL & PL",
+            badgeText = "FR / TN RULES",
+            initiallyExpanded = false
           ) {
-            Column(modifier = Modifier.padding(18.dp)) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                  imageVector = Icons.Default.Verified,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                  text = "Tamil Nadu Leave Rules (HOD / Medical Service)",
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.Bold
-                )
-              }
-              Spacer(modifier = Modifier.height(8.dp))
-              RuleItemBullet("12 Casual Leaves (CL) + 3 Restricted Holidays (RH) per calendar year (lapse on Dec 31).")
-              RuleItemBullet("Max 10 Days Continuous Absence: CL + RH + Prefixed/Suffixed/Intervening Govt Holidays cannot exceed 10 days at a stretch.")
-              RuleItemBullet("Compensatory Off (COL): Earned for 'In Lieu of' special/weekend turn duty; must be availed within 6 months.")
-              RuleItemBullet("Public Holiday Leave (PL): Paired with declared Government Holidays (GH Worked) performed at the hospital.")
-            }
+            RuleItemBullet("12 Casual Leaves (CL) + 3 Restricted Holidays (RH) per calendar year (lapse on Dec 31).")
+            RuleItemBullet("Max 10 Days Continuous Absence: CL + RH + Prefixed/Suffixed/Intervening Govt Holidays cannot exceed 10 days at a stretch.")
+            RuleItemBullet("Compensatory Off (COL): Earned for 'In Lieu of' special/weekend turn duty; must be availed within 6 months.")
+            RuleItemBullet("Public Holiday Leave (PL): Paired with declared Government Holidays (GH Worked) performed at the hospital.")
           }
         }
       }
@@ -1017,7 +1017,7 @@ fun LedgerTabScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("ledger_tab_list"),
-    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    contentPadding = PaddingValues(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 104.dp),
     verticalArrangement = Arrangement.spacedBy(12.dp)
   ) {
     // 1. Year Selector (2023 .. 2027)
@@ -1565,7 +1565,7 @@ fun OptimizerTabScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("optimizer_tab_list"),
-    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    contentPadding = PaddingValues(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 104.dp),
     verticalArrangement = Arrangement.spacedBy(16.dp)
   ) {
     // Enterprise Sub-Tab Switcher so Optimizer is crisp and organized
@@ -1614,17 +1614,23 @@ fun OptimizerTabScreen(
                   tint = com.example.ui.theme.NeonAquaAccent,
                   modifier = Modifier.size(20.dp)
                 )
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                   Text(
                     text = "VISUAL MATERIAL 3 HOLIDAY & BRIDGE RANGE PICKER",
                     style = MaterialTheme.typography.labelSmall,
                     color = com.example.ui.theme.NeonAquaAccent,
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
                   )
                   Text(
                     text = "Tap to highlight upcoming TN Govt Holidays & Long-Weekend Windows",
                     style = MaterialTheme.typography.bodySmall,
-                    color = com.example.ui.theme.NeonCyanBright
+                    color = com.example.ui.theme.NeonCyanBright,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
                   )
                 }
               }
@@ -1754,20 +1760,16 @@ fun OptimizerTabScreen(
               )
               Spacer(modifier = Modifier.height(12.dp))
               Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
+                DatePickerOutlinedField(
                   value = startInput,
                   onValueChange = { startInput = it.trim() },
-                  label = { Text("Start (YYYY-MM-DD)") },
-                  singleLine = true,
-                  shape = RoundedCornerShape(14.dp),
+                  label = "Start Date",
                   modifier = Modifier.weight(1f)
                 )
-                OutlinedTextField(
+                DatePickerOutlinedField(
                   value = endInput,
                   onValueChange = { endInput = it.trim() },
-                  label = { Text("End (YYYY-MM-DD)") },
-                  singleLine = true,
-                  shape = RoundedCornerShape(14.dp),
+                  label = "End Date",
                   modifier = Modifier.weight(1f)
                 )
               }
@@ -1858,7 +1860,7 @@ fun OptimizerTabScreen(
           )
         }
 
-        // Tamil Nadu Leave Rules 1933 & Fundamental Rules Statutory Engine Card
+        // Tamil Nadu Leave Rules 1933 & Fundamental Rules Statutory Engine Card (Tier-3 Collapsible Accordion)
         item {
           val serviceAccount = remember(state.allRecords) {
             com.example.domain.TamilNaduLeaveRulesService.computeServiceLeaveAccount(state.allRecords)
@@ -1867,179 +1869,162 @@ fun OptimizerTabScreen(
             com.example.domain.TamilNaduLeaveRulesService.getAllRuleSpecs()
           }
 
-          Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth()
+          ExecutiveCollapsibleAccordionCard(
+            icon = Icons.Default.Verified,
+            accent = EmeraldOptimal,
+            title = "TN Leave Rules 1933 & FR Statutory Engine",
+            subtitle = "EL (+15d/half-yr), UEL-MC (540d cap), CL, COL & RH statutory citations",
+            badgeText = "FR 1933",
+            initiallyExpanded = false
           ) {
-            Column(modifier = Modifier.padding(18.dp)) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                  imageVector = Icons.Default.Verified,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                  text = "TN Leave Rules 1933 & FR Engine (EL, ML, CL, COL, RH)",
-                  style = MaterialTheme.typography.titleMedium,
-                  fontWeight = FontWeight.Bold
-                )
-              }
-
-              Spacer(modifier = Modifier.height(8.dp))
-
-              Row(
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+              horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+              Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = BadgeElNeutral.copy(alpha = 0.12f),
                 modifier = Modifier
-                  .fillMaxWidth()
-                  .height(androidx.compose.foundation.layout.IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                  .weight(1f)
+                  .fillMaxHeight()
               ) {
-                Surface(
-                  shape = RoundedCornerShape(16.dp),
-                  color = BadgeElNeutral.copy(alpha = 0.12f),
-                  modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                ) {
-                  Column(
-                    modifier = Modifier
-                      .fillMaxSize()
-                      .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                  ) {
-                    Text(
-                      text = "Earned Leave (EL Rule 8)",
-                      style = MaterialTheme.typography.labelLarge,
-                      lineHeight = 15.sp,
-                      color = BadgeElNeutral,
-                      maxLines = 1,
-                      softWrap = false,
-                      overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                    Text(
-                      text = "+15d / Half-Yr (Max 240d)",
-                      style = MaterialTheme.typography.titleMedium,
-                      lineHeight = 19.sp,
-                      fontWeight = FontWeight.Bold,
-                      maxLines = 1,
-                      softWrap = false,
-                      overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                    Text(
-                      text = "${serviceAccount.elTotalTaken2023To2026}d availed • Intervening GH debited",
-                      fontSize = 11.sp,
-                      lineHeight = 14.sp,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant,
-                      maxLines = 1,
-                      softWrap = false,
-                      overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                  }
-                }
-
-                Surface(
-                  shape = RoundedCornerShape(16.dp),
-                  color = BadgeMlOrange.copy(alpha = 0.12f),
-                  modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                ) {
-                  Column(
-                    modifier = Modifier
-                      .fillMaxSize()
-                      .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                  ) {
-                    Text(
-                      text = "Medical Leave (UEL-MC)",
-                      style = MaterialTheme.typography.labelLarge,
-                      lineHeight = 15.sp,
-                      color = BadgeMlOrange,
-                      maxLines = 1,
-                      softWrap = false,
-                      overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                    Text(
-                      text = "${serviceAccount.mlRemainingCareerQuota} / 540d Left",
-                      style = MaterialTheme.typography.titleMedium,
-                      lineHeight = 19.sp,
-                      fontWeight = FontWeight.Bold,
-                      maxLines = 1,
-                      softWrap = false,
-                      overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                    Text(
-                      text = "${serviceAccount.mlTotalTaken2023To2026}d availed • >60d Med Board",
-                      fontSize = 11.sp,
-                      lineHeight = 14.sp,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant,
-                      maxLines = 1,
-                      softWrap = false,
-                      overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
-                  }
-                }
-              }
-
-              Spacer(modifier = Modifier.height(10.dp))
-
-              ruleSpecs.filter {
-                it.category in listOf(
-                  LeaveCategory.EL,
-                  LeaveCategory.ML,
-                  LeaveCategory.CL,
-                  LeaveCategory.COL,
-                  LeaveCategory.RH
-                )
-              }.forEach { spec ->
                 Column(
                   modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 5.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
-                    .padding(10.dp)
+                    .fillMaxSize()
+                    .padding(12.dp),
+                  verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                  Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                  ) {
-                    Text(
-                      text = "${spec.category.shortLabel} — ${spec.category.fullTitle}",
-                      style = MaterialTheme.typography.labelLarge,
-                      color = spec.category.accentColor(),
-                      fontWeight = FontWeight.Bold,
-                      maxLines = 1,
-                      overflow = TextOverflow.Ellipsis,
-                      modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp)
-                    )
-                    Text(
-                      text = "Max Stretch: ${spec.maxContinuousStretchDays}d",
-                      style = MaterialTheme.typography.labelMedium,
-                      fontSize = 11.sp,
-                      maxLines = 1,
-                      softWrap = false
-                    )
-                  }
                   Text(
-                    text = spec.statutoryCitation,
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
+                    text = "Earned Leave (EL Rule 8)",
+                    style = MaterialTheme.typography.labelLarge,
+                    lineHeight = 15.sp,
+                    color = BadgeElNeutral,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                   )
                   Text(
-                    text = spec.medicalOfficerSpecialClause,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "+15d / Half-Yr (Max 240d)",
+                    style = MaterialTheme.typography.titleMedium,
+                    lineHeight = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                  )
+                  Text(
+                    text = "${serviceAccount.elTotalTaken2023To2026}d availed • Intervening GH debited",
                     fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    lineHeight = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                   )
                 }
+              }
+
+              Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = BadgeMlOrange.copy(alpha = 0.12f),
+                modifier = Modifier
+                  .weight(1f)
+                  .fillMaxHeight()
+              ) {
+                Column(
+                  modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                  verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                  Text(
+                    text = "Medical Leave (UEL-MC)",
+                    style = MaterialTheme.typography.labelLarge,
+                    lineHeight = 15.sp,
+                    color = BadgeMlOrange,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                  )
+                  Text(
+                    text = "${serviceAccount.mlRemainingCareerQuota} / 540d Left",
+                    style = MaterialTheme.typography.titleMedium,
+                    lineHeight = 19.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                  )
+                  Text(
+                    text = "${serviceAccount.mlTotalTaken2023To2026}d availed • >60d Med Board",
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                  )
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            ruleSpecs.filter {
+              it.category in listOf(
+                LeaveCategory.EL,
+                LeaveCategory.ML,
+                LeaveCategory.CL,
+                LeaveCategory.COL,
+                LeaveCategory.RH
+              )
+            }.forEach { spec ->
+              Column(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(vertical = 5.dp)
+                  .clip(RoundedCornerShape(14.dp))
+                  .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                  .padding(10.dp)
+              ) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Text(
+                    text = "${spec.category.shortLabel} — ${spec.category.fullTitle}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = spec.category.accentColor(),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                      .weight(1f)
+                      .padding(end = 8.dp)
+                  )
+                  Text(
+                    text = "Max Stretch: ${spec.maxContinuousStretchDays}d",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    softWrap = false
+                  )
+                }
+                Text(
+                  text = spec.statutoryCitation,
+                  fontSize = 10.sp,
+                  color = MaterialTheme.colorScheme.primary,
+                  fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                  text = spec.medicalOfficerSpecialClause,
+                  style = MaterialTheme.typography.bodyMedium,
+                  fontSize = 11.sp,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
               }
             }
           }

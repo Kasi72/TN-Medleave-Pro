@@ -1,5 +1,10 @@
 package com.example.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -8,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,15 +27,29 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +67,12 @@ import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 /**
  * Enterprise-grade dark obsidian/sapphire hero container with:
@@ -355,3 +381,436 @@ private fun EnterpriseTelemetryMicroPill(
     }
   }
 }
+
+/**
+ * Unified clinical & executive date formatter that turns raw database ISO strings ("2026-11-23")
+ * into scannable human-readable dates ("23 Nov 2026", "MON", "14 Jan → 18 Jan 2026 (Wed–Sun)").
+ */
+object ClinicalDateFormatter {
+  private val friendlyFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
+  private val shortMonthDayFormatter = DateTimeFormatter.ofPattern("dd MMM", Locale.ENGLISH)
+
+  fun formatFriendlyDate(dateIso: String): String {
+    val clean = dateIso.trim()
+    if (clean.length != 10) return dateIso
+    return runCatching {
+      LocalDate.parse(clean).format(friendlyFormatter)
+    }.getOrDefault(dateIso)
+  }
+
+  fun formatFriendlyWithDay(dateIso: String): String {
+    val clean = dateIso.trim()
+    if (clean.length != 10) return dateIso
+    return runCatching {
+      val ld = LocalDate.parse(clean)
+      val dow = ld.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+      "$dow, ${ld.format(friendlyFormatter)}"
+    }.getOrDefault(dateIso)
+  }
+
+  fun dayOfWeekShort(dateIso: String): String? {
+    val clean = dateIso.trim()
+    if (clean.length != 10) return null
+    return runCatching {
+      LocalDate.parse(clean).dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH).uppercase(Locale.ENGLISH)
+    }.getOrNull()
+  }
+
+  fun formatRangeFriendly(startIso: String, endIso: String): String {
+    return runCatching {
+      val s = LocalDate.parse(startIso.trim())
+      val e = LocalDate.parse(endIso.trim())
+      val sDow = s.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+      val eDow = e.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+      if (s == e) {
+        "${s.format(friendlyFormatter)} ($sDow)"
+      } else if (s.year == e.year) {
+        "${s.format(shortMonthDayFormatter)} → ${e.format(friendlyFormatter)} ($sDow–$eDow)"
+      } else {
+        "${s.format(friendlyFormatter)} → ${e.format(friendlyFormatter)} ($sDow–$eDow)"
+      }
+    }.getOrElse { "$startIso → $endIso" }
+  }
+}
+
+/**
+ * Guaranteed Zero-Vertical-Wrap Card Header Row.
+ * Ensures the left title/subtitle column always claims `Modifier.weight(1f)` and the right badge
+ * always uses `maxLines = 1, softWrap = false` so no text can ever wrap vertically 1 character per line.
+ */
+@Composable
+fun ExecutiveCardHeaderRow(
+  icon: ImageVector,
+  iconAccent: Color,
+  title: String,
+  subtitle: String? = null,
+  badgeText: String? = null,
+  badgeAccent: Color = iconAccent,
+  onBadgeClick: (() -> Unit)? = null,
+  modifier: Modifier = Modifier
+) {
+  Row(
+    modifier = modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Row(
+      modifier = Modifier.weight(1f),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+      Surface(
+        shape = RoundedCornerShape(13.dp),
+        color = iconAccent.copy(alpha = 0.16f),
+        border = BorderStroke(1.dp, iconAccent.copy(alpha = 0.40f)),
+        modifier = Modifier.size(40.dp)
+      ) {
+        Box(contentAlignment = Alignment.Center) {
+          Icon(
+            imageVector = icon,
+            contentDescription = title,
+            tint = iconAccent,
+            modifier = Modifier.size(20.dp)
+          )
+        }
+      }
+      Column(modifier = Modifier.weight(1f)) {
+        Text(
+          text = title,
+          style = MaterialTheme.typography.titleMedium,
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.onSurface,
+          maxLines = 1,
+          softWrap = false,
+          overflow = TextOverflow.Ellipsis
+        )
+        if (!subtitle.isNullOrBlank()) {
+          Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+          )
+        }
+      }
+    }
+
+    if (!badgeText.isNullOrBlank()) {
+      Spacer(modifier = Modifier.width(8.dp))
+      Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = badgeAccent.copy(alpha = 0.15f),
+        border = BorderStroke(1.dp, badgeAccent.copy(alpha = 0.42f)),
+        modifier = Modifier
+          .clip(RoundedCornerShape(10.dp))
+          .then(if (onBadgeClick != null) Modifier.clickable { onBadgeClick() } else Modifier)
+      ) {
+        Text(
+          text = badgeText,
+          fontFamily = JetBrainsMonoFontFamily,
+          fontSize = 10.sp,
+          lineHeight = 13.sp,
+          fontWeight = FontWeight.ExtraBold,
+          color = badgeAccent,
+          maxLines = 1,
+          softWrap = false,
+          modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+        )
+      }
+    }
+  }
+}
+
+/**
+ * 1-Tap Native Material 3 Calendar DatePicker + Direct ISO Text Field.
+ * Lets the user either tap the trailing Calendar icon to pick a date from a visual month calendar
+ * OR type/edit YYYY-MM-DD directly, while displaying a live human-readable subtitle ("Mon, 23 Nov 2026").
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DatePickerOutlinedField(
+  value: String,
+  onValueChange: (String) -> Unit,
+  label: String,
+  modifier: Modifier = Modifier,
+  showFriendlySupportingText: Boolean = true
+) {
+  var showCalendarDialog by remember { mutableStateOf(false) }
+  val friendlyHint = remember(value) {
+    val clean = value.trim()
+    if (clean.length == 10) ClinicalDateFormatter.formatFriendlyWithDay(clean) else null
+  }
+
+  OutlinedTextField(
+    value = value,
+    onValueChange = { onValueChange(it.trim()) },
+    label = {
+      Text(
+        text = label,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis
+      )
+    },
+    supportingText = if (showFriendlySupportingText && friendlyHint != null) {
+      {
+        Text(
+          text = friendlyHint,
+          fontFamily = JetBrainsMonoFontFamily,
+          fontSize = 10.sp,
+          color = EmeraldOptimal,
+          fontWeight = FontWeight.SemiBold,
+          maxLines = 1,
+          softWrap = false,
+          overflow = TextOverflow.Ellipsis
+        )
+      }
+    } else null,
+    trailingIcon = {
+      IconButton(
+        onClick = { showCalendarDialog = true }
+      ) {
+        Icon(
+          imageVector = Icons.Default.CalendarMonth,
+          contentDescription = "Open Calendar Date Picker for $label",
+          tint = BadgeColCyan,
+          modifier = Modifier.size(20.dp)
+        )
+      }
+    },
+    singleLine = true,
+    shape = RoundedCornerShape(14.dp),
+    modifier = modifier
+  )
+
+  if (showCalendarDialog) {
+    val initialMillis = remember(value) {
+      runCatching {
+        LocalDate.parse(value.trim())
+          .atStartOfDay(ZoneOffset.UTC)
+          .toInstant()
+          .toEpochMilli()
+      }.getOrElse {
+        LocalDate.of(2026, 11, 23)
+          .atStartOfDay(ZoneOffset.UTC)
+          .toInstant()
+          .toEpochMilli()
+      }
+    }
+    val pickerState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+
+    DatePickerDialog(
+      onDismissRequest = { showCalendarDialog = false },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            pickerState.selectedDateMillis?.let { millis ->
+              val pickedDate = Instant.ofEpochMilli(millis)
+                .atZone(ZoneOffset.UTC)
+                .toLocalDate()
+              onValueChange(pickedDate.toString())
+            }
+            showCalendarDialog = false
+          }
+        ) {
+          Text("Select Date", fontWeight = FontWeight.Bold, color = EmeraldOptimal)
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { showCalendarDialog = false }) {
+          Text("Cancel")
+        }
+      }
+    ) {
+      DatePicker(state = pickerState)
+    }
+  }
+}
+
+/**
+ * Tier-3 Progressive Disclosure Accordion Card for secondary calculators, statutory rules, and tools.
+ */
+@Composable
+fun ExecutiveCollapsibleAccordionCard(
+  icon: ImageVector,
+  accent: Color,
+  title: String,
+  subtitle: String,
+  badgeText: String,
+  initiallyExpanded: Boolean = false,
+  modifier: Modifier = Modifier,
+  content: @Composable ColumnScope.() -> Unit
+) {
+  var expanded by remember { mutableStateOf(initiallyExpanded) }
+  Surface(
+    shape = RoundedCornerShape(24.dp),
+    color = MaterialTheme.colorScheme.surface,
+    tonalElevation = if (expanded) 2.dp else 1.dp,
+    border = BorderStroke(
+      width = 1.dp,
+      color = if (expanded) accent.copy(alpha = 0.42f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+    ),
+    modifier = modifier.fillMaxWidth()
+  ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clickable { expanded = !expanded }
+          .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Row(
+          modifier = Modifier.weight(1f),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+          Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = accent.copy(alpha = 0.15f),
+            border = BorderStroke(1.dp, accent.copy(alpha = 0.35f)),
+            modifier = Modifier.size(38.dp)
+          ) {
+            Box(contentAlignment = Alignment.Center) {
+              Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = accent,
+                modifier = Modifier.size(19.dp)
+              )
+            }
+          }
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+              text = title,
+              style = MaterialTheme.typography.titleSmall,
+              fontWeight = FontWeight.Bold,
+              color = MaterialTheme.colorScheme.onSurface,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
+            Text(
+              text = subtitle,
+              style = MaterialTheme.typography.bodySmall,
+              fontSize = 11.sp,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = accent.copy(alpha = 0.14f)
+          ) {
+            Text(
+              text = badgeText,
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 9.sp,
+              fontWeight = FontWeight.Bold,
+              color = accent,
+              maxLines = 1,
+              softWrap = false,
+              modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+          }
+          Icon(
+            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = if (expanded) "Collapse" else "Expand",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+          )
+        }
+      }
+
+      AnimatedVisibility(
+        visible = expanded,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut()
+      ) {
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+          content = content
+        )
+      }
+    }
+  }
+}
+
+/**
+ * Executive Glass Dialog Header with a 38dp squircle icon badge, primary title, and monospace subtitle.
+ */
+@Composable
+fun ExecutiveDialogHeader(
+  icon: ImageVector,
+  accent: Color,
+  title: String,
+  subtitle: String,
+  modifier: Modifier = Modifier
+) {
+  Row(
+    modifier = modifier.fillMaxWidth(),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(12.dp)
+  ) {
+    Surface(
+      shape = RoundedCornerShape(13.dp),
+      color = accent.copy(alpha = 0.16f),
+      border = BorderStroke(1.dp, accent.copy(alpha = 0.42f)),
+      modifier = Modifier.size(40.dp)
+    ) {
+      Box(contentAlignment = Alignment.Center) {
+        Icon(
+          imageVector = icon,
+          contentDescription = title,
+          tint = accent,
+          modifier = Modifier.size(20.dp)
+        )
+      }
+    }
+
+    Column(modifier = Modifier.weight(1f)) {
+      Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontSize = 16.sp,
+        lineHeight = 20.sp,
+        fontWeight = FontWeight.ExtraBold,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis
+      )
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(
+        text = subtitle,
+        fontFamily = JetBrainsMonoFontFamily,
+        fontSize = 10.sp,
+        lineHeight = 13.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = accent,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis
+      )
+    }
+  }
+}
+
+

@@ -271,24 +271,32 @@ fun MainFeatureHost(
       )
     },
     floatingActionButton = {
-      if (currentTab != 5 && !showEnterpriseSettingsDialog) {
+      if (currentTab !in listOf(3, 5) && !showEnterpriseSettingsDialog) {
         FloatingActionButton(
           onClick = { showAddDialog = true },
-          shape = RoundedCornerShape(20.dp),
+          shape = RoundedCornerShape(18.dp),
           containerColor = EmeraldOptimal,
           contentColor = Color.White,
-          modifier = Modifier.testTag("fab_add_leave")
+          modifier = Modifier
+            .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(18.dp))
+            .testTag("fab_add_leave")
         ) {
           Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Icon(Icons.Default.Add, contentDescription = "Log Leave")
+            Icon(
+              imageVector = Icons.Default.Add,
+              contentDescription = "Log Leave",
+              modifier = Modifier.size(18.dp)
+            )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
               text = "Log Leave",
-              fontWeight = FontWeight.Bold,
-              fontSize = 14.sp
+              fontWeight = FontWeight.ExtraBold,
+              fontSize = 13.sp,
+              maxLines = 1,
+              softWrap = false
             )
           }
         }
@@ -629,7 +637,7 @@ private fun IosExecutiveTopBar(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 12.dp),
+          .padding(horizontal = 14.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
@@ -648,8 +656,9 @@ private fun IosExecutiveTopBar(
               text = officerHeaderSubtitle,
               style = MaterialTheme.typography.labelMedium,
               color = EmeraldOptimal,
-              fontSize = 10.sp,
-              lineHeight = 13.sp,
+              fontSize = 9.5.sp,
+              lineHeight = 12.sp,
+              letterSpacing = 0.25.sp,
               maxLines = 1,
               softWrap = false,
               overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -659,9 +668,9 @@ private fun IosExecutiveTopBar(
           Text(
             text = title,
             style = MaterialTheme.typography.headlineMedium,
-            fontSize = 20.sp,
-            lineHeight = 25.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            lineHeight = 22.sp,
+            fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             softWrap = false,
@@ -669,26 +678,23 @@ private fun IosExecutiveTopBar(
           )
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(6.dp))
 
         Row(
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
+          horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
           Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(11.dp),
             color = EmeraldOptimal.copy(alpha = 0.12f),
             modifier = Modifier
-              .height(36.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .border(1.dp, EmeraldOptimal.copy(alpha = 0.32f), RoundedCornerShape(12.dp))
+              .size(34.dp)
+              .clip(RoundedCornerShape(11.dp))
+              .border(1.dp, EmeraldOptimal.copy(alpha = 0.30f), RoundedCornerShape(11.dp))
               .clickable { onOpenBiometricLock() }
               .testTag("top_bar_biometric_lock_button")
           ) {
-            Box(
-              modifier = Modifier.padding(horizontal = 9.dp),
-              contentAlignment = Alignment.Center
-            ) {
+            Box(contentAlignment = Alignment.Center) {
               Icon(
                 imageVector = Icons.Default.Fingerprint,
                 contentDescription = "Biometric Lock & Security",
@@ -699,19 +705,16 @@ private fun IosExecutiveTopBar(
           }
 
           Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(11.dp),
             color = EmeraldOptimal.copy(alpha = 0.12f),
             modifier = Modifier
-              .height(36.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .border(1.dp, EmeraldOptimal.copy(alpha = 0.32f), RoundedCornerShape(12.dp))
+              .size(34.dp)
+              .clip(RoundedCornerShape(11.dp))
+              .border(1.dp, EmeraldOptimal.copy(alpha = 0.30f), RoundedCornerShape(11.dp))
               .clickable { onOpenNotifications() }
               .testTag("top_bar_notifications_button")
           ) {
-            Box(
-              modifier = Modifier.padding(horizontal = 9.dp),
-              contentAlignment = Alignment.Center
-            ) {
+            Box(contentAlignment = Alignment.Center) {
               Icon(
                 imageVector = Icons.Default.NotificationsActive,
                 contentDescription = "Holiday & Leave Push Alerts",
@@ -722,32 +725,32 @@ private fun IosExecutiveTopBar(
           }
 
           Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = EmeraldOptimal.copy(alpha = 0.14f),
+            shape = RoundedCornerShape(11.dp),
+            color = EmeraldOptimal.copy(alpha = 0.16f),
             modifier = Modifier
-              .height(36.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .border(1.dp, EmeraldOptimal.copy(alpha = 0.38f), RoundedCornerShape(12.dp))
+              .height(34.dp)
+              .clip(RoundedCornerShape(11.dp))
+              .border(1.dp, EmeraldOptimal.copy(alpha = 0.42f), RoundedCornerShape(11.dp))
               .clickable { onOpenPdfExport() }
               .testTag("top_bar_pdf_export_button")
           ) {
             Row(
-              modifier = Modifier.padding(horizontal = 10.dp),
+              modifier = Modifier.padding(horizontal = 9.dp),
               verticalAlignment = Alignment.CenterVertically
             ) {
               Icon(
                 imageVector = Icons.Default.PictureAsPdf,
                 contentDescription = "Export Official PDF Report",
                 tint = EmeraldOptimal,
-                modifier = Modifier.size(15.dp)
+                modifier = Modifier.size(14.dp)
               )
-              Spacer(modifier = Modifier.width(4.dp))
+              Spacer(modifier = Modifier.width(3.dp))
               Text(
                 text = "PDF",
                 color = EmeraldOptimal,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-                lineHeight = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 10.5.sp,
+                lineHeight = 13.sp,
                 maxLines = 1,
                 softWrap = false
               )
@@ -755,51 +758,49 @@ private fun IosExecutiveTopBar(
           }
 
           Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = EmeraldOptimal.copy(alpha = 0.14f),
+            shape = RoundedCornerShape(11.dp),
+            color = if (isSettingsOpen) EmeraldOptimal else EmeraldOptimal.copy(alpha = 0.14f),
             modifier = Modifier
-              .height(36.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .border(1.dp, EmeraldOptimal.copy(alpha = 0.38f), RoundedCornerShape(12.dp))
+              .size(34.dp)
+              .clip(RoundedCornerShape(11.dp))
+              .border(
+                1.dp,
+                if (isSettingsOpen) EmeraldOptimal else EmeraldOptimal.copy(alpha = 0.38f),
+                RoundedCornerShape(11.dp)
+              )
               .clickable { onOpenSettings() }
               .testTag("top_bar_settings_button")
           ) {
-            Box(
-              modifier = Modifier.padding(horizontal = 9.dp),
-              contentAlignment = Alignment.Center
-            ) {
+            Box(contentAlignment = Alignment.Center) {
               Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Enterprise Settings & 2027 Holiday Sync",
-                tint = EmeraldOptimal,
+                tint = if (isSettingsOpen) Color.White else EmeraldOptimal,
                 modifier = Modifier.size(16.dp)
               )
             }
           }
 
           Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(11.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier
-              .height(36.dp)
-              .clip(RoundedCornerShape(12.dp))
+              .size(34.dp)
+              .clip(RoundedCornerShape(11.dp))
               .border(
                 1.dp,
                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
-                RoundedCornerShape(12.dp)
+                RoundedCornerShape(11.dp)
               )
               .clickable { onSignOut() }
               .testTag("sign_out_button")
           ) {
-            Box(
-              modifier = Modifier.padding(horizontal = 9.dp),
-              contentAlignment = Alignment.Center
-            ) {
+            Box(contentAlignment = Alignment.Center) {
               Icon(
                 imageVector = Icons.AutoMirrored.Filled.Logout,
                 contentDescription = "Sign Out",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(15.dp)
               )
             }
           }
@@ -833,23 +834,23 @@ private fun IosSquircleBottomTabBar(
 
   Surface(
     color = IosDarkDockSurface,
-    tonalElevation = 12.dp,
-    shadowElevation = 18.dp,
-    shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
+    tonalElevation = 14.dp,
+    shadowElevation = 20.dp,
+    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     modifier = Modifier
       .fillMaxWidth()
       .border(
         width = 1.2.dp,
-        color = NeonCyanText.copy(alpha = 0.42f),
-        shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
+        color = NeonCyanText.copy(alpha = 0.38f),
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
       )
   ) {
     Row(
       modifier = Modifier
         .fillMaxWidth()
         .navigationBarsPadding()
-        .padding(horizontal = 6.dp, vertical = 8.dp),
-      horizontalArrangement = Arrangement.spacedBy(4.dp),
+        .padding(horizontal = 8.dp, vertical = 7.dp),
+      horizontalArrangement = Arrangement.spacedBy(2.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
       tabs.forEach { (index, label, icon) ->
@@ -857,12 +858,12 @@ private fun IosSquircleBottomTabBar(
         val iconColor = if (isSelected) {
           Color(0xFF041322)
         } else {
-          NeonCyanBright
+          NeonCyanBright.copy(alpha = 0.78f)
         }
         val labelColor = if (isSelected) {
           NeonAquaAccent
         } else {
-          NeonCyanBright
+          NeonCyanBright.copy(alpha = 0.72f)
         }
 
         Column(
@@ -870,32 +871,32 @@ private fun IosSquircleBottomTabBar(
             .weight(1f)
             .clip(RoundedCornerShape(16.dp))
             .clickable { onSelectTab(index) }
-            .padding(vertical = 4.dp)
+            .padding(vertical = 3.dp)
             .testTag("bottom_tab_$index"),
           horizontalAlignment = Alignment.CenterHorizontally,
-          verticalArrangement = Arrangement.spacedBy(4.dp)
+          verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
           Box(
             modifier = Modifier
-              .height(32.dp)
-              .padding(horizontal = 4.dp)
+              .height(30.dp)
+              .padding(horizontal = 6.dp)
               .fillMaxWidth()
-              .clip(RoundedCornerShape(13.dp))
+              .clip(RoundedCornerShape(14.dp))
               .then(
                 if (isSelected) {
-                  Modifier.background(
-                    Brush.linearGradient(
-                      listOf(NeonAquaAccent, NeonCyanText)
-                    )
-                  )
-                } else {
                   Modifier
-                    .background(IosSquircleGlassFill)
+                    .background(
+                      Brush.linearGradient(
+                        listOf(NeonAquaAccent, NeonCyanText)
+                      )
+                    )
                     .border(
                       width = 1.dp,
-                      color = NeonCyanText.copy(alpha = 0.28f),
-                      shape = RoundedCornerShape(13.dp)
+                      color = Color.White.copy(alpha = 0.45f),
+                      shape = RoundedCornerShape(14.dp)
                     )
+                } else {
+                  Modifier.background(Color.Transparent)
                 }
               ),
             contentAlignment = Alignment.Center
@@ -904,20 +905,28 @@ private fun IosSquircleBottomTabBar(
               imageVector = icon,
               contentDescription = label,
               tint = iconColor,
-              modifier = Modifier.size(18.dp)
+              modifier = Modifier.size(if (isSelected) 18.dp else 17.dp)
             )
           }
           Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
             color = labelColor,
-            fontWeight = FontWeight.Bold,
-            fontSize = 11.sp,
-            lineHeight = 13.sp,
-            letterSpacing = 0.35.sp,
+            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+            fontSize = 10.5.sp,
+            lineHeight = 12.sp,
+            letterSpacing = 0.2.sp,
             maxLines = 1,
             softWrap = false,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+          )
+          Box(
+            modifier = Modifier
+              .size(width = if (isSelected) 14.dp else 4.dp, height = 3.dp)
+              .clip(RoundedCornerShape(2.dp))
+              .background(
+                if (isSelected) NeonAquaAccent else Color.Transparent
+              )
           )
         }
       }

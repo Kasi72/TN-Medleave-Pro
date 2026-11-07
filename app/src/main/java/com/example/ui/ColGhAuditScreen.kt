@@ -125,7 +125,7 @@ fun ColGhAuditTabScreen(
     modifier = Modifier
       .fillMaxSize()
       .testTag("col_gh_audit_tab_list"),
-    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    contentPadding = PaddingValues(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 104.dp),
     verticalArrangement = Arrangement.spacedBy(14.dp)
   ) {
     // 1. Executive 3-Way COL <-> In Lieu <-> GH Worked Audit Banner (Enterprise Mesh & Specular Glass)
@@ -564,10 +564,11 @@ fun ColGhAuditTabScreen(
       onDismissRequest = { manualPairItem = null },
       shape = RoundedCornerShape(28.dp),
       title = {
-        Text(
-          text = "Pair COL (${auditItem.colDateIso}) with GH Worked",
-          style = MaterialTheme.typography.titleLarge,
-          fontWeight = FontWeight.Bold
+        ExecutiveDialogHeader(
+          icon = Icons.Default.Link,
+          accent = BadgeColCyan,
+          title = "Pair COL with GH Worked",
+          subtitle = "COL DATE: ${ClinicalDateFormatter.formatFriendlyDate(auditItem.colDateIso)}"
         )
       },
       text = {
@@ -605,7 +606,7 @@ fun ColGhAuditTabScreen(
                     verticalAlignment = Alignment.CenterVertically
                   ) {
                     Text(
-                      text = "${gh.dateIso} (${gh.year}) • ${gh.notes.ifBlank { "GH Duty" }}",
+                      text = "${ClinicalDateFormatter.formatFriendlyDate(gh.dateIso)} • ${gh.notes.ifBlank { "GH Duty" }}",
                       color = if (isChosen) Color.White else BadgeGhLime,
                       fontWeight = FontWeight.Bold,
                       fontSize = 12.sp
@@ -616,12 +617,10 @@ fun ColGhAuditTabScreen(
             }
           }
 
-          OutlinedTextField(
+          DatePickerOutlinedField(
             value = customGhDate,
             onValueChange = { customGhDate = it.trim() },
-            label = { Text("GH Worked Date (YYYY-MM-DD)") },
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            label = "GH Worked Date (YYYY-MM-DD)",
             modifier = Modifier.fillMaxWidth()
           )
         }
@@ -659,24 +658,23 @@ fun ColGhAuditTabScreen(
       onDismissRequest = { claimUnusedGhRecord = null },
       shape = RoundedCornerShape(28.dp),
       title = {
-        Text(
-          text = "Avail COL for GH Worked (${ghRec.dateIso})",
-          style = MaterialTheme.typography.titleLarge,
-          fontWeight = FontWeight.Bold
+        ExecutiveDialogHeader(
+          icon = Icons.Default.EventAvailable,
+          accent = EmeraldOptimal,
+          title = "Avail COL for GH Worked",
+          subtitle = "GH DUTY: ${ClinicalDateFormatter.formatFriendlyDate(ghRec.dateIso)}"
         )
       },
       text = {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
           Text(
-            text = "You worked on Government Holiday ${ghRec.dateIso} (${ghRec.notes.ifBlank { "Hospital Duty" }}) and haven't linked a COL to it yet. Pick a date to avail this COL:",
+            text = "You worked on Government Holiday ${ClinicalDateFormatter.formatFriendlyDate(ghRec.dateIso)} (${ghRec.notes.ifBlank { "Hospital Duty" }}) and haven't linked a COL to it yet. Pick a date to avail this COL:",
             style = MaterialTheme.typography.bodyMedium
           )
-          OutlinedTextField(
+          DatePickerOutlinedField(
             value = newColDate,
             onValueChange = { newColDate = it.trim() },
-            label = { Text("COL Leave Date to Avail (YYYY-MM-DD)") },
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            label = "COL Leave Date to Avail (YYYY-MM-DD)",
             modifier = Modifier.fillMaxWidth()
           )
           OutlinedTextField(
@@ -855,15 +853,30 @@ private fun ColGhAuditSquircleCard(
             text = "COL Leave",
             fontSize = 10.sp,
             color = BadgeColCyan,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            softWrap = false
           )
           Text(
-            text = item.colDateIso,
+            text = ClinicalDateFormatter.formatFriendlyDate(item.colDateIso),
             fontFamily = JetBrainsMonoFontFamily,
             fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onSurface
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            softWrap = false,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
           )
+          ClinicalDateFormatter.dayOfWeekShort(item.colDateIso)?.let { dow ->
+            Text(
+              text = "$dow • ${item.colDateIso}",
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 9.sp,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
         }
 
         Icon(
@@ -880,15 +893,30 @@ private fun ColGhAuditSquircleCard(
             text = "In Lieu Of",
             fontSize = 10.sp,
             color = BadgeInLieuLavender,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            softWrap = false
           )
           Text(
-            text = item.inLieuDateIso,
+            text = ClinicalDateFormatter.formatFriendlyDate(item.inLieuDateIso),
             fontFamily = JetBrainsMonoFontFamily,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.onSurface
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            softWrap = false,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
           )
+          ClinicalDateFormatter.dayOfWeekShort(item.inLieuDateIso)?.let { dow ->
+            Text(
+              text = "$dow • ${item.inLieuDateIso}",
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 9.sp,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
         }
 
         Icon(
@@ -905,19 +933,34 @@ private fun ColGhAuditSquircleCard(
             text = "GH Worked",
             fontSize = 10.sp,
             color = BadgeGhLime,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            softWrap = false
           )
           Text(
-            text = item.ghWorkedDateIso,
+            text = ClinicalDateFormatter.formatFriendlyDate(item.ghWorkedDateIso),
             fontFamily = JetBrainsMonoFontFamily,
             fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
+            fontSize = 12.sp,
             color = if (item.status == ColAuditStatus.VERIFIED_MATCH || item.status == ColAuditStatus.AVAILABLE_GH_CREDIT) {
               BadgeGhLime
             } else {
               StatusAlertRed
-            }
+            },
+            maxLines = 1,
+            softWrap = false,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
           )
+          ClinicalDateFormatter.dayOfWeekShort(item.ghWorkedDateIso)?.let { dow ->
+            Text(
+              text = "$dow • ${item.ghWorkedDateIso}",
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 9.sp,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
         }
       }
 
