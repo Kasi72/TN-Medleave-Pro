@@ -767,7 +767,7 @@ fun EarnedLeaveMasterPassbookCard(
                     softWrap = false
                   )
                   Text(
-                    text = "Open ${row.openingBalance}d • +${row.statutoryAccrual}d Credit (${row.creditDateIso}) • -${row.elAvailedInHalfYear}d Used",
+                    text = "Open ${row.openingBalance}d • +${row.statutoryAccrual}d Credit (${ClinicalDateFormatter.formatFriendlyDate(row.creditDateIso)}) • -${row.elAvailedInHalfYear}d Used",
                     fontFamily = JetBrainsMonoFontFamily,
                     fontSize = 9.sp,
                     lineHeight = 12.sp,
@@ -804,12 +804,13 @@ fun EarnedLeaveMasterPassbookCard(
     var surrInput by remember { mutableStateOf(surrenderedDays.toString()) }
     AlertDialog(
       onDismissRequest = { showConfigDialog = false },
-      shape = RoundedCornerShape(24.dp),
+      shape = RoundedCornerShape(26.dp),
       title = {
-        Text(
-          text = "Calibrate Service Register EL Passbook",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold
+        ExecutiveDialogHeader(
+          icon = Icons.Default.AccountBalanceWallet,
+          accent = BadgePlGold,
+          title = "Calibrate EL Career Passbook",
+          subtitle = "TN FR RULE 8 • JAN 1 & JUL 1 ACCRUALS"
         )
       },
       text = {
@@ -1078,7 +1079,7 @@ fun DecemberLapseBurnDownCard(
                   )
                 }
                 Text(
-                  text = "${slot.dateIso} (${slot.consecutiveDaysOff}d Stretch)",
+                  text = "${ClinicalDateFormatter.formatFriendlyDate(slot.dateIso)} (${slot.consecutiveDaysOff}d Stretch)",
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 11.sp,
                   lineHeight = 14.sp,
@@ -1328,12 +1329,13 @@ fun CsvSpreadsheetHubCard(
     }
     AlertDialog(
       onDismissRequest = { showPasteCsvDialog = false },
-      shape = RoundedCornerShape(24.dp),
+      shape = RoundedCornerShape(26.dp),
       title = {
-        Text(
-          text = "Paste Spreadsheet / CSV Rows",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold
+        ExecutiveDialogHeader(
+          icon = Icons.Default.TableView,
+          accent = BadgeColCyan,
+          title = "Paste Spreadsheet / CSV Rows",
+          subtitle = "BULK LEDGER IMPORT • 7-LAYER DUPLICATE GUARD"
         )
       },
       text = {
@@ -1530,23 +1532,34 @@ fun HomeScreenWidgetPreviewCard(
             verticalAlignment = Alignment.CenterVertically
           ) {
             Column(modifier = Modifier.weight(1f)) {
+              val widgetHeaderTitle = remember(summary2026) {
+                val desig = HodProfileSettingsStore.getDesignation(context).uppercase()
+                val dept = HodProfileSettingsStore.getDepartment(context).uppercase()
+                "TN MEDLEAVE PRO • $desig ($dept)"
+              }
+              val widgetCollegeSub = remember(summary2026) {
+                val colShort = HodProfileSettingsStore.getCollege(context).substringBefore(",")
+                "$colShort • ${summary2026.year} Live Quota"
+              }
               Text(
-                text = "TN MEDLEAVE PRO • HOD PSYCHIATRY",
+                text = widgetHeaderTitle,
                 fontFamily = JetBrainsMonoFontFamily,
                 fontSize = 9.sp,
                 lineHeight = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF34D399),
                 maxLines = 1,
-                softWrap = false
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
               )
               Text(
-                text = "Govt. Erode Medical College • 2026 Live Quota",
+                text = widgetCollegeSub,
                 fontSize = 11.sp,
                 lineHeight = 14.sp,
                 color = Color(0xFFBAE6FD),
                 maxLines = 1,
-                softWrap = false
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
               )
             }
             Surface(
@@ -1688,19 +1701,12 @@ fun CertificateVaultAndSrDialog(
     onDismissRequest = onDismiss,
     shape = RoundedCornerShape(26.dp),
     title = {
-      Column {
-        Text(
-          text = "Certificate Vault & Office SR Verification",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold
-        )
-        Text(
-          text = "${record.dateIso} • ${record.category.fullTitle}",
-          fontFamily = JetBrainsMonoFontFamily,
-          fontSize = 11.sp,
-          color = record.category.accentColor()
-        )
-      }
+      ExecutiveDialogHeader(
+        icon = Icons.Default.Verified,
+        accent = record.category.accentColor(),
+        title = "Certificate Vault & Office SR",
+        subtitle = "${ClinicalDateFormatter.formatFriendlyWithDay(record.dateIso)} • ${record.category.shortLabel}"
+      )
     },
     text = {
       Column(

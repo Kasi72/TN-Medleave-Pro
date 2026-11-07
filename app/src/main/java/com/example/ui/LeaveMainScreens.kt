@@ -791,10 +791,6 @@ fun OverviewTabScreen(
         }
       }
     }
-
-    item {
-      Spacer(modifier = Modifier.height(80.dp))
-    }
   }
 }
 
@@ -1320,7 +1316,7 @@ fun LedgerTabScreen(
               onToggleSrState = { updatedMeta ->
                 LedgerEnrichmentStore.saveMetaForRecord(context, updatedMeta)
                 metaVersion++
-                onShowStatusBanner("Updated ${record.dateIso} (${record.leaveType}) → ${updatedMeta.srState.shortBadge}")
+                onShowStatusBanner("Updated ${ClinicalDateFormatter.formatFriendlyDate(record.dateIso)} (${record.leaveType}) → ${updatedMeta.srState.shortBadge}")
               },
               onOpenCertificateVault = { rec, meta ->
                 activeVaultRecord = rec to meta
@@ -1423,7 +1419,7 @@ fun LedgerTabScreen(
             onToggleSrState = { updatedMeta ->
               LedgerEnrichmentStore.saveMetaForRecord(context, updatedMeta)
               metaVersion++
-              onShowStatusBanner("Updated ${record.dateIso} (${record.leaveType}) → ${updatedMeta.srState.shortBadge}")
+              onShowStatusBanner("Updated ${ClinicalDateFormatter.formatFriendlyDate(record.dateIso)} (${record.leaveType}) → ${updatedMeta.srState.shortBadge}")
             },
             onOpenCertificateVault = { rec, meta ->
               activeVaultRecord = rec to meta
@@ -1467,10 +1463,6 @@ fun LedgerTabScreen(
         }
       }
     }
-
-    item {
-      Spacer(modifier = Modifier.height(84.dp))
-    }
   }
 
   activeVaultRecord?.let { (rec, meta) ->
@@ -1482,7 +1474,7 @@ fun LedgerTabScreen(
         LedgerEnrichmentStore.saveMetaForRecord(context, saved)
         metaVersion++
         activeVaultRecord = null
-        onShowStatusBanner("Saved Certificate Vault & IFHRMS SR Status for ${rec.dateIso}!")
+        onShowStatusBanner("Saved Certificate Vault & IFHRMS SR Status for ${ClinicalDateFormatter.formatFriendlyDate(rec.dateIso)}!")
       }
     )
   }
@@ -2106,39 +2098,57 @@ private fun SmartBridgeCard(
           "WEEKEND" -> BadgeColCyan
           else -> BadgeClGreen
         }
-        Row(
+        Surface(
+          shape = RoundedCornerShape(12.dp),
+          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
           modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 3.dp),
-          verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 3.dp)
         ) {
-          Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = badgeColor.copy(alpha = 0.16f),
-            modifier = Modifier.width(86.dp)
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 10.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
-            Text(
-              text = step.badgeType.replace("_", " "),
-              fontSize = 10.sp,
-              fontWeight = FontWeight.Bold,
-              color = badgeColor,
-              modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-            )
+            Surface(
+              shape = RoundedCornerShape(7.dp),
+              color = badgeColor.copy(alpha = 0.18f),
+              border = androidx.compose.foundation.BorderStroke(1.dp, badgeColor.copy(alpha = 0.35f))
+            ) {
+              Text(
+                text = step.badgeType.replace("_", " "),
+                fontFamily = JetBrainsMonoFontFamily,
+                fontSize = 9.5.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = badgeColor,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+              )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                text = step.dayLabel,
+                fontFamily = JetBrainsMonoFontFamily,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                softWrap = false
+              )
+              Text(
+                text = step.description,
+                style = MaterialTheme.typography.bodySmall,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                softWrap = false,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+              )
+            }
           }
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(
-            text = step.dayLabel,
-            fontFamily = JetBrainsMonoFontFamily,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.width(90.dp)
-          )
-          Text(
-            text = step.description,
-            style = MaterialTheme.typography.bodyMedium,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
         }
       }
 

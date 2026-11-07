@@ -486,7 +486,7 @@ fun EnterpriseSettingsPageContent(
       modifier = Modifier
         .fillMaxSize()
         .testTag("settings_lazy_list"),
-      contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+      contentPadding = PaddingValues(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 104.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
       // Prominent GitHub App Update & Release Sync Card (Always accessible at the top of Settings)
@@ -561,10 +561,6 @@ fun EnterpriseSettingsPageContent(
             )
           }
         }
-      }
-
-      item {
-        Spacer(modifier = Modifier.height(48.dp))
       }
     }
   }

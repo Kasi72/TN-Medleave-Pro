@@ -252,7 +252,7 @@ fun UndoDeleteBannerCard(
     ) {
       Column(modifier = Modifier.weight(1f)) {
         Text(
-          text = "DELETED: ${deletedRecord.dateIso} • ${deletedRecord.category.shortLabel}",
+          text = "DELETED: ${ClinicalDateFormatter.formatFriendlyWithDay(deletedRecord.dateIso)} • ${deletedRecord.category.shortLabel}",
           fontFamily = JetBrainsMonoFontFamily,
           fontSize = 11.sp,
           lineHeight = 14.sp,
@@ -867,12 +867,13 @@ fun AcademicOdSubQuotaCard(
     var odNotes by remember { mutableStateOf(subCat.title) }
     AlertDialog(
       onDismissRequest = { activeSubOdDialog = null },
-      shape = RoundedCornerShape(24.dp),
+      shape = RoundedCornerShape(26.dp),
       title = {
-        Text(
-          text = "Log ${subCat.shortTag} On-Duty",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold
+        ExecutiveDialogHeader(
+          icon = Icons.Default.School,
+          accent = BadgeOnDutyBlue,
+          title = "Log ${subCat.shortTag} On-Duty",
+          subtitle = "DME / UNIVERSITY SUB-QUOTA • ${ClinicalDateFormatter.formatFriendlyDate(odDate)}"
         )
       },
       text = {
@@ -1030,52 +1031,80 @@ fun DualHolidayDutyColLoggerCard(
         modifier = Modifier.fillMaxWidth()
       )
 
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+      Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = EmeraldOptimal.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.28f)),
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(14.dp))
+          .clickable { alsoScheduleColNow = !alsoScheduleColNow }
       ) {
         Row(
-          verticalAlignment = Alignment.CenterVertically,
           modifier = Modifier
-            .weight(1f)
-            .clickable { alsoScheduleColNow = !alsoScheduleColNow }
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+          verticalAlignment = Alignment.CenterVertically
         ) {
           Checkbox(
             checked = alsoScheduleColNow,
             onCheckedChange = { alsoScheduleColNow = it }
           )
-          Text(
-            text = "Simultaneously pair & book COL date (100% Verified)",
-            style = MaterialTheme.typography.bodySmall,
-            fontSize = 11.sp
-          )
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+              text = "Simultaneously pair & book COL date (100% Verified)",
+              style = MaterialTheme.typography.labelMedium,
+              fontWeight = FontWeight.Bold,
+              color = EmeraldOptimal,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
+            Text(
+              text = if (alsoScheduleColNow) {
+                "Auto-links ${ClinicalDateFormatter.formatFriendlyDate(dutyDateIso)} duty → ${ClinicalDateFormatter.formatFriendlyDate(colDateIso)} COL"
+              } else {
+                "Banks ${ClinicalDateFormatter.formatFriendlyDate(dutyDateIso)} as an unused GH credit for future COL"
+              },
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 10.sp,
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
         }
+      }
 
-        Button(
-          onClick = {
-            val isoRegex = Regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
-            if (dutyDateIso.matches(isoRegex)) {
-              val targetCol = if (alsoScheduleColNow && colDateIso.matches(isoRegex)) colDateIso else ""
-              onLogDualDutyAndCol(dutyDateIso, targetCol, dutyNotes)
-            }
-          },
-          shape = RoundedCornerShape(12.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = EmeraldOptimal,
-            contentColor = Color.White
-          ),
-          modifier = Modifier.testTag("submit_dual_duty_col_btn")
-        ) {
-          Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(16.dp))
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = if (alsoScheduleColNow) "Log Duty + COL Pair" else "Bank GH Credit",
-            fontFamily = JetBrainsMonoFontFamily,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold
-          )
-        }
+      Button(
+        onClick = {
+          val isoRegex = Regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+          if (dutyDateIso.matches(isoRegex)) {
+            val targetCol = if (alsoScheduleColNow && colDateIso.matches(isoRegex)) colDateIso else ""
+            onLogDualDutyAndCol(dutyDateIso, targetCol, dutyNotes)
+          }
+        },
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.buttonColors(
+          containerColor = EmeraldOptimal,
+          contentColor = Color.White
+        ),
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(44.dp)
+          .testTag("submit_dual_duty_col_btn")
+      ) {
+        Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(17.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+          text = if (alsoScheduleColNow) "Log GH Duty + Paired COL (100% Verified)" else "Bank Unclaimed GH Duty Credit",
+          fontFamily = JetBrainsMonoFontFamily,
+          fontSize = 11.5.sp,
+          fontWeight = FontWeight.Bold,
+          maxLines = 1,
+          softWrap = false
+        )
       }
     }
   }
@@ -1226,12 +1255,13 @@ fun TnGovtLtcBlockTrackerCard(
     var encashInput by remember { mutableStateOf(ltcState.elEncashedWithLtcDays.toString()) }
     AlertDialog(
       onDismissRequest = { showEditLtcDialog = false },
-      shape = RoundedCornerShape(24.dp),
+      shape = RoundedCornerShape(26.dp),
       title = {
-        Text(
-          text = "Update 2024–2027 LTC Block Status",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold
+        ExecutiveDialogHeader(
+          icon = Icons.Default.FlightTakeoff,
+          accent = BadgePlGold,
+          title = "Update 2024–2027 LTC Block",
+          subtitle = "HOME TOWN & ALL-INDIA LTC • 10D EL ENCASHMENT"
         )
       },
       text = {
@@ -1745,20 +1775,16 @@ fun WhatIfLeaveSimulatorCard(
       }
 
       Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
+        DatePickerOutlinedField(
           value = simStart,
           onValueChange = { simStart = it.trim() },
-          label = { Text("Trip Start (YYYY-MM-DD)") },
-          singleLine = true,
-          shape = RoundedCornerShape(12.dp),
+          label = "Trip Start",
           modifier = Modifier.weight(1f)
         )
-        OutlinedTextField(
+        DatePickerOutlinedField(
           value = simEnd,
           onValueChange = { simEnd = it.trim() },
-          label = { Text("Trip End (YYYY-MM-DD)") },
-          singleLine = true,
-          shape = RoundedCornerShape(12.dp),
+          label = "Trip End",
           modifier = Modifier.weight(1f)
         )
       }
@@ -1826,10 +1852,11 @@ fun WhatIfLeaveSimulatorCard(
         if (splicePreview.workingDaysToDebit.isNotEmpty() && !isAlert) {
           Button(
             onClick = {
+              val friendlyRange = ClinicalDateFormatter.formatRangeFriendly(simStart, simEnd)
               onCommitSimulatedWorkingDays(
                 simCategory,
                 splicePreview.workingDaysToDebit.map { it.dateIso },
-                "Booked via What-If Simulator ($simStart → $simEnd, weekends/GH auto-skipped)"
+                "Booked via What-If Simulator ($friendlyRange, weekends/GH auto-skipped)"
               )
             },
             shape = RoundedCornerShape(12.dp),

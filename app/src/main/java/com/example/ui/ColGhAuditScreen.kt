@@ -543,10 +543,6 @@ fun ColGhAuditTabScreen(
         }
       }
     }
-
-    item {
-      Spacer(modifier = Modifier.height(84.dp))
-    }
   }
 
   // Modal 1: Pair an unaccounted COL with any Unused GH Worked credit (or custom GH date)
@@ -869,7 +865,7 @@ private fun ColGhAuditSquircleCard(
           )
           ClinicalDateFormatter.dayOfWeekShort(item.colDateIso)?.let { dow ->
             Text(
-              text = "$dow • ${item.colDateIso}",
+              text = "$dow • COL Availed",
               fontFamily = JetBrainsMonoFontFamily,
               fontSize = 9.sp,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -909,7 +905,7 @@ private fun ColGhAuditSquircleCard(
           )
           ClinicalDateFormatter.dayOfWeekShort(item.inLieuDateIso)?.let { dow ->
             Text(
-              text = "$dow • ${item.inLieuDateIso}",
+              text = "$dow • Cited Duty",
               fontFamily = JetBrainsMonoFontFamily,
               fontSize = 9.sp,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -953,7 +949,7 @@ private fun ColGhAuditSquircleCard(
           )
           ClinicalDateFormatter.dayOfWeekShort(item.ghWorkedDateIso)?.let { dow ->
             Text(
-              text = "$dow • ${item.ghWorkedDateIso}",
+              text = "$dow • Hospital Duty",
               fontFamily = JetBrainsMonoFontFamily,
               fontSize = 9.sp,
               color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -989,9 +985,11 @@ private fun ColGhAuditSquircleCard(
                 Icon(Icons.Default.AddLink, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                  text = "Pair w/ Unused GH (${item.suggestedFixGhDateIso})",
+                  text = "Pair w/ GH (${ClinicalDateFormatter.formatFriendlyDate(item.suggestedFixGhDateIso)})",
                   fontSize = 11.sp,
-                  fontWeight = FontWeight.Bold
+                  fontWeight = FontWeight.Bold,
+                  maxLines = 1,
+                  softWrap = false
                 )
               }
             }
@@ -1007,6 +1005,8 @@ private fun ColGhAuditSquircleCard(
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
+                maxLines = 1,
+                softWrap = false,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
               )
             }
@@ -1024,9 +1024,11 @@ private fun ColGhAuditSquircleCard(
                 modifier = Modifier.weight(1f)
               ) {
                 Text(
-                  text = "Pair w/ Unused GH (${item.suggestedFixGhDateIso})",
+                  text = "Pair w/ GH (${ClinicalDateFormatter.formatFriendlyDate(item.suggestedFixGhDateIso)})",
                   fontSize = 11.sp,
-                  fontWeight = FontWeight.Bold
+                  fontWeight = FontWeight.Bold,
+                  maxLines = 1,
+                  softWrap = false
                 )
               }
             }
@@ -1038,10 +1040,12 @@ private fun ColGhAuditSquircleCard(
                 .clickable { onSyncInLieuToGhColumn() }
             ) {
               Text(
-                text = "+ Add ${item.inLieuDateIso} to GH Col",
+                text = "+ Add ${ClinicalDateFormatter.formatFriendlyDate(item.inLieuDateIso)} to GH Col",
                 color = BadgeGhLime,
                 fontWeight = FontWeight.Bold,
                 fontSize = 11.sp,
+                maxLines = 1,
+                softWrap = false,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
               )
             }
@@ -1059,9 +1063,11 @@ private fun ColGhAuditSquircleCard(
             Icon(Icons.Default.EventAvailable, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-              text = "Avail New COL Leave Against GH (${item.ghWorkedDateIso})",
+              text = "Avail New COL Leave Against GH (${ClinicalDateFormatter.formatFriendlyDate(item.ghWorkedDateIso)})",
               fontSize = 12.sp,
-              fontWeight = FontWeight.Bold
+              fontWeight = FontWeight.Bold,
+              maxLines = 1,
+              softWrap = false
             )
           }
         }
