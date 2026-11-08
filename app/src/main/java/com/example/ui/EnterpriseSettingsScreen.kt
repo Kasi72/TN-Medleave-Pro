@@ -101,6 +101,8 @@ import com.example.domain.RemoteConfigHolidaySnapshot
 import com.example.domain.TnHolidayBackgroundSyncService
 import com.example.domain.TnHolidayRemoteConfigService
 import com.example.domain.TnHolidays2027Catalog
+import com.example.ui.theme.AppThemeController
+import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgeOnDutyBlue
@@ -108,7 +110,14 @@ import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.IosDarkDockSurface
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.IosSquircleGlassFill
+import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalAppThemeMode
 import com.example.ui.theme.NeonAquaAccent
 import com.example.ui.theme.NeonCyanBright
 import com.example.ui.theme.NeonCyanText
@@ -225,6 +234,13 @@ object HodProfileSettingsStore {
       .edit()
       .putBoolean(KEY_INCLUDE_SATURDAY_BRIDGE, enabled)
       .apply()
+  }
+
+  fun getThemeMode(context: Context): AppThemeMode =
+    AppThemeController.getThemeMode(context)
+
+  fun setThemeMode(context: Context, mode: AppThemeMode) {
+    AppThemeController.setThemeMode(context, mode)
   }
 
   fun saveProfile(
@@ -489,7 +505,14 @@ fun EnterpriseSettingsPageContent(
       contentPadding = PaddingValues(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 104.dp),
       verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-      // Prominent GitHub App Update & Release Sync Card (Always accessible at the top of Settings)
+      // 1. Visual Theme Studio Selector Card (Emerald Green, Clinical White, Obsidian Dark)
+      item {
+        AppearanceThemeSelectorCard(
+          onShowStatusBanner = onShowStatusBanner
+        )
+      }
+
+      // 2. Prominent GitHub App Update & Release Sync Card (Always accessible at the top of Settings)
       item {
         GitHubOtaAppUpdateCard(
           onTriggerHolidaySync = onTriggerHolidaySync,
@@ -1416,24 +1439,20 @@ private fun DataAndCalendarSyncSubTab(
             )
           }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          OutlinedTextField(
-            value = newHolDateIso,
-            onValueChange = { newHolDateIso = it.trim() },
-            label = { Text("Date (YYYY-MM-DD)") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.weight(1f)
-          )
-          OutlinedTextField(
-            value = newHolNameEn,
-            onValueChange = { newHolNameEn = it },
-            label = { Text("Holiday Name (English)") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.weight(1.3f)
-          )
-        }
+        DatePickerOutlinedField(
+          value = newHolDateIso,
+          onValueChange = { newHolDateIso = it.trim() },
+          label = "Holiday Date (YYYY-MM-DD)",
+          modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+          value = newHolNameEn,
+          onValueChange = { newHolNameEn = it },
+          label = { Text("Holiday Name (English)") },
+          singleLine = true,
+          shape = RoundedCornerShape(14.dp),
+          modifier = Modifier.fillMaxWidth()
+        )
         Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.SpaceBetween,
@@ -1444,7 +1463,7 @@ private fun DataAndCalendarSyncSubTab(
             onValueChange = { newHolNameTa = it },
             label = { Text("Tamil Name (Optional)") },
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(14.dp),
             modifier = Modifier.weight(1f)
           )
           Spacer(modifier = Modifier.width(10.dp))
@@ -1867,7 +1886,7 @@ private fun SettingsMetricPill(
       Text(
         text = value,
         style = MaterialTheme.typography.labelMedium.copy(
-          fontFamily = FontFamily.Monospace,
+          fontFamily = JetBrainsMonoFontFamily,
           fontSize = 11.sp,
           lineHeight = 14.sp
         ),
@@ -1877,6 +1896,350 @@ private fun SettingsMetricPill(
         softWrap = false,
         overflow = TextOverflow.Ellipsis
       )
+    }
+  }
+}
+
+@Composable
+fun AppearanceThemeSelectorCard(
+  onShowStatusBanner: (String) -> Unit
+) {
+  val context = LocalContext.current
+  val currentTheme = LocalAppThemeMode.current
+
+  Surface(
+    shape = IosSharpCardShape,
+    color = Color.Transparent,
+    tonalElevation = 0.dp,
+    shadowElevation = 4.dp,
+    modifier = Modifier
+      .fillMaxWidth()
+      .testTag("appearance_theme_selector_card")
+      .iosFrostedGlassCard(
+        accentColor = EmeraldOptimal,
+        shape = IosSharpCardShape,
+        borderWidth = 1.25.dp,
+        borderAlpha = 0.50f
+      )
+  ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+      // Sharp Top iOS Accent Laser Strip
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(2.5.dp)
+          .background(
+            Brush.horizontalGradient(
+              listOf(EmeraldOptimal, BadgeColCyan, EmeraldOptimal)
+            )
+          )
+      )
+
+      Column(
+        modifier = Modifier.padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(11.dp)
+      ) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.weight(1f)
+          ) {
+            Box(
+              modifier = Modifier
+                .size(36.dp)
+                .clip(IosSharpButtonShape)
+                .background(EmeraldOptimal.copy(alpha = 0.16f))
+                .border(1.dp, EmeraldOptimal.copy(alpha = 0.45f), IosSharpButtonShape),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = "Appearance & Theme Mode",
+                tint = EmeraldOptimal,
+                modifier = Modifier.size(19.dp)
+              )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                text = "iOS 18 APPEARANCE & THEME ENGINE",
+                style = MaterialTheme.typography.labelSmall,
+                color = EmeraldOptimal,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.3.sp,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+              )
+              Text(
+                text = "Select Green, White or Dark Theme",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-0.2).sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+          }
+
+          Spacer(modifier = Modifier.width(8.dp))
+
+          Surface(
+            shape = IosSharpBadgeShape,
+            color = EmeraldOptimal.copy(alpha = 0.15f),
+            border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.45f))
+          ) {
+            Text(
+              text = currentTheme.shortBadge,
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 9.5.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = EmeraldOptimal,
+              maxLines = 1,
+              softWrap = false,
+              modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+          }
+        }
+
+        // Apple iOS UISegmentedControl Quick Theme Switcher Bar (Sharp Squircle Track & Thumb)
+        Surface(
+          shape = IosSharpWellShape,
+          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.40f)),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            AppThemeMode.entries.forEachIndexed { idx, mode ->
+              val isSelected = currentTheme == mode
+              Box(
+                modifier = Modifier
+                  .weight(1f)
+                  .height(32.dp)
+                  .clip(IosSharpButtonShape)
+                  .background(
+                    if (isSelected) EmeraldOptimal else Color.Transparent
+                  )
+                  .then(
+                    if (isSelected) {
+                      Modifier.border(1.dp, Color.White.copy(alpha = 0.40f), IosSharpButtonShape)
+                    } else {
+                      Modifier
+                    }
+                  )
+                  .clickable {
+                    HodProfileSettingsStore.setThemeMode(context, mode)
+                    onShowStatusBanner("Appearance switched to ${mode.displayName} (${mode.subtitle})!")
+                  },
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = mode.displayName,
+                  style = MaterialTheme.typography.labelMedium,
+                  fontSize = 11.sp,
+                  fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                  letterSpacing = (-0.15).sp,
+                  color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
+
+              if (idx < AppThemeMode.entries.lastIndex && !isSelected && AppThemeMode.entries[idx + 1] != currentTheme) {
+                Box(
+                  modifier = Modifier
+                    .width(0.8.dp)
+                    .height(14.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.40f))
+                )
+              }
+            }
+          }
+        }
+
+        // 3-Column Sharp-Edged Interactive Visual Theme Swatch Cards
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+          horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+          AppThemeMode.entries.forEach { mode ->
+            val isSelected = currentTheme == mode
+            val previewCanvasBg = when (mode) {
+              AppThemeMode.GREEN_EMERALD -> Color(0xFFECFDF5)
+              AppThemeMode.WHITE_CLINICAL -> Color(0xFFF2F2F7)
+              AppThemeMode.DARK_OBSIDIAN -> Color(0xFF07111E)
+            }
+            val previewCardBg = when (mode) {
+              AppThemeMode.GREEN_EMERALD -> Color(0xFFD1FAE5)
+              AppThemeMode.WHITE_CLINICAL -> Color(0xFFFFFFFF)
+              AppThemeMode.DARK_OBSIDIAN -> Color(0xFF102136)
+            }
+            val previewAccent = when (mode) {
+              AppThemeMode.GREEN_EMERALD -> Color(0xFF059669)
+              AppThemeMode.WHITE_CLINICAL -> Color(0xFF0A2540)
+              AppThemeMode.DARK_OBSIDIAN -> Color(0xFF38BDF8)
+            }
+            val previewText = when (mode) {
+              AppThemeMode.GREEN_EMERALD -> Color(0xFF064E3B)
+              AppThemeMode.WHITE_CLINICAL -> Color(0xFF0F172A)
+              AppThemeMode.DARK_OBSIDIAN -> Color(0xFFF8FAFC)
+            }
+
+            Surface(
+              shape = IosSharpWellShape,
+              color = if (isSelected) {
+                EmeraldOptimal.copy(alpha = 0.12f)
+              } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+              },
+              border = BorderStroke(
+                width = if (isSelected) 1.8.dp else 1.dp,
+                color = if (isSelected) EmeraldOptimal else MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)
+              ),
+              modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .clip(IosSharpWellShape)
+                .clickable {
+                  HodProfileSettingsStore.setThemeMode(context, mode)
+                  onShowStatusBanner("Appearance switched to ${mode.displayName} (${mode.subtitle})!")
+                }
+                .testTag("theme_option_${mode.id}")
+            ) {
+              Column(
+                modifier = Modifier
+                  .fillMaxHeight()
+                  .padding(9.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+              ) {
+                // Mini Sharp-Edged iOS Window Preview
+                Box(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(IosSharpButtonShape)
+                    .background(previewCanvasBg)
+                    .border(1.dp, previewAccent.copy(alpha = 0.40f), IosSharpButtonShape)
+                    .padding(5.dp)
+                ) {
+                  Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Box(
+                          modifier = Modifier
+                            .size(6.dp)
+                            .clip(IosSharpMicroShape)
+                            .background(previewAccent)
+                        )
+                        Box(
+                          modifier = Modifier
+                            .size(6.dp)
+                            .clip(IosSharpMicroShape)
+                            .background(EmeraldOptimal)
+                        )
+                      }
+                      if (isSelected) {
+                        Icon(
+                          imageVector = Icons.Default.CheckCircle,
+                          contentDescription = "Selected Theme",
+                          tint = EmeraldOptimal,
+                          modifier = Modifier.size(13.dp)
+                        )
+                      }
+                    }
+                    Box(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .height(14.dp)
+                        .clip(IosSharpMicroShape)
+                        .background(previewCardBg)
+                        .padding(horizontal = 4.dp),
+                      contentAlignment = Alignment.CenterStart
+                    ) {
+                      Box(
+                        modifier = Modifier
+                          .width(24.dp)
+                          .height(4.dp)
+                          .clip(IosSharpMicroShape)
+                          .background(previewText.copy(alpha = 0.65f))
+                      )
+                    }
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(7.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                  Text(
+                    text = mode.displayName,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 11.5.sp,
+                    lineHeight = 14.sp,
+                    letterSpacing = (-0.15).sp,
+                    color = if (isSelected) EmeraldOptimal else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                  Text(
+                    text = mode.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 9.sp,
+                    lineHeight = 11.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Surface(
+                  shape = IosSharpMicroShape,
+                  color = if (isSelected) EmeraldOptimal else MaterialTheme.colorScheme.surface,
+                  border = BorderStroke(
+                    1.dp,
+                    if (isSelected) EmeraldOptimal else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                  ),
+                  modifier = Modifier.fillMaxWidth()
+                ) {
+                  Text(
+                    text = if (isSelected) "ACTIVE" else "SELECT",
+                    fontFamily = JetBrainsMonoFontFamily,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier
+                      .padding(vertical = 4.dp)
+                      .align(Alignment.CenterHorizontally)
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -2009,7 +2372,7 @@ private fun GitHubOtaAppUpdateCard(
         ) {
           Text(
             text = statusText,
-            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
             color = statusColor,
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
@@ -2035,16 +2398,22 @@ private fun GitHubOtaAppUpdateCard(
           ) {
             Text(
               text = "Installed Build: v${BuildConfig.VERSION_NAME} (Code ${BuildConfig.VERSION_CODE})",
-              style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+              style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
               color = NeonCyanText,
-              fontWeight = FontWeight.Bold
+              fontWeight = FontWeight.Bold,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis,
+              modifier = Modifier.weight(1f)
             )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
               text = if (ghRepo.isNotBlank()) "$ghOwner/$ghRepo ($ghBranch)" else "$ghOwner (Auto-Detect Repo)",
-              style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+              style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
               color = NeonAquaAccent,
               fontWeight = FontWeight.Bold,
               maxLines = 1,
+              softWrap = false,
               overflow = TextOverflow.Ellipsis
             )
           }
@@ -2060,7 +2429,7 @@ private fun GitHubOtaAppUpdateCard(
             if (check.isSuccess) {
               Text(
                 text = "Latest Release: ${check.remoteVersionLabel} • Commit #${check.latestCommitShaShort} (${check.publishedAtFormatted})",
-                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
                 color = NeonCyanText
               )
               if (check.latestCommitMessage.isNotBlank()) {
@@ -2477,7 +2846,7 @@ private fun FirebaseRemoteConfigHolidayCard(
         ) {
           Text(
             text = if (isFetchingRc) "FETCHING RC..." else "LIVE RC ACTIVE",
-            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
             color = if (isFetchingRc) BadgePlGold else NeonAquaAccent,
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
@@ -2537,12 +2906,12 @@ private fun FirebaseRemoteConfigHolidayCard(
           )
           Text(
             text = "Source: ${rcSnapshot.fetchSourceLabel} • Last Fetched: ${rcSnapshot.lastFetchedFormatted}",
-            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
             color = NeonCyanText
           )
           Text(
             text = "Parameter Key: ${TnHolidayRemoteConfigService.KEY_HOLIDAYS_REMOTE_JSON} → Room DB (tn_holidays)",
-            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
             color = Color(0xFF94A3B8)
           )
         }

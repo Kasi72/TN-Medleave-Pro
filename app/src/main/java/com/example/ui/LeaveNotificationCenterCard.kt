@@ -77,6 +77,7 @@ import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusVerifiedGreen
 
@@ -222,7 +223,7 @@ fun SmartHolidayNotificationCard(
             fontSize = 11.sp,
             lineHeight = 14.sp,
             fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = JetBrainsMonoFontFamily,
             color = if (hasPermission) EmeraldOptimal else BadgePlGold,
             maxLines = 1,
             softWrap = false
@@ -412,7 +413,7 @@ private fun CompactAlertPreviewRow(
           fontSize = 10.sp,
           lineHeight = 13.sp,
           fontWeight = FontWeight.Bold,
-          fontFamily = FontFamily.Monospace,
+          fontFamily = JetBrainsMonoFontFamily,
           maxLines = 1,
           softWrap = false,
           overflow = TextOverflow.Ellipsis,
@@ -533,6 +534,7 @@ fun SmartNotificationCenterDialog(
   onShowStatusBanner: (String) -> Unit
 ) {
   val context = LocalContext.current
+  val designation = remember { HodProfileSettingsStore.getDesignation(context) }
   var selectedFilter by remember { mutableStateOf<LeaveAlertType?>(null) }
   var leadDays by remember {
     mutableIntStateOf(LeaveNotificationHelper.getLeadDaysPreference(context))
@@ -622,7 +624,7 @@ fun SmartNotificationCenterDialog(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                   Text(
-                    text = "HOD PSYCHIATRY • SMART PUSH ALERTS",
+                    text = "${designation.uppercase()} • SMART PUSH ALERTS",
                     style = MaterialTheme.typography.labelMedium,
                     color = Color(0xFF34D399),
                     fontSize = 10.sp,
@@ -791,7 +793,8 @@ fun SmartNotificationCenterDialog(
                   scheduledIds = LeaveNotificationHelper.getScheduledAlertIds(context)
                   if (active) {
                     LeaveNotificationHelper.postNotificationNow(context, alert)
-                    val msg = "Reminder scheduled ($leadDays days before ${alert.targetDateIso}) & push notification sent!"
+                    val friendlyDate = ClinicalDateFormatter.formatFriendlyDate(alert.targetDateIso)
+                    val msg = "Reminder scheduled ($leadDays days before $friendlyDate) & push notification sent!"
                     localBanner = msg
                     onShowStatusBanner(msg)
                   } else {
@@ -801,7 +804,7 @@ fun SmartNotificationCenterDialog(
               },
               onApplyBridge = { bridge ->
                 onApplyBridge(bridge)
-                localBanner = "Applied '${bridge.title}' directly to your 2026 Leave Ledger!"
+                localBanner = "Applied '${bridge.title}' directly to your ${state.selectedYear} Leave Ledger!"
               }
             )
           }
@@ -908,7 +911,7 @@ private fun FullNotificationAlertCard(
             fontSize = 10.sp,
             lineHeight = 13.sp,
             fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = JetBrainsMonoFontFamily,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis

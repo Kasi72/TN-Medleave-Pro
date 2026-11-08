@@ -91,10 +91,16 @@ import com.example.ui.theme.BadgeMlOrange
 import com.example.ui.theme.BadgeOnDutyBlue
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
+import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.IosDarkDockSurface
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.IosSquircleGlassFill
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalAppThemeMode
 import com.example.ui.theme.NeonAquaAccent
 import com.example.ui.theme.NeonCyanBright
 import com.example.ui.theme.NeonCyanText
@@ -103,7 +109,7 @@ import com.example.ui.theme.StatusPendingOrange
 import com.example.ui.theme.StatusVerifiedGreen
 
 // ============================================================================
-// ENTERPRISE SUB-TAB SWITCHER (FOR CLEAN, UNCLUTTERED MULTI-VIEW PAGES)
+// APPLE iOS 18 PRO SHARP-EDGED SEGMENTED SUB-TAB SWITCHER
 // ============================================================================
 
 data class SubTabOption(
@@ -120,97 +126,137 @@ fun EnterpriseSubTabSwitcher(
   onSelectTab: (Int) -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val themeMode = LocalAppThemeMode.current
+  val isWhiteTheme = themeMode == AppThemeMode.WHITE_CLINICAL
+  val isGreenTheme = themeMode == AppThemeMode.GREEN_EMERALD
+
+  val trackColor = when (themeMode) {
+    AppThemeMode.WHITE_CLINICAL -> Color(0xFFE5E5EA) // Authentic iOS UISegmentedControl track
+    AppThemeMode.GREEN_EMERALD -> Color(0xFF063B36)
+    AppThemeMode.DARK_OBSIDIAN -> IosDarkDockSurface
+  }
+  val trackBorderColor = when (themeMode) {
+    AppThemeMode.WHITE_CLINICAL -> Color(0xFFCBD5E1)
+    AppThemeMode.GREEN_EMERALD -> Color(0xFF34D399).copy(alpha = 0.45f)
+    AppThemeMode.DARK_OBSIDIAN -> NeonCyanText.copy(alpha = 0.38f)
+  }
+
   Surface(
-    shape = RoundedCornerShape(18.dp),
-    color = IosDarkDockSurface,
+    shape = IosSharpWellShape,
+    color = trackColor,
     tonalElevation = 4.dp,
-    shadowElevation = 4.dp,
+    shadowElevation = 3.dp,
     modifier = modifier
       .fillMaxWidth()
       .border(
         width = 1.dp,
-        color = NeonCyanText.copy(alpha = 0.35f),
-        shape = RoundedCornerShape(18.dp)
+        color = trackBorderColor,
+        shape = IosSharpWellShape
       )
   ) {
     Row(
       modifier = Modifier
         .fillMaxWidth()
         .horizontalScroll(rememberScrollState())
-        .padding(5.dp),
-      horizontalArrangement = Arrangement.spacedBy(6.dp),
+        .padding(3.5.dp),
+      horizontalArrangement = Arrangement.spacedBy(4.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      tabs.forEach { tab ->
+      tabs.forEachIndexed { idx, tab ->
         val isSelected = tab.index == selectedIndex
+        val activeThumbBg = when {
+          isSelected && isWhiteTheme -> Color.White
+          isSelected && isGreenTheme -> Color(0xFF047857)
+          isSelected -> IosSquircleGlassFill
+          isWhiteTheme -> Color.Transparent
+          isGreenTheme -> Color(0xFF042F2E)
+          else -> Color(0xFF0C2138)
+        }
         val bgColor by animateColorAsState(
-          targetValue = if (isSelected) IosSquircleGlassFill else Color(0xFF0C2138),
+          targetValue = activeThumbBg,
           animationSpec = spring(),
           label = "subtab_bg"
         )
+        val activeAccent = when {
+          isWhiteTheme -> EmeraldOptimal
+          isGreenTheme -> Color(0xFF6EE7B7)
+          else -> NeonAquaAccent
+        }
+        val inactiveText = when {
+          isWhiteTheme -> Color(0xFF334155)
+          isGreenTheme -> Color(0xFFD1FAE5).copy(alpha = 0.85f)
+          else -> NeonCyanBright
+        }
+
         Surface(
-          shape = RoundedCornerShape(14.dp),
+          shape = IosSharpButtonShape,
           color = bgColor,
-          shadowElevation = if (isSelected) 4.dp else 0.dp,
+          shadowElevation = if (isSelected) 3.dp else 0.dp,
           border = BorderStroke(
-            width = if (isSelected) 1.4.dp else 1.dp,
-            color = if (isSelected) NeonAquaAccent else NeonCyanText.copy(alpha = 0.24f)
+            width = if (isSelected) 1.25.dp else 0.75.dp,
+            color = if (isSelected) {
+              activeAccent
+            } else {
+              if (isWhiteTheme) Color(0xFFCBD5E1).copy(alpha = 0.55f)
+              else NeonCyanText.copy(alpha = 0.22f)
+            }
           ),
           modifier = Modifier
-            .height(38.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .height(35.dp)
+            .clip(IosSharpButtonShape)
             .clickable { onSelectTab(tab.index) }
             .testTag("subtab_option_${tab.index}")
         ) {
           Row(
-            modifier = Modifier.padding(horizontal = 12.dp),
+            modifier = Modifier.padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
           ) {
             Box(
               modifier = Modifier
-                .size(6.dp)
-                .clip(CircleShape)
+                .size(width = 6.dp, height = 6.dp)
+                .clip(IosSharpMicroShape)
                 .background(
                   if (isSelected) {
-                    NeonAquaAccent
+                    activeAccent
                   } else {
-                    NeonCyanBright.copy(alpha = 0.70f)
+                    inactiveText.copy(alpha = 0.55f)
                   }
                 )
             )
             Text(
               text = tab.title,
               style = MaterialTheme.typography.labelLarge,
-              fontSize = 12.sp,
-              lineHeight = 15.sp,
-              letterSpacing = 0.3.sp,
-              fontWeight = FontWeight.Bold,
+              fontSize = 11.5.sp,
+              lineHeight = 14.sp,
+              letterSpacing = (-0.15).sp,
+              fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
               color = if (isSelected) {
-                NeonAquaAccent
+                if (isWhiteTheme) Color(0xFF0F172A) else activeAccent
               } else {
-                NeonCyanBright
+                inactiveText
               },
               maxLines = 1,
               softWrap = false
             )
             if (!tab.badge.isNullOrBlank()) {
               Surface(
-                shape = RoundedCornerShape(7.dp),
+                shape = IosSharpMicroShape,
                 color = if (isSelected) {
-                  NeonAquaAccent.copy(alpha = 0.20f)
+                  activeAccent.copy(alpha = 0.18f)
                 } else {
-                  NeonCyanText.copy(alpha = 0.14f)
+                  if (isWhiteTheme) Color(0xFFCBD5E1).copy(alpha = 0.45f)
+                  else NeonCyanText.copy(alpha = 0.14f)
                 }
               ) {
                 Text(
                   text = tab.badge,
                   fontFamily = JetBrainsMonoFontFamily,
-                  fontSize = 9.sp,
-                  lineHeight = 11.sp,
-                  letterSpacing = 0.25.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = if (isSelected) NeonAquaAccent else NeonCyanBright,
+                  fontSize = 8.5.sp,
+                  lineHeight = 10.sp,
+                  letterSpacing = 0.2.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = if (isSelected) activeAccent else inactiveText,
                   maxLines = 1,
                   softWrap = false,
                   modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
@@ -218,6 +264,19 @@ fun EnterpriseSubTabSwitcher(
               }
             }
           }
+        }
+
+        // Authentic iOS UISegmentedControl vertical hairline separator
+        if (idx < tabs.lastIndex && !isSelected && tabs[idx + 1].index != selectedIndex) {
+          Box(
+            modifier = Modifier
+              .width(0.8.dp)
+              .height(16.dp)
+              .background(
+                if (isWhiteTheme) Color(0xFFCBD5E1)
+                else Color.White.copy(alpha = 0.14f)
+              )
+          )
         }
       }
     }

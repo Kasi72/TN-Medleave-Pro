@@ -63,6 +63,8 @@ import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
@@ -374,23 +376,18 @@ fun EnterpriseLeaveBalanceCircularCard(
   )
 
   Surface(
-    shape = RoundedCornerShape(28.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 6.dp,
+    shape = IosSharpCardShape,
+    color = Color.Transparent,
+    tonalElevation = 0.dp,
+    shadowElevation = 5.dp,
     modifier = modifier
       .fillMaxWidth()
       .testTag("leave_balance_circular_gauge_card")
-      .border(
-        width = 1.2.dp,
-        brush = Brush.linearGradient(
-          colors = listOf(
-            animatedPrimaryColor.copy(alpha = 0.45f),
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-            activeMetrics.secondaryColor.copy(alpha = 0.35f)
-          )
-        ),
-        shape = RoundedCornerShape(28.dp)
+      .iosFrostedGlassCard(
+        accentColor = animatedPrimaryColor,
+        shape = IosSharpCardShape,
+        borderWidth = 1.25.dp,
+        borderAlpha = 0.52f
       )
   ) {
     Column(
@@ -399,7 +396,7 @@ fun EnterpriseLeaveBalanceCircularCard(
         .background(
           Brush.radialGradient(
             colors = listOf(
-              animatedPrimaryColor.copy(alpha = 0.08f),
+              animatedPrimaryColor.copy(alpha = 0.09f),
               Color.Transparent
             ),
             radius = 650f
@@ -419,10 +416,10 @@ fun EnterpriseLeaveBalanceCircularCard(
           verticalAlignment = Alignment.CenterVertically
         ) {
           Surface(
-            shape = RoundedCornerShape(14.dp),
+            shape = IosSharpButtonShape,
             color = animatedPrimaryColor.copy(alpha = 0.14f),
-            border = BorderStroke(1.dp, animatedPrimaryColor.copy(alpha = 0.35f)),
-            modifier = Modifier.size(42.dp)
+            border = BorderStroke(1.dp, animatedPrimaryColor.copy(alpha = 0.42f)),
+            modifier = Modifier.size(40.dp)
           ) {
             Box(contentAlignment = Alignment.Center) {
               Icon(

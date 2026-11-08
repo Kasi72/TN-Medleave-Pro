@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,6 +91,8 @@ fun PsychiatryLeaveAnalyticsSection(
   state: LeaveUiState.Success,
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
+  val department = remember { HodProfileSettingsStore.getDepartment(context) }
   val selectedYear = state.selectedYear
   val yearRecords = remember(state.allRecords, selectedYear) {
     state.allRecords.filter { it.year == selectedYear }
@@ -160,7 +163,7 @@ fun PsychiatryLeaveAnalyticsSection(
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
               Text(
-                text = "DEPT. OF PSYCHIATRY • VISUAL ANALYTICS",
+                text = "${department.uppercase()} • VISUAL ANALYTICS",
                 style = MaterialTheme.typography.labelMedium,
                 color = EmeraldOptimal,
                 fontSize = 10.sp,
@@ -690,7 +693,7 @@ private fun MultiYearComparisonChartCard(
   allRecords: List<LeaveRecord>,
   selectedYear: Long
 ) {
-  val years = listOf(2023L, 2024L, 2025L, 2026L)
+  val years = listOf(2023L, 2024L, 2025L, 2026L, 2027L)
   val yearStats = remember(allRecords) {
     years.map { yr ->
       val recs = allRecords.filter { it.year == yr }
@@ -726,7 +729,7 @@ private fun MultiYearComparisonChartCard(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-          text = "2023–2026 Multi-Year Leave & GH Duty Trend",
+          text = "2023–2027 Multi-Year Leave & GH Duty Trend",
           style = MaterialTheme.typography.titleMedium,
           fontWeight = FontWeight.Bold,
           modifier = Modifier.weight(1f),

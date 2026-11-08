@@ -412,21 +412,14 @@ private fun AddOrScrapeHolidayDialog(
 
   AlertDialog(
     onDismissRequest = onDismiss,
+    shape = RoundedCornerShape(26.dp),
     title = {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-          imageVector = Icons.Default.Storage,
-          contentDescription = null,
-          tint = BadgeColCyan,
-          modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-          text = "Update Local Room Holiday Database",
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold
-        )
-      }
+      ExecutiveDialogHeader(
+        icon = Icons.Default.Storage,
+        accent = BadgeColCyan,
+        title = "Update Local Holiday DB",
+        subtitle = "TN GAZETTE • ERODE COLLECTORATE"
+      )
     },
     text = {
       Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -457,12 +450,10 @@ private fun AddOrScrapeHolidayDialog(
           style = MaterialTheme.typography.bodyMedium,
           fontSize = 12.sp
         )
-        OutlinedTextField(
+        DatePickerOutlinedField(
           value = dateIso,
           onValueChange = { dateIso = it.trim() },
-          label = { Text("Holiday Date (YYYY-MM-DD)") },
-          singleLine = true,
-          shape = RoundedCornerShape(12.dp),
+          label = "Holiday Date (YYYY-MM-DD)",
           modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(

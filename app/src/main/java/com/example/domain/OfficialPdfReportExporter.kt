@@ -31,6 +31,7 @@ data class PdfReportConfig(
   val includeHolidaySummary2026: Boolean = true,
   val officerName: String = "Dr. Kasi, M.D. (Psychiatry)",
   val designation: String = "Professor & Head of Department (HOD), Dept. of Psychiatry",
+  val departmentName: String = "Department of Psychiatry",
   val institution: String = "Government Erode Medical College & Hospital, Perundurai, Erode - 638053",
   val departmentGov: String = "GOVERNMENT OF TAMIL NADU • DIRECTORATE OF MEDICAL EDUCATION & RESEARCH"
 )
@@ -181,9 +182,9 @@ object OfficialPdfReportExporter {
         }
         val cells = arrayOf(
           (index + 1).toString(),
-          item.colDateIso.ifBlank { "—" },
-          item.inLieuDateIso.ifBlank { "—" },
-          item.ghWorkedDateIso.ifBlank { "—" },
+          formatPdfDate(item.colDateIso),
+          formatPdfDate(item.inLieuDateIso),
+          formatPdfDate(item.ghWorkedDateIso),
           item.auditExplanation.take(42),
           statusText
         )
@@ -245,9 +246,9 @@ object OfficialPdfReportExporter {
           }
           val rowCells = arrayOf(
             (idx + 1).toString(),
-            rec.dateIso,
+            formatPdfDate(rec.dateIso),
             rec.category.shortLabel,
-            rec.pairedDateIso.ifBlank { "—" },
+            formatPdfDate(rec.pairedDateIso),
             rec.notes.ifBlank { rec.category.fullTitle }.take(44),
             statusLabel
           )
@@ -264,19 +265,20 @@ object OfficialPdfReportExporter {
       }
 
       // =========================================================================
-      // SECTION IV: 2026 TAMIL NADU GOVERNMENT HOLIDAYS (GH) & RESTRICTED HOLIDAYS (RH)
+      // SECTION IV: TAMIL NADU GOVERNMENT HOLIDAYS (GH) & RESTRICTED HOLIDAYS (RH)
       // =========================================================================
       if (config.includeHolidaySummary2026) {
+        val holidayYear = if (selectedYear == 2027L) 2027L else 2026L
         ensureVerticalSpace(110f)
         cursorY = drawSectionBanner(
           canvas = canvas,
           topY = cursorY,
           sectionCode = "SECTION IV",
-          title = "2026 TAMIL NADU GOVT. HOLIDAYS (GH) & RESTRICTED HOLIDAYS (RH) SUMMARY"
+          title = "$holidayYear TAMIL NADU GOVT. HOLIDAYS (GH) & RESTRICTED HOLIDAYS (RH) SUMMARY"
         )
 
-        val logged2026ByDate = allRecords
-          .filter { it.year == 2026L }
+        val loggedByDate = allRecords
+          .filter { it.year == holidayYear }
           .associateBy { it.dateIso }
 
         val holColWidths = floatArrayOf(72f, 68f, 62f, 215f, 106f)
@@ -290,17 +292,20 @@ object OfficialPdfReportExporter {
         ensureVerticalSpace(44f)
         cursorY = drawTableHeaderRow(canvas, cursorY, holColWidths, holHeaders)
 
-        val combinedHolidays = (
-          InitialLeaveSeedData.tnGovtPublicHolidays2026 +
-            InitialLeaveSeedData.tnRestrictedHolidays2026
-          ).sortedBy { it.dateIso }
+        val combinedHolidays = if (holidayYear == 2027L) {
+          (TnHolidays2027Catalog.tnGovtPublicHolidays2027 + TnHolidays2027Catalog.tnRestrictedHolidays2027)
+            .sortedBy { it.dateIso }
+        } else {
+          (InitialLeaveSeedData.tnGovtPublicHolidays2026 + InitialLeaveSeedData.tnRestrictedHolidays2026)
+            .sortedBy { it.dateIso }
+        }
 
         combinedHolidays.forEachIndexed { idx, hol ->
           if (cursorY + 20f > A4_HEIGHT - 64f) {
             startNextPage()
             cursorY = drawTableHeaderRow(canvas, cursorY, holColWidths, holHeaders)
           }
-          val loggedRecord = logged2026ByDate[hol.dateIso]
+          val loggedRecord = loggedByDate[hol.dateIso]
           val ledgerStatus = when {
             loggedRecord != null -> "LOGGED: ${loggedRecord.category.shortLabel}"
             hol.isRestrictedHoliday -> "ELIGIBLE RH (RL)"
@@ -312,7 +317,7 @@ object OfficialPdfReportExporter {
             else -> COLOR_SLATE_MUTED
           }
           val cells = arrayOf(
-            hol.dateIso,
+            formatPdfDate(hol.dateIso),
             hol.dayOfWeek,
             if (hol.isRestrictedHoliday) "TN RH (RL)" else "TN GH",
             hol.nameEnglish.take(46),
@@ -413,7 +418,7 @@ object OfficialPdfReportExporter {
     paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
     paint.textSize = 10f
     canvas.drawText(
-      "DEPARTMENT OF PSYCHIATRY • OFFICIAL LEAVE AUDIT & HOLIDAY STATEMENT",
+      "${config.departmentName.uppercase()} • OFFICIAL LEAVE AUDIT & HOLIDAY STATEMENT",
       centerX,
       83f,
       paint
@@ -504,7 +509,7 @@ object OfficialPdfReportExporter {
     paint.typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
     paint.textSize = 9.5f
     canvas.drawText(
-      "GOVT. ERODE MEDICAL COLLEGE & HOSPITAL • DEPT. OF PSYCHIATRY (HOD LEAVE AUDIT)",
+      "${config.institution.take(42).uppercase()} • ${config.departmentName.uppercase()} (LEAVE AUDIT)",
       MARGIN_H + 12f,
       43f,
       paint
@@ -824,9 +829,9 @@ object OfficialPdfReportExporter {
     val colW = CONTENT_WIDTH / 3f
     val sigY = topY + 64f
     val labels = listOf(
-      Pair(config.officerName, "Professor & HOD, Dept. of Psychiatry"),
-      Pair("Office Superintendent / JAO", "Establishment & Leave Section, GEMCH"),
-      Pair("The Dean", "Govt. Erode Medical College & Hospital")
+      Pair(config.officerName, config.designation.take(42)),
+      Pair("Office Superintendent / JAO", "Establishment & Leave Section"),
+      Pair("The Dean", config.institution.take(42))
     )
 
     labels.forEachIndexed { idx, (line1, line2) ->
@@ -934,5 +939,13 @@ object OfficialPdfReportExporter {
     } else {
       String.format(java.util.Locale.US, "%.1f", value)
     }
+  }
+
+  private fun formatPdfDate(rawIso: String): String {
+    val trimmed = rawIso.trim()
+    if (trimmed.isEmpty()) return "—"
+    return runCatching {
+      LocalDate.parse(trimmed).format(DateTimeFormatter.ofPattern("dd MMM yyyy", java.util.Locale.ENGLISH))
+    }.getOrDefault(trimmed)
   }
 }

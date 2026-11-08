@@ -80,6 +80,10 @@ import com.example.ui.theme.BadgeOnDutyBlue
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
@@ -167,7 +171,7 @@ fun OverviewTabScreen(
       }
 
       EnterpriseMeshHeroContainer(
-        cornerRadius = 28.dp,
+        cornerRadius = 12.dp,
         primaryGlowColor = Color(0xFF10B981),
         secondaryGlowColor = Color(0xFF38BDF8)
       ) {
@@ -182,18 +186,18 @@ fun OverviewTabScreen(
               verticalAlignment = Alignment.CenterVertically
             ) {
               Surface(
-                shape = RoundedCornerShape(15.dp),
+                shape = IosSharpButtonShape,
                 color = Color(0xFF34D399).copy(alpha = 0.22f),
                 modifier = Modifier
-                  .size(46.dp)
-                  .border(1.dp, Color(0xFF34D399).copy(alpha = 0.45f), RoundedCornerShape(15.dp))
+                  .size(44.dp)
+                  .border(1.dp, Color(0xFF34D399).copy(alpha = 0.50f), IosSharpButtonShape)
               ) {
                 Box(contentAlignment = Alignment.Center) {
                   Icon(
                     imageVector = Icons.Default.LocalHospital,
                     contentDescription = null,
                     tint = Color(0xFF34D399),
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                   )
                 }
               }
@@ -203,6 +207,7 @@ fun OverviewTabScreen(
                   text = officerName,
                   style = MaterialTheme.typography.titleMedium,
                   color = Color.White,
+                  letterSpacing = (-0.25).sp,
                   fontWeight = FontWeight.ExtraBold,
                   maxLines = 1,
                   softWrap = false,
@@ -212,7 +217,7 @@ fun OverviewTabScreen(
                   text = "$officerRoleAndDept • $officerCollege",
                   style = MaterialTheme.typography.bodyMedium,
                   color = Color(0xFFBAE6FD),
-                  fontSize = 11.5.sp,
+                  fontSize = 11.sp,
                   lineHeight = 14.sp,
                   maxLines = 1,
                   softWrap = false,
@@ -224,27 +229,27 @@ fun OverviewTabScreen(
             Spacer(modifier = Modifier.width(8.dp))
 
             Surface(
-              shape = RoundedCornerShape(12.dp),
+              shape = IosSharpBadgeShape,
               color = Color(0xFF10B981).copy(alpha = 0.20f),
               modifier = Modifier
-                .height(30.dp)
-                .border(1.dp, Color(0xFF34D399).copy(alpha = 0.50f), RoundedCornerShape(12.dp))
+                .height(28.dp)
+                .border(1.dp, Color(0xFF34D399).copy(alpha = 0.55f), IosSharpBadgeShape)
             ) {
               Row(
-                modifier = Modifier.padding(horizontal = 10.dp),
+                modifier = Modifier.padding(horizontal = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp)
               ) {
                 Box(
                   modifier = Modifier
-                    .size(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
+                    .size(5.dp)
+                    .clip(IosSharpMicroShape)
                     .background(Color(0xFF34D399))
                 )
                 Text(
                   text = officerIfhrmsId.ifBlank { "TN MES" },
                   fontFamily = JetBrainsMonoFontFamily,
-                  fontSize = 10.sp,
+                  fontSize = 9.5.sp,
                   fontWeight = FontWeight.ExtraBold,
                   color = Color(0xFF6EE7B7),
                   maxLines = 1,
@@ -254,14 +259,14 @@ fun OverviewTabScreen(
             }
           }
 
-          Spacer(modifier = Modifier.height(18.dp))
+          Spacer(modifier = Modifier.height(14.dp))
 
-          // Quick Remaining Quota Bar (Geometrically Uniform 3-Pill Row, Zero Overlap + Micro Progress)
+          // Quick Remaining Quota Bar (Sharp iOS Squircle 3-Pill Row)
           Row(
             modifier = Modifier
               .fillMaxWidth()
               .height(androidx.compose.foundation.layout.IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
             HeroStatPill(
               label = "CL Left (${summary.year})",
@@ -300,6 +305,16 @@ fun OverviewTabScreen(
           }
         }
       }
+    }
+
+    // Apple iOS 18 Control Center Quick-Action Bento Modules
+    item {
+      IosControlCenterBentoStrip(
+        onLogLeave = onOpenAddDialog,
+        onOpenColAudit = { onNavigateToTab(2) },
+        onOpenOptimizer = { onNavigateToTab(3) },
+        onExportPdf = onOpenPdfExportModal
+      )
     }
 
     // Live Enterprise Governance & Telemetry Strip
@@ -804,81 +819,92 @@ private fun HeroStatPill(
   progressFraction: Float = 0.75f
 ) {
   Surface(
-    shape = RoundedCornerShape(18.dp),
+    shape = IosSharpButtonShape,
     color = Color.White.copy(alpha = 0.09f),
-    modifier = modifier.border(1.dp, accent.copy(alpha = 0.42f), RoundedCornerShape(18.dp))
+    modifier = modifier
+      .clip(IosSharpButtonShape)
+      .border(1.dp, accent.copy(alpha = 0.48f), IosSharpButtonShape)
   ) {
-    Column(
-      modifier = Modifier
-        .fillMaxSize()
-        .padding(horizontal = 11.dp, vertical = 11.dp),
-      verticalArrangement = Arrangement.SpaceBetween,
-      horizontalAlignment = Alignment.Start
-    ) {
-      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-            text = label,
-            color = Color(0xFFCBD5E1),
-            fontSize = 10.sp,
-            lineHeight = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            softWrap = false,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-          )
-          Spacer(modifier = Modifier.width(4.dp))
-          MiniCircularQuotaRing(
-            remainingFraction = progressFraction,
-            accentColor = accent,
-            trackColor = Color.White.copy(alpha = 0.16f),
-            size = 20.dp,
-            strokeWidth = 2.6.dp
-          )
-        }
-        Text(
-          text = value,
-          color = accent,
-          fontWeight = FontWeight.Bold,
-          fontSize = 16.sp,
-          lineHeight = 20.sp,
-          fontFamily = JetBrainsMonoFontFamily,
-          maxLines = 1,
-          softWrap = false
-        )
-        Text(
-          text = sub,
-          color = Color.White.copy(alpha = 0.82f),
-          fontSize = 10.sp,
-          lineHeight = 12.sp,
-          maxLines = 1,
-          softWrap = false,
-          overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-        )
-      }
-
-      Spacer(modifier = Modifier.height(6.dp))
-
-      // Glassmorphic micro-telemetry bar
+    Column(modifier = Modifier.fillMaxSize()) {
+      // Sharp Top iOS Accent Laser Strip
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .height(4.dp)
-          .clip(RoundedCornerShape(2.dp))
-          .background(Color.White.copy(alpha = 0.14f))
+          .height(2.dp)
+          .background(accent)
+      )
+      Column(
+        modifier = Modifier
+          .fillMaxSize()
+          .padding(horizontal = 10.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+        horizontalAlignment = Alignment.Start
       ) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text(
+              text = label,
+              color = Color(0xFFCBD5E1),
+              fontSize = 9.5.sp,
+              lineHeight = 11.5.sp,
+              fontWeight = FontWeight.SemiBold,
+              maxLines = 1,
+              softWrap = false,
+              overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+              modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            MiniCircularQuotaRing(
+              remainingFraction = progressFraction,
+              accentColor = accent,
+              trackColor = Color.White.copy(alpha = 0.16f),
+              size = 19.dp,
+              strokeWidth = 2.4.dp
+            )
+          }
+          Text(
+            text = value,
+            color = accent,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 15.5.sp,
+            lineHeight = 19.sp,
+            fontFamily = JetBrainsMonoFontFamily,
+            maxLines = 1,
+            softWrap = false
+          )
+          Text(
+            text = sub,
+            color = Color.White.copy(alpha = 0.82f),
+            fontSize = 9.5.sp,
+            lineHeight = 11.5.sp,
+            maxLines = 1,
+            softWrap = false,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+          )
+        }
+
+        Spacer(modifier = Modifier.height(5.dp))
+
+        // Sharp iOS micro-telemetry bar
         Box(
           modifier = Modifier
-            .fillMaxWidth(progressFraction.coerceIn(0.08f, 1f))
-            .height(4.dp)
-            .clip(RoundedCornerShape(2.dp))
-            .background(accent)
-        )
+            .fillMaxWidth()
+            .height(3.5.dp)
+            .clip(IosSharpMicroShape)
+            .background(Color.White.copy(alpha = 0.14f))
+        ) {
+          Box(
+            modifier = Modifier
+              .fillMaxWidth(progressFraction.coerceIn(0.08f, 1f))
+              .height(3.5.dp)
+              .clip(IosSharpMicroShape)
+              .background(accent)
+          )
+        }
       }
     }
   }

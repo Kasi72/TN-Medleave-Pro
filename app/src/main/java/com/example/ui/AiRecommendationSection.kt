@@ -84,6 +84,7 @@ import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.JetBrainsMonoFontFamily
 import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -657,14 +658,22 @@ private fun copyRecommendationToClipboard(
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val memoText = buildString {
         appendLine("OPTIMAL LEAVE APPLICATION PLAN — ${rec.title}")
-        appendLine("Window: ${rec.startDateIso} to ${rec.endDateIso} (${rec.totalDaysOff} Consecutive Days Off)")
+        appendLine("Window: ${ClinicalDateFormatter.formatRangeFriendly(rec.startDateIso, rec.endDateIso)} (${rec.totalDaysOff} Consecutive Days Off)")
         appendLine("Leave Credits Used: ${formatCreditCount(rec.leaveCreditsUsed)} (${rec.creditMixSummary}) | ${rec.efficiencyMultiplier}x ROI | +${rec.freeDaysUnlocked} Free GH/Weekend Days")
         if (rec.exactDatesToApply.isNotEmpty()) {
-            appendLine("Exact Dates to Apply for Leave: ${rec.exactDatesToApply.joinToString(", ")}")
+            val formattedExact = rec.exactDatesToApply.joinToString(", ") { raw ->
+                val cleanIso = raw.take(10)
+                if (cleanIso.length == 10 && cleanIso[4] == '-' && cleanIso[7] == '-') {
+                    ClinicalDateFormatter.formatFriendlyWithDay(cleanIso)
+                } else {
+                    raw
+                }
+            }
+            appendLine("Exact Dates to Apply for Leave: $formattedExact")
         }
         appendLine("Schedule Breakdown:")
         rec.dailyPlan.forEach { day ->
-            appendLine("  • ${day.dayLabel} (${day.dateIso}) [${day.creditType}]: ${day.description}")
+            appendLine("  • ${ClinicalDateFormatter.formatFriendlyWithDay(day.dateIso)} [${day.creditType}]: ${day.description}")
         }
         appendLine("Strategic Rationale: ${rec.whyOptimalForHod}")
         appendLine("FIFO / Rule Check: ${rec.tnRuleComplianceCheck}")
@@ -763,7 +772,7 @@ private fun AiRecommendationItemCard(
                             Text(
                                 text = ClinicalDateFormatter.formatRangeFriendly(rec.startDateIso, rec.endDateIso),
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = JetBrainsMonoFontFamily
                                 ),
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -869,16 +878,24 @@ private fun AiRecommendationItemCard(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             rec.exactDatesToApply.forEach { applyDateChip ->
+                                val cleanIso = applyDateChip.trim().take(10)
+                                val displayChip = if (cleanIso.length == 10 && cleanIso[4] == '-' && cleanIso[7] == '-') {
+                                    val suffix = applyDateChip.trim().drop(10).trim()
+                                    val friendly = ClinicalDateFormatter.formatFriendlyWithDay(cleanIso)
+                                    if (suffix.isNotEmpty()) "$friendly $suffix" else friendly
+                                } else {
+                                    applyDateChip
+                                }
                                 Surface(
                                     shape = RoundedCornerShape(7.dp),
                                     color = MaterialTheme.colorScheme.surface,
                                     border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.45f))
                                 ) {
                                     Text(
-                                        text = applyDateChip,
+                                        text = displayChip,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            fontFamily = FontFamily.Monospace
+                                            fontFamily = JetBrainsMonoFontFamily
                                         ),
                                         fontWeight = FontWeight.ExtraBold,
                                         color = MaterialTheme.colorScheme.onSurface
@@ -946,7 +963,7 @@ private fun AiRecommendationItemCard(
                                     text = "${dayStep.dayLabel}: ${dayStep.description}",
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        fontFamily = FontFamily.Monospace
+                                        fontFamily = JetBrainsMonoFontFamily
                                     ),
                                     fontWeight = if (isLeaveAction) FontWeight.Bold else FontWeight.Medium,
                                     color = if (isLeaveAction) badgeColor else MaterialTheme.colorScheme.onSurface
@@ -987,7 +1004,7 @@ private fun AiRecommendationItemCard(
                                 Text(
                                     text = "Projected Balance After: ${rec.projectedBalanceAfter}",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        fontFamily = FontFamily.Monospace
+                                        fontFamily = JetBrainsMonoFontFamily
                                     ),
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -1104,7 +1121,7 @@ private fun LiveCreditInputPill(
             Text(
                 text = value,
                 style = MaterialTheme.typography.labelMedium.copy(
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = JetBrainsMonoFontFamily,
                     fontSize = 11.sp,
                     lineHeight = 14.sp
                 ),

@@ -205,6 +205,10 @@ fun AuthScreen(
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   val credentialManager = remember { CredentialManager.create(context) }
+  val officerName = remember { HodProfileSettingsStore.getOfficerName(context) }
+  val designation = remember { HodProfileSettingsStore.getDesignation(context) }
+  val department = remember { HodProfileSettingsStore.getDepartment(context) }
+  val college = remember { HodProfileSettingsStore.getCollege(context) }
 
   var isGoogleLoading by remember { mutableStateOf(false) }
   var isBiometricScanning by remember { mutableStateOf(false) }
@@ -407,7 +411,7 @@ fun AuthScreen(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-          text = "HOD, Dept. of Psychiatry • drkasi@gmail.com\nGovt. Erode Medical College & Hospital",
+          text = "$officerName • $designation, $department\n$college",
           style = MaterialTheme.typography.bodyMedium,
           color = Color(0xFFBAE6FD),
           textAlign = TextAlign.Center,
@@ -685,14 +689,14 @@ fun AuthScreen(
         // Enterprise Feature Highlights
         FeatureBulletRow(
           icon = Icons.Default.CalendarMonth,
-          title = "2023–2026 Leave Ledger Pre-Loaded",
-          subtitle = "198 historical CL, COL, In-Lieu, PL, GH Worked, ML, RH, EL & OD records"
+          title = "2023–2027 Multi-Year Leave Ledger",
+          subtitle = "198+ historical CL, COL, In-Lieu, PL, GH Worked, ML, RH, EL & OD records"
         )
         Spacer(modifier = Modifier.height(8.dp))
         FeatureBulletRow(
           icon = Icons.Default.AutoAwesome,
-          title = "AI Smart Bridge & Room Holiday Sync",
-          subtitle = "Auto-syncs 2026 TN Govt Holidays (23 GH) + 31 Restricted Holidays (RL)"
+          title = "AI Smart Bridge & 2026–2027 Holiday Sync",
+          subtitle = "Auto-syncs 2026 & 2027 TN Govt Holidays (GH) + Restricted Holidays (RL)"
         )
         Spacer(modifier = Modifier.height(8.dp))
         FeatureBulletRow(

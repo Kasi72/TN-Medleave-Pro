@@ -68,6 +68,7 @@ import com.example.domain.GeneratedPdfBundle
 import com.example.domain.OfficialPdfReportExporter
 import com.example.domain.PdfReportConfig
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.StatusAlertRed
 import kotlinx.coroutines.launch
 
@@ -77,6 +78,8 @@ fun OfficialPdfExportBannerCard(
   onOpenPdfExportModal: () -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
+  val college = remember { HodProfileSettingsStore.getCollege(context) }
   Surface(
     shape = RoundedCornerShape(24.dp),
     color = Color.Transparent,
@@ -125,7 +128,7 @@ fun OfficialPdfExportBannerCard(
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
               Text(
-                text = "DEAN'S OFFICE SUBMISSION • GEMCH",
+                text = "DEAN'S OFFICE SUBMISSION • ${college.uppercase()}",
                 style = MaterialTheme.typography.labelMedium,
                 color = Color(0xFF34D399),
                 fontSize = 10.sp,
@@ -158,7 +161,7 @@ fun OfficialPdfExportBannerCard(
               fontSize = 11.sp,
               lineHeight = 14.sp,
               fontWeight = FontWeight.Bold,
-              fontFamily = FontFamily.Monospace,
+              fontFamily = JetBrainsMonoFontFamily,
               color = Color(0xFF6EE7B7),
               maxLines = 1,
               softWrap = false
@@ -167,7 +170,7 @@ fun OfficialPdfExportBannerCard(
         }
 
         Text(
-          text = "Generates a formatted A4 multi-page PDF with the Government Erode Medical College & Hospital header, $selectedYear Leave Credit Summary, 1:1 COL ↔ GH Worked Reconciliation Table, 2026 Holiday Summary, and Dean/HOD signature blocks.",
+          text = "Generates a formatted A4 multi-page PDF with the $college header, $selectedYear Leave Credit Summary, 1:1 COL ↔ GH Worked Reconciliation Table, 2026 Holiday Summary, and Dean/HOD signature blocks.",
           style = MaterialTheme.typography.bodyMedium,
           color = Color(0xFFE0F2FE),
           fontSize = 12.sp,
@@ -213,6 +216,11 @@ fun OfficialPdfExportDialog(
 ) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
+  val officerName = remember { HodProfileSettingsStore.getOfficerName(context) }
+  val designation = remember { HodProfileSettingsStore.getDesignation(context) }
+  val department = remember { HodProfileSettingsStore.getDepartment(context) }
+  val college = remember { HodProfileSettingsStore.getCollege(context) }
+  val ifhrmsId = remember { HodProfileSettingsStore.getIfhrmsId(context) }
 
   var includeAllYearsAudit by remember { mutableStateOf(false) }
   var includeChronologicalLedger by remember { mutableStateOf(true) }
@@ -257,7 +265,11 @@ fun OfficialPdfExportDialog(
     val config = PdfReportConfig(
       includeAllYearsAudit = includeAllYearsAudit,
       includeChronologicalLedger = includeChronologicalLedger,
-      includeHolidaySummary2026 = includeHolidaySummary2026
+      includeHolidaySummary2026 = includeHolidaySummary2026,
+      officerName = "$officerName ($ifhrmsId)",
+      designation = "$designation, $department",
+      departmentName = department,
+      institution = college
     )
     val res = OfficialPdfReportExporter.generateOfficialPdfBundle(
       context = context,
@@ -315,7 +327,7 @@ fun OfficialPdfExportDialog(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                   Text(
-                    text = "GOVT. ERODE MEDICAL COLLEGE • OFFICIAL A4 PDF",
+                    text = "${college.uppercase()} • OFFICIAL A4 PDF",
                     style = MaterialTheme.typography.labelMedium,
                     color = Color(0xFF34D399),
                     fontSize = 10.sp,
@@ -356,7 +368,7 @@ fun OfficialPdfExportDialog(
               horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
               PdfToggleChip(
-                label = if (includeAllYearsAudit) "Audit: 2023–2026" else "Audit: ${state.selectedYear} Only",
+                label = if (includeAllYearsAudit) "Audit: 2023–2027" else "Audit: ${state.selectedYear} Only",
                 selected = includeAllYearsAudit,
                 onClick = { includeAllYearsAudit = !includeAllYearsAudit },
                 modifier = Modifier.weight(1f)
@@ -368,7 +380,7 @@ fun OfficialPdfExportDialog(
                 modifier = Modifier.weight(1f)
               )
               PdfToggleChip(
-                label = "2026 GH & RH",
+                label = "${state.selectedYear} GH & RH",
                 selected = includeHolidaySummary2026,
                 onClick = { includeHolidaySummary2026 = !includeHolidaySummary2026 },
                 modifier = Modifier.weight(1f)
@@ -458,7 +470,7 @@ fun OfficialPdfExportDialog(
                       text = bundle.fileName,
                       color = Color(0xFFBAE6FD),
                       fontSize = 12.sp,
-                      fontFamily = FontFamily.Monospace,
+                      fontFamily = JetBrainsMonoFontFamily,
                       maxLines = 1,
                       softWrap = false,
                       overflow = TextOverflow.Ellipsis,
@@ -488,7 +500,7 @@ fun OfficialPdfExportDialog(
                       text = "PAGE ${pageIdx + 1} OF ${bundle.pageCount}",
                       color = Color.White.copy(alpha = 0.7f),
                       fontSize = 11.sp,
-                      fontFamily = FontFamily.Monospace,
+                      fontFamily = JetBrainsMonoFontFamily,
                       fontWeight = FontWeight.Bold
                     )
                     Surface(

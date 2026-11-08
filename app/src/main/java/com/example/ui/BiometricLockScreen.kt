@@ -73,6 +73,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.domain.BiometricLockManager
 import com.example.domain.HardwareBiometricStatus
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.StatusAlertRed
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -84,6 +85,10 @@ fun BiometricVaultLockScreen(
 ) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
+  val officerName = remember { HodProfileSettingsStore.getOfficerName(context) }
+  val designation = remember { HodProfileSettingsStore.getDesignation(context) }
+  val department = remember { HodProfileSettingsStore.getDepartment(context) }
+  val college = remember { HodProfileSettingsStore.getCollege(context) }
 
   val hardwareStatus = remember {
     BiometricLockManager.checkHardwareBiometricStatus(context)
@@ -213,14 +218,15 @@ fun BiometricVaultLockScreen(
           )
           Spacer(modifier = Modifier.width(6.dp))
           Text(
-            text = "BIOMETRIC SECURITY VAULT • GEMCH PSYCHIATRY",
+            text = "BIOMETRIC SECURITY VAULT • ${department.uppercase()}",
             color = Color(0xFF6EE7B7),
             fontSize = 10.sp,
             lineHeight = 13.sp,
             fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = JetBrainsMonoFontFamily,
             maxLines = 1,
-            softWrap = false
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
           )
         }
       }
@@ -234,7 +240,7 @@ fun BiometricVaultLockScreen(
       )
 
       Text(
-        text = "Protected for $userEmail • HOD, Dept. of Psychiatry",
+        text = "Protected for $officerName ($userEmail) • $designation, $college",
         style = MaterialTheme.typography.bodyMedium,
         color = Color(0xFFBAE6FD),
         fontSize = 12.sp,
@@ -449,7 +455,7 @@ private fun PinKeyButton(
         color = Color.White,
         fontSize = 20.sp,
         fontWeight = FontWeight.Bold,
-        fontFamily = FontFamily.Monospace
+        fontFamily = JetBrainsMonoFontFamily
       )
     }
   }
@@ -494,46 +500,13 @@ fun BiometricSecuritySettingsDialog(
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
+          ExecutiveDialogHeader(
+            icon = Icons.Default.Fingerprint,
+            accent = EmeraldOptimal,
+            title = "Biometric & App Lock",
+            subtitle = "HOD SECURITY & PRIVACY",
             modifier = Modifier.weight(1f)
-          ) {
-            Box(
-              modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(EmeraldOptimal.copy(alpha = 0.15f)),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = Icons.Default.Fingerprint,
-                contentDescription = null,
-                tint = EmeraldOptimal,
-                modifier = Modifier.size(22.dp)
-              )
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-              Text(
-                text = "HOD SECURITY & PRIVACY",
-                style = MaterialTheme.typography.labelMedium,
-                color = EmeraldOptimal,
-                fontSize = 10.sp,
-                lineHeight = 13.sp,
-                maxLines = 1,
-                softWrap = false
-              )
-              Text(
-                text = "Biometric & App Lock",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-              )
-            }
-          }
-
+          )
           IconButton(onClick = onDismiss) {
             Icon(
               imageVector = Icons.Default.Close,

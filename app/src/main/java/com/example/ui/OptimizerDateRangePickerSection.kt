@@ -389,7 +389,7 @@ fun OptimizerMaterial3CalendarSection(
                   )
                 }
                 Text(
-                  text = "${preset.startIso} → ${preset.endIso} • ${preset.yieldBadge}",
+                  text = "${ClinicalDateFormatter.formatRangeFriendly(preset.startIso, preset.endIso)} • ${preset.yieldBadge}",
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 10.sp,
                   color = Color.White.copy(alpha = 0.85f)
@@ -606,7 +606,7 @@ fun OptimizerMaterial3CalendarSection(
             ) {
               Column(modifier = Modifier.weight(1f)) {
                 Text(
-                  text = "${day.dateIso} (${day.dayShort})",
+                  text = ClinicalDateFormatter.formatFriendlyWithDay(day.dateIso),
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 11.sp,
                   fontWeight = FontWeight.Bold,
@@ -650,22 +650,27 @@ fun OptimizerMaterial3CalendarSection(
                   .filter { it.suggestedCategory == "RH" }
                   .map { it.dateIso }
 
+                val friendlyRange = if (selectedStartDate != null && selectedEndDate != null) {
+                  ClinicalDateFormatter.formatRangeFriendly(selectedStartDate.toString(), selectedEndDate.toString())
+                } else {
+                  "$selectedStartDate → $selectedEndDate"
+                }
                 if (clDates.isNotEmpty()) {
                   onCommitWorkingDaysBatch(
                     LeaveCategory.CL,
                     clDates,
-                    "M3 DateRangePicker Long-Weekend Bridge ($selectedStartDate → $selectedEndDate)"
+                    "M3 DateRangePicker Long-Weekend Bridge ($friendlyRange)"
                   )
                 }
                 if (rhDates.isNotEmpty()) {
                   onCommitWorkingDaysBatch(
                     LeaveCategory.RH,
                     rhDates,
-                    "M3 DateRangePicker Restricted Holiday Bridge ($selectedStartDate → $selectedEndDate)"
+                    "M3 DateRangePicker Restricted Holiday Bridge ($friendlyRange)"
                   )
                 }
                 onShowStatusBanner(
-                  "Applied ${workingLeaveDays.size} bridge leave day(s) for $totalDaysSelected-day long weekend ($selectedStartDate → $selectedEndDate)!"
+                  "Applied ${workingLeaveDays.size} bridge leave day(s) for $totalDaysSelected-day long weekend ($friendlyRange)!"
                 )
               },
               shape = RoundedCornerShape(14.dp),
@@ -744,7 +749,9 @@ fun OptimizerMaterial3CalendarSection(
                   startDateMillis = s.toUtcEpochMillis(),
                   endDateMillis = e.toUtcEpochMillis()
                 )
-                onShowStatusBanner("Highlighted ${preset.label} (${preset.startIso} → ${preset.endIso}) on M3 Calendar")
+                onShowStatusBanner(
+                  "Highlighted ${preset.label} (${ClinicalDateFormatter.formatRangeFriendly(preset.startIso, preset.endIso)}) on M3 Calendar"
+                )
               }
               .testTag("radar_holiday_row_${preset.id}")
           ) {
@@ -768,7 +775,7 @@ fun OptimizerMaterial3CalendarSection(
                   color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                  text = "Window: ${preset.startIso} → ${preset.endIso}",
+                  text = "Window: ${ClinicalDateFormatter.formatRangeFriendly(preset.startIso, preset.endIso)}",
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 11.sp,
                   color = EmeraldOptimal,

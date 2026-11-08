@@ -19,20 +19,23 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.FactCheck
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -57,39 +60,235 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.BadgeColCyan
+import com.example.ui.theme.BadgeOnDutyBlue
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpSquircleShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalAppThemeMode
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.min
 
 /**
- * Enterprise-grade dark obsidian/sapphire hero container with:
- * - Multi-stop deep clinical sapphire & emerald gradient background
- * - Custom Canvas architectural micro-grid & glowing radial light orbs
- * - Specular 1.dp gradient border along the perimeter
+ * Full-bleed Apple iOS 18 Ambient Mesh Backdrop.
+ * Renders subtle, theme-adaptive atmospheric light blooms behind scrollable screens so
+ * translucent glassmorphic cards refract soft color and specular depth.
+ */
+@Composable
+fun IosAmbientGlassBackdrop(
+  modifier: Modifier = Modifier,
+  content: @Composable BoxScope.() -> Unit
+) {
+  val themeMode = LocalAppThemeMode.current
+  val baseBg = MaterialTheme.colorScheme.background
+
+  val orbTopLeft = when (themeMode) {
+    AppThemeMode.GREEN_EMERALD -> Color(0xFF10B981).copy(alpha = 0.14f)
+    AppThemeMode.WHITE_CLINICAL -> Color(0xFF0EA5E9).copy(alpha = 0.09f)
+    AppThemeMode.DARK_OBSIDIAN -> Color(0xFF059669).copy(alpha = 0.16f)
+  }
+  val orbMidRight = when (themeMode) {
+    AppThemeMode.GREEN_EMERALD -> Color(0xFF06B6D4).copy(alpha = 0.11f)
+    AppThemeMode.WHITE_CLINICAL -> Color(0xFF10B981).copy(alpha = 0.08f)
+    AppThemeMode.DARK_OBSIDIAN -> Color(0xFF0284C7).copy(alpha = 0.15f)
+  }
+  val orbBottomLeft = when (themeMode) {
+    AppThemeMode.GREEN_EMERALD -> Color(0xFF34D399).copy(alpha = 0.12f)
+    AppThemeMode.WHITE_CLINICAL -> Color(0xFF6366F1).copy(alpha = 0.06f)
+    AppThemeMode.DARK_OBSIDIAN -> Color(0xFF14B8A6).copy(alpha = 0.12f)
+  }
+
+  Box(
+    modifier = modifier
+      .fillMaxSize()
+      .background(baseBg)
+      .drawBehind {
+        // 1. Top-Left Ambient Light Bloom
+        drawCircle(
+          brush = Brush.radialGradient(
+            colors = listOf(orbTopLeft, Color.Transparent),
+            center = Offset(size.width * 0.12f, size.height * 0.10f),
+            radius = size.width * 0.72f
+          ),
+          center = Offset(size.width * 0.12f, size.height * 0.10f),
+          radius = size.width * 0.72f
+        )
+
+        // 2. Mid-Right Ambient Light Bloom
+        drawCircle(
+          brush = Brush.radialGradient(
+            colors = listOf(orbMidRight, Color.Transparent),
+            center = Offset(size.width * 0.90f, size.height * 0.44f),
+            radius = size.width * 0.68f
+          ),
+          center = Offset(size.width * 0.90f, size.height * 0.44f),
+          radius = size.width * 0.68f
+        )
+
+        // 3. Bottom-Left Ambient Light Bloom
+        drawCircle(
+          brush = Brush.radialGradient(
+            colors = listOf(orbBottomLeft, Color.Transparent),
+            center = Offset(size.width * 0.20f, size.height * 0.86f),
+            radius = size.width * 0.75f
+          ),
+          center = Offset(size.width * 0.20f, size.height * 0.86f),
+          radius = size.width * 0.75f
+        )
+      },
+    content = content
+  )
+}
+
+/**
+ * Reusable Apple iOS 18 / visionOS Frosted Glassmorphism Modifier for cards and containers.
+ * Combines:
+ * 1. Translucent multi-stop frosted surface fill
+ * 2. Top-left radial light refraction + diagonal 45° glass sheen
+ * 3. Crisp 1.5px top inner specular highlight bevel
+ * 4. Dual-stop refractive gradient border (bright top-left specular edge to subtle bottom-right rim)
+ */
+@Composable
+fun Modifier.iosFrostedGlassCard(
+  accentColor: Color = EmeraldOptimal,
+  shape: Shape = IosSharpCardShape,
+  borderWidth: Dp = 1.15.dp,
+  borderAlpha: Float = 0.46f
+): Modifier {
+  val themeMode = LocalAppThemeMode.current
+  val isDark = themeMode == AppThemeMode.DARK_OBSIDIAN
+  val isWhite = themeMode == AppThemeMode.WHITE_CLINICAL
+
+  val glassTopStart = when {
+    isDark -> Color(0xFF13253E).copy(alpha = 0.82f)
+    isWhite -> Color(0xFFFFFFFF).copy(alpha = 0.86f)
+    else -> Color(0xFFFAFFFC).copy(alpha = 0.84f)
+  }
+  val glassBottomEnd = when {
+    isDark -> Color(0xFF0A1424).copy(alpha = 0.90f)
+    isWhite -> Color(0xFFF8FAFC).copy(alpha = 0.93f)
+    else -> Color(0xFFECFDF5).copy(alpha = 0.91f)
+  }
+  val topInnerBevelColor = when {
+    isDark -> Color.White.copy(alpha = 0.24f)
+    isWhite -> Color.White.copy(alpha = 0.92f)
+    else -> Color.White.copy(alpha = 0.82f)
+  }
+  val diagonalSheenColor = when {
+    isDark -> Color.White.copy(alpha = 0.045f)
+    isWhite -> Color.White.copy(alpha = 0.55f)
+    else -> Color.White.copy(alpha = 0.42f)
+  }
+  val topRimColor = if (isDark) {
+    Color.White.copy(alpha = 0.30f)
+  } else {
+    Color.White.copy(alpha = 0.85f)
+  }
+
+  return this
+    .clip(shape)
+    .background(
+      brush = Brush.linearGradient(
+        colors = listOf(glassTopStart, glassBottomEnd),
+        start = Offset(0f, 0f),
+        end = Offset(700f, 700f)
+      ),
+      shape = shape
+    )
+    .drawBehind {
+      // 1. Subtle top-left accent refraction bloom inside the frosted glass
+      drawCircle(
+        brush = Brush.radialGradient(
+          colors = listOf(
+            accentColor.copy(alpha = if (isDark) 0.13f else 0.09f),
+            Color.Transparent
+          ),
+          center = Offset(size.width * 0.14f, size.height * 0.12f),
+          radius = size.width * 0.62f
+        ),
+        center = Offset(size.width * 0.14f, size.height * 0.12f),
+        radius = size.width * 0.62f
+      )
+
+      // 2. Diagonal iOS glass reflection sheen
+      drawRect(
+        brush = Brush.linearGradient(
+          colors = listOf(
+            diagonalSheenColor,
+            Color.Transparent,
+            accentColor.copy(alpha = if (isDark) 0.05f else 0.035f)
+          ),
+          start = Offset(0f, 0f),
+          end = Offset(size.width, size.height)
+        )
+      )
+
+      // 3. Crisp 1.5px top inner specular highlight bevel
+      drawLine(
+        brush = Brush.horizontalGradient(
+          colors = listOf(
+            Color.Transparent,
+            topInnerBevelColor,
+            accentColor.copy(alpha = 0.38f),
+            Color.Transparent
+          )
+        ),
+        start = Offset(size.width * 0.05f, 1.2f),
+        end = Offset(size.width * 0.95f, 1.2f),
+        strokeWidth = 1.6f
+      )
+    }
+    .border(
+      width = borderWidth,
+      brush = Brush.linearGradient(
+        colors = listOf(
+          topRimColor,
+          accentColor.copy(alpha = borderAlpha),
+          accentColor.copy(alpha = borderAlpha * 0.35f)
+        ),
+        start = Offset(0f, 0f),
+        end = Offset(600f, 600f)
+      ),
+      shape = shape
+    )
+}
+
+/**
+ * Apple iOS 18 Pro Sharp-Edged Squircle Hero Container with:
+ * - Crisp superellipse squircle geometry (clamped to 12.dp max for razor-sharp architectural corners)
+ * - Multi-stop deep clinical sapphire & emerald frosted glass gradient background
+ * - Custom Canvas architectural micro-grid, radial light orbs, diagonal glass sheen, and top specular bevel
  */
 @Composable
 fun EnterpriseMeshHeroContainer(
   modifier: Modifier = Modifier,
-  cornerRadius: Dp = 28.dp,
+  cornerRadius: Dp = 12.dp,
   primaryGlowColor: Color = Color(0xFF10B981),
   secondaryGlowColor: Color = Color(0xFF0EA5E9),
-  contentPadding: PaddingValues = PaddingValues(22.dp),
+  contentPadding: PaddingValues = PaddingValues(18.dp),
   content: @Composable BoxScope.() -> Unit
 ) {
-  val shape = RoundedCornerShape(cornerRadius)
+  val sharpRadius = min(cornerRadius.value, 12f).dp
+  val shape = IosSharpSquircleShape(sharpRadius, sharpnessBias = 0.84f)
   Box(
     modifier = modifier
       .fillMaxWidth()
@@ -97,10 +296,10 @@ fun EnterpriseMeshHeroContainer(
       .background(
         Brush.linearGradient(
           colors = listOf(
-            Color(0xFF061326),
-            Color(0xFF0B2545),
-            Color(0xFF093542),
-            Color(0xFF052E2B)
+            Color(0xFF051122).copy(alpha = 0.95f),
+            Color(0xFF0B2442).copy(alpha = 0.93f),
+            Color(0xFF083340).copy(alpha = 0.93f),
+            Color(0xFF042A27).copy(alpha = 0.95f)
           ),
           start = Offset(0f, 0f),
           end = Offset(1000f, 900f)
@@ -108,8 +307,8 @@ fun EnterpriseMeshHeroContainer(
       )
       .drawBehind {
         // 1. Subtle architectural grid lines
-        val step = 36.dp.toPx()
-        val gridColor = Color.White.copy(alpha = 0.035f)
+        val step = 32.dp.toPx()
+        val gridColor = Color.White.copy(alpha = 0.04f)
         var x = step
         while (x < size.width) {
           drawLine(
@@ -135,37 +334,65 @@ fun EnterpriseMeshHeroContainer(
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              primaryGlowColor.copy(alpha = 0.26f),
+              primaryGlowColor.copy(alpha = 0.30f),
               Color.Transparent
             ),
             center = Offset(size.width * 0.88f, size.height * 0.18f),
-            radius = size.width * 0.55f
+            radius = size.width * 0.56f
           ),
           center = Offset(size.width * 0.88f, size.height * 0.18f),
-          radius = size.width * 0.55f
+          radius = size.width * 0.56f
         )
 
         // 3. Bottom-left ambient sapphire/cyan radial orb
         drawCircle(
           brush = Brush.radialGradient(
             colors = listOf(
-              secondaryGlowColor.copy(alpha = 0.20f),
+              secondaryGlowColor.copy(alpha = 0.24f),
               Color.Transparent
             ),
             center = Offset(size.width * 0.12f, size.height * 0.88f),
-            radius = size.width * 0.50f
+            radius = size.width * 0.52f
           ),
           center = Offset(size.width * 0.12f, size.height * 0.88f),
-          radius = size.width * 0.50f
+          radius = size.width * 0.52f
+        )
+
+        // 4. Diagonal frosted glass reflection band
+        drawRect(
+          brush = Brush.linearGradient(
+            colors = listOf(
+              Color.White.copy(alpha = 0.09f),
+              Color.Transparent,
+              Color.White.copy(alpha = 0.03f)
+            ),
+            start = Offset(0f, 0f),
+            end = Offset(size.width * 0.85f, size.height)
+          )
+        )
+
+        // 5. iOS 18 Pro Top Specular Chamfer Line
+        drawLine(
+          brush = Brush.horizontalGradient(
+            colors = listOf(
+              Color.Transparent,
+              Color.White.copy(alpha = 0.65f),
+              primaryGlowColor.copy(alpha = 0.75f),
+              Color.Transparent
+            )
+          ),
+          start = Offset(size.width * 0.05f, 1.5f),
+          end = Offset(size.width * 0.95f, 1.5f),
+          strokeWidth = 2.4f
         )
       }
       .border(
-        width = 1.2.dp,
+        width = 1.3.dp,
         brush = Brush.linearGradient(
           colors = listOf(
-            Color.White.copy(alpha = 0.30f),
-            primaryGlowColor.copy(alpha = 0.45f),
-            secondaryGlowColor.copy(alpha = 0.25f)
+            Color.White.copy(alpha = 0.48f),
+            primaryGlowColor.copy(alpha = 0.58f),
+            secondaryGlowColor.copy(alpha = 0.38f)
           )
         ),
         shape = shape
@@ -176,7 +403,147 @@ fun EnterpriseMeshHeroContainer(
 }
 
 /**
- * Enterprise Section Header with numbered overline tag, main title, and optional right badge/action.
+ * Apple iOS 18 Control Center Quick-Action Bento Strip with Frosted Glassmorphism.
+ */
+@Composable
+fun IosControlCenterBentoStrip(
+  onLogLeave: () -> Unit,
+  onOpenColAudit: () -> Unit,
+  onOpenOptimizer: () -> Unit,
+  onExportPdf: () -> Unit,
+  modifier: Modifier = Modifier
+) {
+  Row(
+    modifier = modifier
+      .fillMaxWidth()
+      .height(IntrinsicSize.Min),
+    horizontalArrangement = Arrangement.spacedBy(7.dp)
+  ) {
+    IosControlCenterTile(
+      icon = Icons.Default.Add,
+      title = "Log Leave",
+      subtitle = "CL • RH • EL",
+      accent = EmeraldOptimal,
+      onClick = onLogLeave,
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight()
+    )
+    IosControlCenterTile(
+      icon = Icons.Default.FactCheck,
+      title = "COL ↔ GH",
+      subtitle = "Pair Duty",
+      accent = BadgeColCyan,
+      onClick = onOpenColAudit,
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight()
+    )
+    IosControlCenterTile(
+      icon = Icons.Default.AutoAwesome,
+      title = "AI Bridge",
+      subtitle = "10d Cap",
+      accent = BadgePlGold,
+      onClick = onOpenOptimizer,
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight()
+    )
+    IosControlCenterTile(
+      icon = Icons.Default.PictureAsPdf,
+      title = "A4 Report",
+      subtitle = "Dean PDF",
+      accent = BadgeOnDutyBlue,
+      onClick = onExportPdf,
+      modifier = Modifier
+        .weight(1f)
+        .fillMaxHeight()
+    )
+  }
+}
+
+@Composable
+private fun IosControlCenterTile(
+  icon: ImageVector,
+  title: String,
+  subtitle: String,
+  accent: Color,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier
+) {
+  Box(
+    modifier = modifier
+      .iosFrostedGlassCard(
+        accentColor = accent,
+        shape = IosSharpButtonShape,
+        borderWidth = 1.1.dp,
+        borderAlpha = 0.44f
+      )
+      .clickable { onClick() }
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 8.dp, vertical = 8.dp),
+      verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Surface(
+          shape = IosSharpMicroShape,
+          color = accent.copy(alpha = 0.16f),
+          border = BorderStroke(0.8.dp, accent.copy(alpha = 0.45f)),
+          modifier = Modifier.size(24.dp)
+        ) {
+          Box(contentAlignment = Alignment.Center) {
+            Icon(
+              imageVector = icon,
+              contentDescription = title,
+              tint = accent,
+              modifier = Modifier.size(14.dp)
+            )
+          }
+        }
+        Icon(
+          imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+          modifier = Modifier.size(14.dp)
+        )
+      }
+      Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Text(
+          text = title,
+          style = MaterialTheme.typography.labelLarge,
+          fontSize = 11.sp,
+          lineHeight = 13.sp,
+          fontWeight = FontWeight.ExtraBold,
+          color = MaterialTheme.colorScheme.onSurface,
+          maxLines = 1,
+          softWrap = false,
+          overflow = TextOverflow.Ellipsis
+        )
+        Text(
+          text = subtitle,
+          fontFamily = JetBrainsMonoFontFamily,
+          fontSize = 8.5.sp,
+          lineHeight = 10.sp,
+          fontWeight = FontWeight.Bold,
+          color = accent,
+          maxLines = 1,
+          softWrap = false,
+          overflow = TextOverflow.Ellipsis
+        )
+      }
+    }
+  }
+}
+
+/**
+ * iOS Inset Grouped Section Header with sharp squircle indicator, tight SF-style title, and frosted glass badge.
  */
 @Composable
 fun EnterpriseSectionHeader(
@@ -198,17 +565,18 @@ fun EnterpriseSectionHeader(
         Row(verticalAlignment = Alignment.CenterVertically) {
           Box(
             modifier = Modifier
-              .size(6.dp)
-              .clip(CircleShape)
+              .size(width = 7.dp, height = 7.dp)
+              .clip(IosSharpMicroShape)
               .background(badgeColor)
           )
           Spacer(modifier = Modifier.width(6.dp))
           Text(
             text = indexTag.uppercase(),
             fontFamily = JetBrainsMonoFontFamily,
-            fontSize = 10.sp,
-            lineHeight = 13.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 9.5.sp,
+            lineHeight = 12.sp,
+            letterSpacing = 0.4.sp,
+            fontWeight = FontWeight.ExtraBold,
             color = badgeColor,
             maxLines = 1,
             softWrap = false,
@@ -219,7 +587,8 @@ fun EnterpriseSectionHeader(
         Text(
           text = title,
           style = MaterialTheme.typography.titleLarge,
-          fontWeight = FontWeight.Bold,
+          fontWeight = FontWeight.ExtraBold,
+          letterSpacing = (-0.3).sp,
           color = MaterialTheme.colorScheme.onBackground,
           maxLines = 1,
           softWrap = false,
@@ -230,24 +599,37 @@ fun EnterpriseSectionHeader(
       if (badgeText != null) {
         Spacer(modifier = Modifier.width(10.dp))
         Surface(
-          shape = RoundedCornerShape(12.dp),
-          color = badgeColor.copy(alpha = 0.12f),
-          border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.30f)),
+          shape = IosSharpBadgeShape,
+          color = badgeColor.copy(alpha = 0.14f),
+          border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.42f)),
           modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(IosSharpBadgeShape)
             .then(if (onBadgeClick != null) Modifier.clickable { onBadgeClick() } else Modifier)
         ) {
-          Text(
-            text = badgeText,
-            fontFamily = JetBrainsMonoFontFamily,
-            fontSize = 11.sp,
-            lineHeight = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = badgeColor,
-            maxLines = 1,
-            softWrap = false,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-          )
+          Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
+          ) {
+            Text(
+              text = badgeText,
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 10.sp,
+              lineHeight = 13.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = badgeColor,
+              maxLines = 1,
+              softWrap = false
+            )
+            if (onBadgeClick != null) {
+              Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = badgeColor,
+                modifier = Modifier.size(13.dp)
+              )
+            }
+          }
         }
       }
     }
@@ -257,8 +639,8 @@ fun EnterpriseSectionHeader(
       Text(
         text = subtitle,
         style = MaterialTheme.typography.bodyMedium,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
+        fontSize = 11.5.sp,
+        lineHeight = 15.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1,
         softWrap = false,
@@ -269,7 +651,7 @@ fun EnterpriseSectionHeader(
 }
 
 /**
- * Enterprise 3-Pill Live Governance & Telemetry Strip for the HOD Executive Desk.
+ * Enterprise 3-Pill Live Governance & Telemetry Strip with Frosted Glassmorphism & Sharp iOS Squircles.
  */
 @Composable
 fun EnterpriseExecutiveStatusStrip(
@@ -285,7 +667,7 @@ fun EnterpriseExecutiveStatusStrip(
     modifier = modifier
       .fillMaxWidth()
       .height(IntrinsicSize.Min),
-    horizontalArrangement = Arrangement.spacedBy(8.dp)
+    horizontalArrangement = Arrangement.spacedBy(7.dp)
   ) {
     EnterpriseTelemetryMicroPill(
       icon = Icons.Default.VerifiedUser,
@@ -329,55 +711,64 @@ private fun EnterpriseTelemetryMicroPill(
   onClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(16.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    shadowElevation = 2.dp,
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.25f)),
+  Box(
     modifier = modifier
-      .clip(RoundedCornerShape(16.dp))
+      .iosFrostedGlassCard(
+        accentColor = accent,
+        shape = IosSharpButtonShape,
+        borderWidth = 1.1.dp,
+        borderAlpha = 0.42f
+      )
       .clickable { onClick() }
   ) {
-    Column(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 10.dp, vertical = 9.dp),
-      verticalArrangement = Arrangement.spacedBy(3.dp)
-    ) {
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    Column(modifier = Modifier.fillMaxWidth()) {
+      // Sharp top accent laser strip
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(2.dp)
+          .background(accent)
+      )
+      Column(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 9.dp, vertical = 7.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp)
       ) {
-        Icon(
-          imageVector = icon,
-          contentDescription = null,
-          tint = accent,
-          modifier = Modifier.size(12.dp)
-        )
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+          Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(11.dp)
+          )
+          Text(
+            text = label,
+            fontFamily = JetBrainsMonoFontFamily,
+            fontSize = 8.5.sp,
+            lineHeight = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+          )
+        }
         Text(
-          text = label,
+          text = value,
           fontFamily = JetBrainsMonoFontFamily,
-          fontSize = 9.sp,
-          lineHeight = 11.sp,
-          fontWeight = FontWeight.Bold,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          fontSize = 10.5.sp,
+          lineHeight = 13.sp,
+          fontWeight = FontWeight.ExtraBold,
+          color = accent,
           maxLines = 1,
           softWrap = false,
           overflow = TextOverflow.Ellipsis
         )
       }
-      Text(
-        text = value,
-        fontFamily = JetBrainsMonoFontFamily,
-        fontSize = 11.sp,
-        lineHeight = 14.sp,
-        fontWeight = FontWeight.Bold,
-        color = accent,
-        maxLines = 1,
-        softWrap = false,
-        overflow = TextOverflow.Ellipsis
-      )
     }
   }
 }
@@ -434,9 +825,7 @@ object ClinicalDateFormatter {
 }
 
 /**
- * Guaranteed Zero-Vertical-Wrap Card Header Row.
- * Ensures the left title/subtitle column always claims `Modifier.weight(1f)` and the right badge
- * always uses `maxLines = 1, softWrap = false` so no text can ever wrap vertically 1 character per line.
+ * Guaranteed Zero-Vertical-Wrap Card Header Row with sharp iOS squircle icon badge.
  */
 @Composable
 fun ExecutiveCardHeaderRow(
@@ -460,17 +849,17 @@ fun ExecutiveCardHeaderRow(
       horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
       Surface(
-        shape = RoundedCornerShape(13.dp),
+        shape = IosSharpButtonShape,
         color = iconAccent.copy(alpha = 0.16f),
-        border = BorderStroke(1.dp, iconAccent.copy(alpha = 0.40f)),
-        modifier = Modifier.size(40.dp)
+        border = BorderStroke(1.dp, iconAccent.copy(alpha = 0.45f)),
+        modifier = Modifier.size(38.dp)
       ) {
         Box(contentAlignment = Alignment.Center) {
           Icon(
             imageVector = icon,
             contentDescription = title,
             tint = iconAccent,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(19.dp)
           )
         }
       }
@@ -478,7 +867,8 @@ fun ExecutiveCardHeaderRow(
         Text(
           text = title,
           style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.Bold,
+          fontWeight = FontWeight.ExtraBold,
+          letterSpacing = (-0.2).sp,
           color = MaterialTheme.colorScheme.onSurface,
           maxLines = 1,
           softWrap = false,
@@ -502,23 +892,23 @@ fun ExecutiveCardHeaderRow(
     if (!badgeText.isNullOrBlank()) {
       Spacer(modifier = Modifier.width(8.dp))
       Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = IosSharpBadgeShape,
         color = badgeAccent.copy(alpha = 0.15f),
-        border = BorderStroke(1.dp, badgeAccent.copy(alpha = 0.42f)),
+        border = BorderStroke(1.dp, badgeAccent.copy(alpha = 0.45f)),
         modifier = Modifier
-          .clip(RoundedCornerShape(10.dp))
+          .clip(IosSharpBadgeShape)
           .then(if (onBadgeClick != null) Modifier.clickable { onBadgeClick() } else Modifier)
       ) {
         Text(
           text = badgeText,
           fontFamily = JetBrainsMonoFontFamily,
-          fontSize = 10.sp,
-          lineHeight = 13.sp,
+          fontSize = 9.5.sp,
+          lineHeight = 12.sp,
           fontWeight = FontWeight.ExtraBold,
           color = badgeAccent,
           maxLines = 1,
           softWrap = false,
-          modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+          modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         )
       }
     }
@@ -526,9 +916,7 @@ fun ExecutiveCardHeaderRow(
 }
 
 /**
- * 1-Tap Native Material 3 Calendar DatePicker + Direct ISO Text Field.
- * Lets the user either tap the trailing Calendar icon to pick a date from a visual month calendar
- * OR type/edit YYYY-MM-DD directly, while displaying a live human-readable subtitle ("Mon, 23 Nov 2026").
+ * 1-Tap Native Material 3 Calendar DatePicker + Direct ISO Text Field with sharp iOS squircle border.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -583,7 +971,7 @@ fun DatePickerOutlinedField(
       }
     },
     singleLine = true,
-    shape = RoundedCornerShape(14.dp),
+    shape = IosSharpWellShape,
     modifier = modifier
   )
 
@@ -632,7 +1020,7 @@ fun DatePickerOutlinedField(
 }
 
 /**
- * Tier-3 Progressive Disclosure Accordion Card for secondary calculators, statutory rules, and tools.
+ * Tier-3 Progressive Disclosure Accordion Card with Frosted Glassmorphism & sharp iOS squircle geometry.
  */
 @Composable
 fun ExecutiveCollapsibleAccordionCard(
@@ -646,22 +1034,22 @@ fun ExecutiveCollapsibleAccordionCard(
   content: @Composable ColumnScope.() -> Unit
 ) {
   var expanded by remember { mutableStateOf(initiallyExpanded) }
-  Surface(
-    shape = RoundedCornerShape(24.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = if (expanded) 2.dp else 1.dp,
-    border = BorderStroke(
-      width = 1.dp,
-      color = if (expanded) accent.copy(alpha = 0.42f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
-    ),
-    modifier = modifier.fillMaxWidth()
+  Box(
+    modifier = modifier
+      .fillMaxWidth()
+      .iosFrostedGlassCard(
+        accentColor = accent,
+        shape = IosSharpCardShape,
+        borderWidth = if (expanded) 1.3.dp else 1.dp,
+        borderAlpha = if (expanded) 0.55f else 0.35f
+      )
   ) {
     Column(modifier = Modifier.fillMaxWidth()) {
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .clickable { expanded = !expanded }
-          .padding(horizontal = 16.dp, vertical = 14.dp),
+          .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
@@ -671,17 +1059,17 @@ fun ExecutiveCollapsibleAccordionCard(
           horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
           Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = IosSharpButtonShape,
             color = accent.copy(alpha = 0.15f),
-            border = BorderStroke(1.dp, accent.copy(alpha = 0.35f)),
-            modifier = Modifier.size(38.dp)
+            border = BorderStroke(1.dp, accent.copy(alpha = 0.40f)),
+            modifier = Modifier.size(36.dp)
           ) {
             Box(contentAlignment = Alignment.Center) {
               Icon(
                 imageVector = icon,
                 contentDescription = title,
                 tint = accent,
-                modifier = Modifier.size(19.dp)
+                modifier = Modifier.size(18.dp)
               )
             }
           }
@@ -689,7 +1077,7 @@ fun ExecutiveCollapsibleAccordionCard(
             Text(
               text = title,
               style = MaterialTheme.typography.titleSmall,
-              fontWeight = FontWeight.Bold,
+              fontWeight = FontWeight.ExtraBold,
               color = MaterialTheme.colorScheme.onSurface,
               maxLines = 1,
               softWrap = false,
@@ -714,8 +1102,9 @@ fun ExecutiveCollapsibleAccordionCard(
           horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
           Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = accent.copy(alpha = 0.14f)
+            shape = IosSharpBadgeShape,
+            color = accent.copy(alpha = 0.14f),
+            border = BorderStroke(0.8.dp, accent.copy(alpha = 0.35f))
           ) {
             Text(
               text = badgeText,
@@ -725,7 +1114,7 @@ fun ExecutiveCollapsibleAccordionCard(
               color = accent,
               maxLines = 1,
               softWrap = false,
-              modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+              modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
             )
           }
           Icon(
@@ -745,7 +1134,7 @@ fun ExecutiveCollapsibleAccordionCard(
         Column(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            .padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
           content = content
         )
       }
@@ -754,7 +1143,7 @@ fun ExecutiveCollapsibleAccordionCard(
 }
 
 /**
- * Executive Glass Dialog Header with a 38dp squircle icon badge, primary title, and monospace subtitle.
+ * Executive Glass Dialog Header with a sharp 6dp squircle icon badge, primary title, and monospace subtitle.
  */
 @Composable
 fun ExecutiveDialogHeader(
@@ -770,17 +1159,17 @@ fun ExecutiveDialogHeader(
     horizontalArrangement = Arrangement.spacedBy(12.dp)
   ) {
     Surface(
-      shape = RoundedCornerShape(13.dp),
+      shape = IosSharpButtonShape,
       color = accent.copy(alpha = 0.16f),
-      border = BorderStroke(1.dp, accent.copy(alpha = 0.42f)),
-      modifier = Modifier.size(40.dp)
+      border = BorderStroke(1.dp, accent.copy(alpha = 0.45f)),
+      modifier = Modifier.size(38.dp)
     ) {
       Box(contentAlignment = Alignment.Center) {
         Icon(
           imageVector = icon,
           contentDescription = title,
           tint = accent,
-          modifier = Modifier.size(20.dp)
+          modifier = Modifier.size(19.dp)
         )
       }
     }
@@ -812,5 +1201,3 @@ fun ExecutiveDialogHeader(
     }
   }
 }
-
-

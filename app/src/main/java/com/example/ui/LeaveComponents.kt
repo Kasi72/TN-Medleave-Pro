@@ -84,6 +84,11 @@ import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.BadgeWeekOffTeal
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
@@ -110,24 +115,25 @@ fun IosSegmentedYearSelector(
   modifier: Modifier = Modifier
 ) {
   Surface(
-    shape = RoundedCornerShape(20.dp),
-    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+    shape = IosSharpWellShape,
+    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.90f),
     tonalElevation = 2.dp,
     modifier = modifier
       .fillMaxWidth()
       .border(
         width = 1.dp,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(20.dp)
+        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+        shape = IosSharpWellShape
       )
   ) {
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(5.dp),
-      horizontalArrangement = Arrangement.spacedBy(6.dp)
+        .padding(3.dp),
+      horizontalArrangement = Arrangement.spacedBy(3.dp),
+      verticalAlignment = Alignment.CenterVertically
     ) {
-      years.forEach { year ->
+      years.forEachIndexed { idx, year ->
         val isSelected = year == selectedYear
         val bgColor by animateColorAsState(
           targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -137,15 +143,15 @@ fun IosSegmentedYearSelector(
         Box(
           modifier = Modifier
             .weight(1f)
-            .height(42.dp)
-            .clip(RoundedCornerShape(15.dp))
+            .height(38.dp)
+            .clip(IosSharpButtonShape)
             .background(bgColor)
             .then(
               if (isSelected) {
                 Modifier.border(
-                  width = 1.dp,
-                  color = Color.White.copy(alpha = 0.22f),
-                  shape = RoundedCornerShape(15.dp)
+                  width = 1.1.dp,
+                  color = Color.White.copy(alpha = 0.35f),
+                  shape = IosSharpButtonShape
                 )
               } else {
                 Modifier
@@ -157,22 +163,23 @@ fun IosSegmentedYearSelector(
         ) {
           Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
           ) {
             if (isSelected) {
               Box(
                 modifier = Modifier
-                  .size(6.dp)
-                  .clip(RoundedCornerShape(3.dp))
+                  .size(width = 5.dp, height = 5.dp)
+                  .clip(IosSharpMicroShape)
                   .background(Color(0xFF34D399))
               )
             }
             Text(
               text = year.toString(),
               fontFamily = JetBrainsMonoFontFamily,
-              fontSize = 14.sp,
-              lineHeight = 18.sp,
-              fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+              fontSize = 13.sp,
+              lineHeight = 16.sp,
+              letterSpacing = (-0.2).sp,
+              fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
               color = if (isSelected) {
                 MaterialTheme.colorScheme.onPrimary
               } else {
@@ -182,6 +189,16 @@ fun IosSegmentedYearSelector(
               softWrap = false
             )
           }
+        }
+
+        // Authentic Apple iOS UISegmentedControl Hairline Divider
+        if (idx < years.lastIndex && !isSelected && years[idx + 1] != selectedYear) {
+          Box(
+            modifier = Modifier
+              .width(0.8.dp)
+              .height(16.dp)
+              .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.38f))
+          )
         }
       }
     }
@@ -215,23 +232,18 @@ fun SquircleCreditCard(
   }
 
   Surface(
-    shape = RoundedCornerShape(24.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
+    shape = IosSharpCardShape,
+    color = Color.Transparent,
+    tonalElevation = 0.dp,
+    shadowElevation = 3.dp,
     modifier = modifier
-      .clip(RoundedCornerShape(24.dp))
-      .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
-      .border(
-        width = 1.2.dp,
-        brush = androidx.compose.ui.graphics.Brush.linearGradient(
-          colors = listOf(
-            accent.copy(alpha = 0.42f),
-            accent.copy(alpha = 0.12f)
-          )
-        ),
-        shape = RoundedCornerShape(24.dp)
+      .iosFrostedGlassCard(
+        accentColor = accent,
+        shape = IosSharpCardShape,
+        borderWidth = 1.15.dp,
+        borderAlpha = 0.50f
       )
+      .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
   ) {
     Box(
       modifier = Modifier
@@ -246,115 +258,128 @@ fun SquircleCreditCard(
           )
         )
     ) {
-      Column(
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-      ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Surface(
-              shape = RoundedCornerShape(10.dp),
-              color = accent.copy(alpha = 0.15f),
-              modifier = Modifier.border(
-                width = 1.dp,
-                color = accent.copy(alpha = 0.30f),
-                shape = RoundedCornerShape(10.dp)
-              )
+      Column(modifier = Modifier.fillMaxSize()) {
+        // Sharp Top iOS Accent Laser Strip
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(2.5.dp)
+            .background(accent)
+        )
+
+        Column(
+          modifier = Modifier
+            .fillMaxSize()
+            .padding(14.dp),
+          verticalArrangement = Arrangement.SpaceBetween
+        ) {
+          Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
             ) {
-              Text(
-                text = code,
-                style = MaterialTheme.typography.labelMedium,
-                color = accent,
-                lineHeight = 14.sp,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-              )
-            }
-            if (computedProgress != null) {
-              MiniCircularQuotaRing(
-                remainingFraction = (1f - computedProgress).coerceIn(0f, 1f),
-                accentColor = accent,
-                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
-                size = 28.dp,
-                strokeWidth = 3.2.dp
-              )
-            } else {
-              Box(
-                modifier = Modifier
-                  .size(22.dp)
-                  .clip(RoundedCornerShape(7.dp))
-                  .background(accent.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
+              Surface(
+                shape = IosSharpBadgeShape,
+                color = accent.copy(alpha = 0.15f),
+                modifier = Modifier.border(
+                  width = 0.9.dp,
+                  color = accent.copy(alpha = 0.38f),
+                  shape = IosSharpBadgeShape
+                )
               ) {
-                Box(
-                  modifier = Modifier
-                    .size(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(accent)
+                Text(
+                  text = code,
+                  style = MaterialTheme.typography.labelMedium,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = accent,
+                  lineHeight = 13.sp,
+                  maxLines = 1,
+                  softWrap = false,
+                  overflow = TextOverflow.Ellipsis,
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.5.dp)
                 )
               }
+              if (computedProgress != null) {
+                MiniCircularQuotaRing(
+                  remainingFraction = (1f - computedProgress).coerceIn(0f, 1f),
+                  accentColor = accent,
+                  trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+                  size = 26.dp,
+                  strokeWidth = 3.dp
+                )
+              } else {
+                Box(
+                  modifier = Modifier
+                    .size(20.dp)
+                    .clip(IosSharpMicroShape)
+                    .background(accent.copy(alpha = 0.14f)),
+                  contentAlignment = Alignment.Center
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(7.dp)
+                      .clip(IosSharpMicroShape)
+                      .background(accent)
+                  )
+                }
+              }
             }
-          }
 
-          Text(
-            text = mainStat,
-            fontFamily = JetBrainsMonoFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            lineHeight = 24.sp,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis
-          )
-
-          Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-              text = title,
-              style = MaterialTheme.typography.labelLarge,
-              lineHeight = 16.sp,
+              text = mainStat,
+              fontFamily = JetBrainsMonoFontFamily,
+              fontWeight = FontWeight.ExtraBold,
+              fontSize = 19.sp,
+              lineHeight = 23.sp,
+              letterSpacing = (-0.3).sp,
               color = MaterialTheme.colorScheme.onSurface,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
             )
-            Text(
-              text = subStat,
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              fontSize = 11.sp,
-              lineHeight = 14.sp,
-              maxLines = 1,
-              softWrap = false,
-              overflow = TextOverflow.Ellipsis
-            )
-          }
-        }
 
-        if (computedProgress != null) {
-          Column(modifier = Modifier.padding(top = 8.dp)) {
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .height(5.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(accent.copy(alpha = 0.15f))
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+              Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 15.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+              )
+              Text(
+                text = subStat,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 10.5.sp,
+                lineHeight = 13.sp,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+          }
+
+          if (computedProgress != null) {
+            Column(modifier = Modifier.padding(top = 7.dp)) {
               Box(
                 modifier = Modifier
-                  .fillMaxWidth(computedProgress.coerceIn(0.06f, 1f))
-                  .height(5.dp)
-                  .clip(RoundedCornerShape(3.dp))
-                  .background(accent)
-              )
+                  .fillMaxWidth()
+                  .height(4.dp)
+                  .clip(IosSharpMicroShape)
+                  .background(accent.copy(alpha = 0.16f))
+              ) {
+                Box(
+                  modifier = Modifier
+                    .fillMaxWidth(computedProgress.coerceIn(0.06f, 1f))
+                    .height(4.dp)
+                    .clip(IosSharpMicroShape)
+                    .background(accent)
+                )
+              }
             }
           }
         }
@@ -388,40 +413,43 @@ fun LeaveRecordSquircleRow(
     SrReconciliationState.PENDING_SUBMISSION -> StatusPendingOrange
   }
 
+  val rowGlassAccent = when (status) {
+    HighlightStatus.ALERT_RED -> StatusAlertRed
+    HighlightStatus.VERIFIED_GREEN -> StatusVerifiedGreen
+    HighlightStatus.PENDING_ORANGE -> StatusPendingOrange
+    HighlightStatus.NORMAL -> accent
+  }
+
   Surface(
-    shape = RoundedCornerShape(22.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
+    shape = IosSharpCardShape,
+    color = Color.Transparent,
+    tonalElevation = 0.dp,
     shadowElevation = 2.dp,
     modifier = Modifier
       .fillMaxWidth()
-      .border(
-        width = if (status != HighlightStatus.NORMAL) 1.5.dp else 1.dp,
-        color = when (status) {
-          HighlightStatus.ALERT_RED -> StatusAlertRed.copy(alpha = 0.65f)
-          HighlightStatus.VERIFIED_GREEN -> StatusVerifiedGreen.copy(alpha = 0.6f)
-          HighlightStatus.PENDING_ORANGE -> StatusPendingOrange.copy(alpha = 0.6f)
-          HighlightStatus.NORMAL -> accent.copy(alpha = 0.22f)
-        },
-        shape = RoundedCornerShape(22.dp)
+      .iosFrostedGlassCard(
+        accentColor = rowGlassAccent,
+        shape = IosSharpCardShape,
+        borderWidth = if (status != HighlightStatus.NORMAL) 1.4.dp else 1.1.dp,
+        borderAlpha = if (status != HighlightStatus.NORMAL) 0.62f else 0.36f
       )
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(14.dp),
-      verticalArrangement = Arrangement.spacedBy(10.dp)
+        .padding(13.dp),
+      verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
       ) {
-        // Squircle Category Badge
+        // Sharp-Edged iOS Squircle Category Badge (6.dp)
         Surface(
-          shape = RoundedCornerShape(14.dp),
+          shape = IosSharpButtonShape,
           color = accent.copy(alpha = 0.15f),
-          border = BorderStroke(1.dp, accent.copy(alpha = 0.32f)),
-          modifier = Modifier.size(50.dp)
+          border = BorderStroke(1.dp, accent.copy(alpha = 0.40f)),
+          modifier = Modifier.size(46.dp)
         ) {
           Column(
             horizontalAlignment = Alignment.CenterHorizontally,

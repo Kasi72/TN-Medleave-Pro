@@ -198,7 +198,7 @@ fun AiAdvisorChatTabScreen(
                   )
                 }
                 Text(
-                  text = "2026 Left: ${remCl2026.toInt()} CL, $remRh2026 RH, ${auditYear.availableUnusedGhCount} GH • 2027 DB: $gh2027Count GH, $rh2027Count RL",
+                  text = "2026 Left: ${formatDoubleDays(remCl2026)} CL, $remRh2026 RH, ${auditYear.availableUnusedGhCount} GH • 2027 DB: $gh2027Count GH, $rh2027Count RL",
                   style = MaterialTheme.typography.bodySmall,
                   color = Color.White.copy(alpha = 0.9f),
                   fontSize = 11.sp,
@@ -275,7 +275,7 @@ fun AiAdvisorChatTabScreen(
           shadowElevation = 6.dp,
           modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp, bottom = 10.dp)
+            .padding(top = 6.dp, bottom = 96.dp)
         ) {
           Row(
             modifier = Modifier
@@ -344,7 +344,7 @@ fun AiAdvisorChatTabScreen(
       1 -> {
         val promptGroups = listOf(
           "2026 & 2027 Leave Bridge Planning" to listOf(
-            "Best 2026 bridges for my ${remCl2026.toInt()} CL & $remRh2026 RH",
+            "Best 2026 bridges for my ${formatDoubleDays(remCl2026)} CL & $remRh2026 RH",
             "Plan Dec 2026 Christmas & Jan 2027 New Year cross-year leave spell",
             "Analyze Jan 2027 Pongal 6-day megabridge using 2027 GH & RL calendars"
           ),
@@ -361,7 +361,7 @@ fun AiAdvisorChatTabScreen(
 
         LazyColumn(
           modifier = Modifier.fillMaxSize(),
-          contentPadding = PaddingValues(bottom = 88.dp),
+          contentPadding = PaddingValues(bottom = 104.dp),
           verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
           item {
@@ -494,7 +494,7 @@ fun AiAdvisorChatTabScreen(
       2 -> {
         LazyColumn(
           modifier = Modifier.fillMaxSize(),
-          contentPadding = PaddingValues(bottom = 88.dp),
+          contentPadding = PaddingValues(bottom = 104.dp),
           verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
           item {

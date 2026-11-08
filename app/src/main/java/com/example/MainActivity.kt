@@ -82,6 +82,7 @@ import com.example.ui.AiChatViewModel
 import com.example.ui.AddLeaveRecordDialog
 import com.example.ui.AuthScreen
 import com.example.ui.ColGhAuditTabScreen
+import com.example.ui.IosAmbientGlassBackdrop
 import com.example.ui.IosCalendarTabScreen
 import com.example.ui.LeaveUiState
 import com.example.ui.LeaveViewModel
@@ -89,9 +90,17 @@ import com.example.ui.LedgerTabScreen
 import com.example.ui.OptimizerTabScreen
 import com.example.ui.OverviewTabScreen
 import com.example.ui.signOutUser
+import com.example.ui.theme.AppThemeController
+import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.IosDarkDockSurface
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpSquircleShape
+import com.example.ui.theme.IosSharpTabShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.IosSquircleGlassFill
+import com.example.ui.theme.LocalAppThemeMode
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.NeonAquaAccent
 import com.example.ui.theme.NeonCyanBright
@@ -274,26 +283,35 @@ fun MainFeatureHost(
       if (currentTab !in listOf(3, 5) && !showEnterpriseSettingsDialog) {
         FloatingActionButton(
           onClick = { showAddDialog = true },
-          shape = RoundedCornerShape(18.dp),
+          shape = IosSharpButtonShape,
           containerColor = EmeraldOptimal,
           contentColor = Color.White,
           modifier = Modifier
-            .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(18.dp))
+            .border(1.2.dp, Color.White.copy(alpha = 0.42f), IosSharpButtonShape)
             .testTag("fab_add_leave")
         ) {
           Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
           ) {
-            Icon(
-              imageVector = Icons.Default.Add,
-              contentDescription = "Log Leave",
-              modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
+            Box(
+              modifier = Modifier
+                .size(20.dp)
+                .clip(IosSharpMicroShape)
+                .background(Color.White.copy(alpha = 0.22f)),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Log Leave",
+                modifier = Modifier.size(15.dp)
+              )
+            }
             Text(
               text = "Log Leave",
               fontWeight = FontWeight.ExtraBold,
+              letterSpacing = (-0.2).sp,
               fontSize = 13.sp,
               maxLines = 1,
               softWrap = false
@@ -303,12 +321,15 @@ fun MainFeatureHost(
       }
     }
   ) { innerPadding ->
-    Column(
+    IosAmbientGlassBackdrop(
       modifier = Modifier
         .fillMaxSize()
         .padding(innerPadding)
     ) {
-      when (val state = uiState) {
+      Column(
+        modifier = Modifier.fillMaxSize()
+      ) {
+        when (val state = uiState) {
         is LeaveUiState.Loading -> {
           Box(
             modifier = Modifier.fillMaxSize(),
@@ -589,6 +610,7 @@ fun MainFeatureHost(
           }
         }
       }
+      }
     }
   }
 }
@@ -606,6 +628,7 @@ private fun IosExecutiveTopBar(
   onSignOut: () -> Unit
 ) {
   val context = LocalContext.current
+  val activeThemeMode = LocalAppThemeMode.current
   val officerHeaderSubtitle = remember(profileRefreshTick) {
     val collegeShort = com.example.ui.HodProfileSettingsStore.getCollege(context)
       .substringBefore(",")
@@ -626,18 +649,115 @@ private fun IosExecutiveTopBar(
   }
 
   Surface(
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    shadowElevation = 2.dp,
+    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+    tonalElevation = 4.dp,
+    shadowElevation = 4.dp,
     modifier = Modifier
       .fillMaxWidth()
       .statusBarsPadding()
   ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .background(
+          Brush.linearGradient(
+            colors = listOf(
+              Color.White.copy(alpha = if (activeThemeMode == AppThemeMode.DARK_OBSIDIAN) 0.04f else 0.45f),
+              EmeraldOptimal.copy(alpha = 0.04f),
+              Color.Transparent
+            )
+          )
+        )
+    ) {
+      // iOS 18 Dynamic Island Live Activity & Theme Switcher Strip
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 14.dp, vertical = 10.dp),
+          .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        // Left: iOS Dynamic Island Live Activity Capsule (Sharp Squircle)
+        Surface(
+          shape = IosSharpButtonShape,
+          color = Color(0xFF06111F),
+          modifier = Modifier
+            .height(22.dp)
+            .border(0.8.dp, Color(0xFF34D399).copy(alpha = 0.45f), IosSharpButtonShape)
+            .clickable { onOpenNotifications() }
+        ) {
+          Row(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+          ) {
+            Box(
+              modifier = Modifier
+                .size(5.dp)
+                .clip(IosSharpMicroShape)
+                .background(Color(0xFF34D399))
+            )
+            Text(
+              text = "iOS 18 PRO • IFHRMS LIVE SYNC",
+              color = Color(0xFFA7F3D0),
+              fontSize = 8.5.sp,
+              lineHeight = 10.sp,
+              fontWeight = FontWeight.ExtraBold,
+              letterSpacing = 0.35.sp,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
+        }
+
+        // Right: Instant 1-Tap iOS Theme Mode Cycle Pill (Green / White / Dark)
+        Surface(
+          shape = IosSharpButtonShape,
+          color = EmeraldOptimal.copy(alpha = 0.13f),
+          modifier = Modifier
+            .height(22.dp)
+            .clip(IosSharpButtonShape)
+            .border(0.8.dp, EmeraldOptimal.copy(alpha = 0.42f), IosSharpButtonShape)
+            .clickable {
+              val nextMode = when (activeThemeMode) {
+                AppThemeMode.GREEN_EMERALD -> AppThemeMode.WHITE_CLINICAL
+                AppThemeMode.WHITE_CLINICAL -> AppThemeMode.DARK_OBSIDIAN
+                AppThemeMode.DARK_OBSIDIAN -> AppThemeMode.GREEN_EMERALD
+              }
+              AppThemeController.setThemeMode(context, nextMode)
+            }
+            .testTag("top_bar_quick_theme_pill")
+        ) {
+          Row(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+          ) {
+            Box(
+              modifier = Modifier
+                .size(6.dp)
+                .clip(IosSharpMicroShape)
+                .background(EmeraldOptimal)
+            )
+            Text(
+              text = "${activeThemeMode.shortBadge} ⟳",
+              color = EmeraldOptimal,
+              fontSize = 8.5.sp,
+              lineHeight = 10.sp,
+              fontWeight = FontWeight.ExtraBold,
+              letterSpacing = 0.3.sp,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
+        }
+      }
+
+      // Main iOS Large Title + Sharp Squircle Segmented Control Bar
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 12.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
@@ -648,28 +768,29 @@ private fun IosExecutiveTopBar(
           ) {
             Box(
               modifier = Modifier
-                .size(6.dp)
-                .clip(RoundedCornerShape(3.dp))
+                .size(5.dp)
+                .clip(IosSharpMicroShape)
                 .background(EmeraldOptimal)
             )
             Text(
               text = officerHeaderSubtitle,
               style = MaterialTheme.typography.labelMedium,
               color = EmeraldOptimal,
-              fontSize = 9.5.sp,
-              lineHeight = 12.sp,
+              fontSize = 9.sp,
+              lineHeight = 11.sp,
               letterSpacing = 0.25.sp,
               maxLines = 1,
               softWrap = false,
               overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
           }
-          Spacer(modifier = Modifier.height(2.dp))
+          Spacer(modifier = Modifier.height(1.dp))
           Text(
             text = title,
             style = MaterialTheme.typography.headlineMedium,
-            fontSize = 18.sp,
-            lineHeight = 22.sp,
+            fontSize = 17.5.sp,
+            lineHeight = 21.sp,
+            letterSpacing = (-0.4).sp,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
@@ -680,139 +801,151 @@ private fun IosExecutiveTopBar(
 
         Spacer(modifier = Modifier.width(6.dp))
 
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(5.dp)
+        // Unified iOS Sharp-Edged Squircle Control Cluster
+        Surface(
+          shape = IosSharpWellShape,
+          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
+          modifier = Modifier.border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+            shape = IosSharpWellShape
+          )
         ) {
-          Surface(
-            shape = RoundedCornerShape(11.dp),
-            color = EmeraldOptimal.copy(alpha = 0.12f),
-            modifier = Modifier
-              .size(34.dp)
-              .clip(RoundedCornerShape(11.dp))
-              .border(1.dp, EmeraldOptimal.copy(alpha = 0.30f), RoundedCornerShape(11.dp))
-              .clickable { onOpenBiometricLock() }
-              .testTag("top_bar_biometric_lock_button")
+          Row(
+            modifier = Modifier.padding(2.5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
           ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.Fingerprint,
-                contentDescription = "Biometric Lock & Security",
-                tint = EmeraldOptimal,
-                modifier = Modifier.size(16.dp)
-              )
-            }
-          }
-
-          Surface(
-            shape = RoundedCornerShape(11.dp),
-            color = EmeraldOptimal.copy(alpha = 0.12f),
-            modifier = Modifier
-              .size(34.dp)
-              .clip(RoundedCornerShape(11.dp))
-              .border(1.dp, EmeraldOptimal.copy(alpha = 0.30f), RoundedCornerShape(11.dp))
-              .clickable { onOpenNotifications() }
-              .testTag("top_bar_notifications_button")
-          ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.NotificationsActive,
-                contentDescription = "Holiday & Leave Push Alerts",
-                tint = EmeraldOptimal,
-                modifier = Modifier.size(16.dp)
-              )
-            }
-          }
-
-          Surface(
-            shape = RoundedCornerShape(11.dp),
-            color = EmeraldOptimal.copy(alpha = 0.16f),
-            modifier = Modifier
-              .height(34.dp)
-              .clip(RoundedCornerShape(11.dp))
-              .border(1.dp, EmeraldOptimal.copy(alpha = 0.42f), RoundedCornerShape(11.dp))
-              .clickable { onOpenPdfExport() }
-              .testTag("top_bar_pdf_export_button")
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 9.dp),
-              verticalAlignment = Alignment.CenterVertically
+            Surface(
+              shape = IosSharpButtonShape,
+              color = EmeraldOptimal.copy(alpha = 0.14f),
+              modifier = Modifier
+                .size(31.dp)
+                .clip(IosSharpButtonShape)
+                .border(0.9.dp, EmeraldOptimal.copy(alpha = 0.38f), IosSharpButtonShape)
+                .clickable { onOpenBiometricLock() }
+                .testTag("top_bar_biometric_lock_button")
             ) {
-              Icon(
-                imageVector = Icons.Default.PictureAsPdf,
-                contentDescription = "Export Official PDF Report",
-                tint = EmeraldOptimal,
-                modifier = Modifier.size(14.dp)
-              )
-              Spacer(modifier = Modifier.width(3.dp))
-              Text(
-                text = "PDF",
-                color = EmeraldOptimal,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 10.5.sp,
-                lineHeight = 13.sp,
-                maxLines = 1,
-                softWrap = false
-              )
+              Box(contentAlignment = Alignment.Center) {
+                Icon(
+                  imageVector = Icons.Default.Fingerprint,
+                  contentDescription = "Biometric Lock & Security",
+                  tint = EmeraldOptimal,
+                  modifier = Modifier.size(15.dp)
+                )
+              }
             }
-          }
 
-          Surface(
-            shape = RoundedCornerShape(11.dp),
-            color = if (isSettingsOpen) EmeraldOptimal else EmeraldOptimal.copy(alpha = 0.14f),
-            modifier = Modifier
-              .size(34.dp)
-              .clip(RoundedCornerShape(11.dp))
-              .border(
-                1.dp,
-                if (isSettingsOpen) EmeraldOptimal else EmeraldOptimal.copy(alpha = 0.38f),
-                RoundedCornerShape(11.dp)
-              )
-              .clickable { onOpenSettings() }
-              .testTag("top_bar_settings_button")
-          ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Enterprise Settings & 2027 Holiday Sync",
-                tint = if (isSettingsOpen) Color.White else EmeraldOptimal,
-                modifier = Modifier.size(16.dp)
-              )
+            Surface(
+              shape = IosSharpButtonShape,
+              color = EmeraldOptimal.copy(alpha = 0.14f),
+              modifier = Modifier
+                .size(31.dp)
+                .clip(IosSharpButtonShape)
+                .border(0.9.dp, EmeraldOptimal.copy(alpha = 0.38f), IosSharpButtonShape)
+                .clickable { onOpenNotifications() }
+                .testTag("top_bar_notifications_button")
+            ) {
+              Box(contentAlignment = Alignment.Center) {
+                Icon(
+                  imageVector = Icons.Default.NotificationsActive,
+                  contentDescription = "Holiday & Leave Push Alerts",
+                  tint = EmeraldOptimal,
+                  modifier = Modifier.size(15.dp)
+                )
+              }
             }
-          }
 
-          Surface(
-            shape = RoundedCornerShape(11.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier
-              .size(34.dp)
-              .clip(RoundedCornerShape(11.dp))
-              .border(
-                1.dp,
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
-                RoundedCornerShape(11.dp)
-              )
-              .clickable { onSignOut() }
-              .testTag("sign_out_button")
-          ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.AutoMirrored.Filled.Logout,
-                contentDescription = "Sign Out",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(15.dp)
-              )
+            Surface(
+              shape = IosSharpButtonShape,
+              color = EmeraldOptimal.copy(alpha = 0.18f),
+              modifier = Modifier
+                .height(31.dp)
+                .clip(IosSharpButtonShape)
+                .border(0.9.dp, EmeraldOptimal.copy(alpha = 0.48f), IosSharpButtonShape)
+                .clickable { onOpenPdfExport() }
+                .testTag("top_bar_pdf_export_button")
+            ) {
+              Row(
+                modifier = Modifier.padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Icon(
+                  imageVector = Icons.Default.PictureAsPdf,
+                  contentDescription = "Export Official PDF Report",
+                  tint = EmeraldOptimal,
+                  modifier = Modifier.size(13.dp)
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                  text = "PDF",
+                  color = EmeraldOptimal,
+                  fontWeight = FontWeight.ExtraBold,
+                  fontSize = 10.sp,
+                  lineHeight = 12.sp,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
+            }
+
+            Surface(
+              shape = IosSharpButtonShape,
+              color = if (isSettingsOpen) EmeraldOptimal else EmeraldOptimal.copy(alpha = 0.14f),
+              modifier = Modifier
+                .size(31.dp)
+                .clip(IosSharpButtonShape)
+                .border(
+                  0.9.dp,
+                  if (isSettingsOpen) EmeraldOptimal else EmeraldOptimal.copy(alpha = 0.42f),
+                  IosSharpButtonShape
+                )
+                .clickable { onOpenSettings() }
+                .testTag("top_bar_settings_button")
+            ) {
+              Box(contentAlignment = Alignment.Center) {
+                Icon(
+                  imageVector = Icons.Default.Settings,
+                  contentDescription = "Enterprise Settings & 2027 Holiday Sync",
+                  tint = if (isSettingsOpen) Color.White else EmeraldOptimal,
+                  modifier = Modifier.size(15.dp)
+                )
+              }
+            }
+
+            Surface(
+              shape = IosSharpButtonShape,
+              color = MaterialTheme.colorScheme.surface,
+              modifier = Modifier
+                .size(31.dp)
+                .clip(IosSharpButtonShape)
+                .border(
+                  0.9.dp,
+                  MaterialTheme.colorScheme.outline.copy(alpha = 0.40f),
+                  IosSharpButtonShape
+                )
+                .clickable { onSignOut() }
+                .testTag("sign_out_button")
+            ) {
+              Box(contentAlignment = Alignment.Center) {
+                Icon(
+                  imageVector = Icons.AutoMirrored.Filled.Logout,
+                  contentDescription = "Sign Out",
+                  tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                  modifier = Modifier.size(14.dp)
+                )
+              }
             }
           }
         }
       }
 
-      // Subtle enterprise divider line
+      // Crisp iOS Hairline Separator (0.75.dp)
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .height(1.dp)
-          .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f))
+          .height(0.75.dp)
+          .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
       )
     }
   }
@@ -823,6 +956,28 @@ private fun IosSquircleBottomTabBar(
   selectedTab: Int,
   onSelectTab: (Int) -> Unit
 ) {
+  val themeMode = LocalAppThemeMode.current
+  val isWhiteTheme = themeMode == AppThemeMode.WHITE_CLINICAL
+  val isGreenTheme = themeMode == AppThemeMode.GREEN_EMERALD
+
+  val dockBackground = when (themeMode) {
+    AppThemeMode.WHITE_CLINICAL -> Color(0xFFFFFFFF).copy(alpha = 0.90f)
+    AppThemeMode.GREEN_EMERALD -> Color(0xFF042F2E).copy(alpha = 0.92f)
+    AppThemeMode.DARK_OBSIDIAN -> IosDarkDockSurface.copy(alpha = 0.91f)
+  }
+  val dockBorderColor = when (themeMode) {
+    AppThemeMode.WHITE_CLINICAL -> Color(0xFFCBD5E1)
+    AppThemeMode.GREEN_EMERALD -> Color(0xFF34D399).copy(alpha = 0.55f)
+    AppThemeMode.DARK_OBSIDIAN -> NeonCyanText.copy(alpha = 0.45f)
+  }
+  val dockTopShape = IosSharpSquircleShape(
+    topStart = 12.dp,
+    topEnd = 12.dp,
+    bottomEnd = 0.dp,
+    bottomStart = 0.dp,
+    sharpnessBias = 0.85f
+  )
+
   val tabs = listOf(
     Triple(0, "Overview", Icons.Default.Dashboard),
     Triple(1, "Ledger", Icons.Default.EventNote),
@@ -833,103 +988,188 @@ private fun IosSquircleBottomTabBar(
   )
 
   Surface(
-    color = IosDarkDockSurface,
+    color = dockBackground,
     tonalElevation = 14.dp,
     shadowElevation = 20.dp,
-    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+    shape = dockTopShape,
     modifier = Modifier
       .fillMaxWidth()
       .border(
-        width = 1.2.dp,
-        color = NeonCyanText.copy(alpha = 0.38f),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        width = 1.1.dp,
+        color = dockBorderColor,
+        shape = dockTopShape
       )
   ) {
-    Row(
+    Column(
       modifier = Modifier
         .fillMaxWidth()
-        .navigationBarsPadding()
-        .padding(horizontal = 8.dp, vertical = 7.dp),
-      horizontalArrangement = Arrangement.spacedBy(2.dp),
-      verticalAlignment = Alignment.CenterVertically
+        .background(
+          Brush.linearGradient(
+            colors = listOf(
+              Color.White.copy(alpha = if (isWhiteTheme) 0.65f else 0.06f),
+              Color.Transparent,
+              EmeraldOptimal.copy(alpha = 0.05f)
+            )
+          )
+        )
+        .navigationBarsPadding(),
+      horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      tabs.forEach { (index, label, icon) ->
-        val isSelected = selectedTab == index
-        val iconColor = if (isSelected) {
-          Color(0xFF041322)
-        } else {
-          NeonCyanBright.copy(alpha = 0.78f)
-        }
-        val labelColor = if (isSelected) {
-          NeonAquaAccent
-        } else {
-          NeonCyanBright.copy(alpha = 0.72f)
-        }
+      // Top Specular Chamfer Line along the dock edge
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(1.dp)
+          .background(
+            Brush.horizontalGradient(
+              colors = listOf(
+                Color.Transparent,
+                if (isWhiteTheme) EmeraldOptimal.copy(alpha = 0.45f) else NeonAquaAccent.copy(alpha = 0.65f),
+                Color.Transparent
+              )
+            )
+          )
+      )
 
-        Column(
-          modifier = Modifier
-            .weight(1f)
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { onSelectTab(index) }
-            .padding(vertical = 3.dp)
-            .testTag("bottom_tab_$index"),
-          horizontalAlignment = Alignment.CenterHorizontally,
-          verticalArrangement = Arrangement.spacedBy(3.dp)
-        ) {
-          Box(
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 6.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        tabs.forEachIndexed { idx, (index, label, icon) ->
+          val isSelected = selectedTab == index
+          val iconColor = when {
+            isSelected && isWhiteTheme -> Color.White
+            isSelected -> Color(0xFF041322)
+            isWhiteTheme -> Color(0xFF475569)
+            isGreenTheme -> Color(0xFFA7F3D0).copy(alpha = 0.88f)
+            else -> NeonCyanBright.copy(alpha = 0.80f)
+          }
+          val labelColor = when {
+            isSelected && isWhiteTheme -> EmeraldOptimal
+            isSelected -> NeonAquaAccent
+            isWhiteTheme -> Color(0xFF334155)
+            isGreenTheme -> Color(0xFFD1FAE5).copy(alpha = 0.85f)
+            else -> NeonCyanBright.copy(alpha = 0.76f)
+          }
+          val activePillBrush = if (isWhiteTheme) {
+            Brush.linearGradient(listOf(EmeraldOptimal, Color(0xFF047857)))
+          } else {
+            Brush.linearGradient(listOf(NeonAquaAccent, NeonCyanText))
+          }
+
+          Column(
             modifier = Modifier
-              .height(30.dp)
-              .padding(horizontal = 6.dp)
-              .fillMaxWidth()
-              .clip(RoundedCornerShape(14.dp))
+              .weight(1f)
+              .clip(IosSharpTabShape)
+              .background(
+                if (isSelected) {
+                  if (isWhiteTheme) EmeraldOptimal.copy(alpha = 0.08f)
+                  else Color.White.copy(alpha = 0.06f)
+                } else {
+                  Color.Transparent
+                }
+              )
               .then(
                 if (isSelected) {
-                  Modifier
-                    .background(
-                      Brush.linearGradient(
-                        listOf(NeonAquaAccent, NeonCyanText)
-                      )
-                    )
-                    .border(
-                      width = 1.dp,
-                      color = Color.White.copy(alpha = 0.45f),
-                      shape = RoundedCornerShape(14.dp)
-                    )
+                  Modifier.border(
+                    width = 1.dp,
+                    color = if (isWhiteTheme) EmeraldOptimal.copy(alpha = 0.45f) else NeonAquaAccent.copy(alpha = 0.55f),
+                    shape = IosSharpTabShape
+                  )
                 } else {
-                  Modifier.background(Color.Transparent)
+                  Modifier
                 }
-              ),
-            contentAlignment = Alignment.Center
+              )
+              .clickable { onSelectTab(index) }
+              .padding(vertical = 4.dp, horizontal = 2.dp)
+              .testTag("bottom_tab_$index"),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.5.dp)
           ) {
-            Icon(
-              imageVector = icon,
-              contentDescription = label,
-              tint = iconColor,
-              modifier = Modifier.size(if (isSelected) 18.dp else 17.dp)
+            // Top Sharp Laser Accent Bar
+            Box(
+              modifier = Modifier
+                .size(width = if (isSelected) 20.dp else 0.dp, height = 2.dp)
+                .clip(IosSharpMicroShape)
+                .background(
+                  if (isSelected) (if (isWhiteTheme) EmeraldOptimal else NeonAquaAccent) else Color.Transparent
+                )
+            )
+
+            // Sharp-Edged iOS Squircle Icon Button Well (6.dp sharp squircle)
+            Box(
+              modifier = Modifier
+                .height(27.dp)
+                .padding(horizontal = 5.dp)
+                .fillMaxWidth()
+                .clip(IosSharpButtonShape)
+                .then(
+                  if (isSelected) {
+                    Modifier
+                      .background(activePillBrush)
+                      .border(
+                        width = 1.dp,
+                        color = Color.White.copy(alpha = 0.55f),
+                        shape = IosSharpButtonShape
+                      )
+                  } else {
+                    Modifier.background(Color.Transparent)
+                  }
+                ),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = iconColor,
+                modifier = Modifier.size(if (isSelected) 17.dp else 16.dp)
+              )
+            }
+
+            Text(
+              text = label,
+              style = MaterialTheme.typography.labelLarge,
+              color = labelColor,
+              fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+              fontSize = 10.sp,
+              lineHeight = 11.5.sp,
+              letterSpacing = (-0.15).sp,
+              maxLines = 1,
+              softWrap = false,
+              overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
           }
-          Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = labelColor,
-            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-            fontSize = 10.5.sp,
-            lineHeight = 12.sp,
-            letterSpacing = 0.2.sp,
-            maxLines = 1,
-            softWrap = false,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-          )
-          Box(
-            modifier = Modifier
-              .size(width = if (isSelected) 14.dp else 4.dp, height = 3.dp)
-              .clip(RoundedCornerShape(2.dp))
-              .background(
-                if (isSelected) NeonAquaAccent else Color.Transparent
-              )
-          )
+
+          // Subtle iOS Vertical Hairline Divider between tabs
+          if (idx < tabs.lastIndex) {
+            Box(
+              modifier = Modifier
+                .width(0.6.dp)
+                .height(26.dp)
+                .background(
+                  if (isWhiteTheme) Color(0xFFE2E8F0)
+                  else Color.White.copy(alpha = 0.08f)
+                )
+            )
+          }
         }
       }
+
+      // Authentic iOS Home Indicator Bar at the bottom edge
+      Box(
+        modifier = Modifier
+          .padding(bottom = 3.dp)
+          .width(116.dp)
+          .height(3.5.dp)
+          .clip(IosSharpMicroShape)
+          .background(
+            if (isWhiteTheme) Color(0xFFCBD5E1)
+            else Color.White.copy(alpha = 0.24f)
+          )
+      )
     }
   }
 }

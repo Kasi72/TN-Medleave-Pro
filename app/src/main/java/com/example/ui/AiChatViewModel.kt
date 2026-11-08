@@ -56,9 +56,9 @@ data class AiChatUiState(
     ChatMessageItem(
       isUser = false,
       text = "Vanakkam Doctor! I am your **Tamil Nadu Medical Service Leave & Holiday Optimization Advisor** for the Department of Psychiatry, Government Erode Medical College & Hospital.\n\n" +
-        "I have live access to your **2023–2026 Leave Ledger**, your **COL ↔ GH Worked 1-to-1 Audit**, and the **2026 TN Restricted (RL) & Public Holiday (GH) Lists**.\n\n" +
+        "I have live access to your **2023–2027 Leave Ledger**, your **COL ↔ GH Worked 1-to-1 Audit**, and the **2026–2027 TN Restricted (RL) & Public Holiday (GH) Lists**.\n\n" +
         "Ask me to:\n" +
-        "• Recommend optimal 2026 leave bridges using your remaining CL, RH, or unused GH Worked credits\n" +
+        "• Recommend optimal 2026–2027 leave bridges using your remaining CL, RH, or unused GH Worked credits\n" +
         "• Audit any unlinked COL or unclaimed GH Worked duty dates\n" +
         "• Clarify Tamil Nadu Leave Rules, 1933 & Fundamental Rules (FR Annexure VII) for HODs",
       modelLabel = GeminiModelTier.GENERAL.displayName
@@ -81,7 +81,7 @@ class AiChatViewModel : ViewModel() {
     auditAllYears: ColGhAuditSummary
   ) {
     val unusedGhDates = auditSelectedYear.unusedGhRecords.joinToString(", ") {
-      "${it.dateIso} (${it.notes.ifBlank { "GH Worked" }})"
+      "${ClinicalDateFormatter.formatFriendlyDate(it.dateIso)} [${it.dateIso}] (${it.notes.ifBlank { "GH Worked" }})"
     }
 
     latestLedgerContext = """

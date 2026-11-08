@@ -76,12 +76,14 @@ import androidx.compose.ui.zIndex
 import com.example.data.InitialLeaveSeedData
 import com.example.data.LeaveCategory
 import com.example.domain.LeaveBuilderAnalyzer
+import com.example.domain.TnHolidays2027Catalog
 import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgeElNeutral
 import com.example.ui.theme.BadgeMlOrange
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusVerifiedGreen
 import java.time.DayOfWeek
@@ -148,9 +150,12 @@ fun InteractiveLeaveBuilderSection(
   onCommitDraftLeaves: (Map<String, LeaveCategory>) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  var builderMonth by rememberSaveable { mutableIntStateOf(11) } // Default Nov 2026
-  val currentYearMonth = remember(builderMonth) {
-    YearMonth.of(2026, builderMonth.coerceIn(1, 12))
+  val builderYear = remember(state.selectedYear) {
+    if (state.selectedYear in 2026L..2027L) state.selectedYear.toInt() else 2026
+  }
+  var builderMonth by rememberSaveable { mutableIntStateOf(11) } // Default Nov
+  val currentYearMonth = remember(builderYear, builderMonth) {
+    YearMonth.of(builderYear, builderMonth.coerceIn(1, 12))
   }
 
   // User's interactive draft blocks (dateIso -> LeaveCategory)
@@ -177,13 +182,15 @@ fun InteractiveLeaveBuilderSection(
   val cellBoundsInRoot = remember { mutableStateMapOf<String, Rect>() }
 
   val ghByDate = remember {
-    InitialLeaveSeedData.tnGovtPublicHolidays2026.associateBy { it.dateIso }
+    (InitialLeaveSeedData.tnGovtPublicHolidays2026 + TnHolidays2027Catalog.tnGovtPublicHolidays2027)
+      .associateBy { it.dateIso }
   }
   val rhByDate = remember {
-    InitialLeaveSeedData.tnRestrictedHolidays2026.associateBy { it.dateIso }
+    (InitialLeaveSeedData.tnRestrictedHolidays2026 + TnHolidays2027Catalog.tnRestrictedHolidays2027)
+      .associateBy { it.dateIso }
   }
-  val existingByDate = remember(state.allRecords) {
-    state.allRecords.filter { it.year == 2026L }.associateBy { it.dateIso }
+  val existingByDate = remember(state.allRecords, builderYear) {
+    state.allRecords.filter { it.year == builderYear.toLong() }.associateBy { it.dateIso }
   }
 
   val analysis = remember(
@@ -294,7 +301,7 @@ fun InteractiveLeaveBuilderSection(
               fontSize = 11.sp,
               lineHeight = 14.sp,
               fontWeight = FontWeight.Bold,
-              fontFamily = FontFamily.Monospace,
+              fontFamily = JetBrainsMonoFontFamily,
               color = if (analysis.isFullyCompliant) EmeraldOptimal else StatusAlertRed,
               maxLines = 1,
               softWrap = false
@@ -589,7 +596,7 @@ fun InteractiveLeaveBuilderSection(
                     TextStyle.FULL,
                     Locale.ENGLISH
                   )
-                } 2026 • Drop Leave Blocks Below",
+                } $builderYear • Drop Leave Blocks Below",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
@@ -823,7 +830,7 @@ fun InteractiveLeaveBuilderSection(
             text = if (!analysis.isFullyCompliant) {
               "Resolve TN Rule Violations Before Saving"
             } else {
-              "Commit ${draftBlocks.size} Drafted Leave Block(s) to 2026 Ledger"
+              "Commit ${draftBlocks.size} Drafted Leave Block(s) to $builderYear Ledger"
             },
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -858,7 +865,7 @@ fun InteractiveLeaveBuilderSection(
         ) {
           Text(
             text = if (hoveredDateIso != null) {
-              "Drop ${brush.code} on ${hoveredDateIso!!.takeLast(5)}"
+              "Drop ${brush.code} on ${ClinicalDateFormatter.formatFriendlyDate(hoveredDateIso!!)}"
             } else {
               "Dragging ${brush.shortTitle}"
             },
