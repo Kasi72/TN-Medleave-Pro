@@ -24,8 +24,11 @@ import com.example.domain.LeaveOptimizerEngine
 import com.example.domain.OptimizerConstraints
 import com.example.domain.TentativeHoldRecord
 import com.example.domain.TentativePlanStore
+import androidx.work.WorkInfo
 import com.example.domain.TnHolidayBackgroundSyncService
 import com.example.domain.TnHolidayRemoteConfigService
+import com.example.domain.TnHolidaySyncScheduler
+import com.example.domain.TnHolidaySyncWorker
 import com.example.domain.TnHolidays2027Catalog
 import com.example.domain.YearCreditSummary
 import com.example.widget.MedLeaveQuotaAppWidget
@@ -155,7 +158,78 @@ class LeaveViewModel(
       }
     )
 
-    // 3. Run initial Firebase Remote Config fetch + automatic background web/API sync if due
+    // 3. Schedule persistent AndroidX WorkManager periodic sync (every 12h/24h/7d on connected network)
+    if (TnHolidayBackgroundSyncService.isAutoYearRolloverSyncEnabled(appContext)) {
+      TnHolidaySyncScheduler.schedulePeriodicSync(appContext, replaceExisting = false)
+    }
+
+    // 4. Observe WorkManager periodic & immediate background worker state so UI & AI Optimizer stay live
+    viewModelScope.launch {
+      combine(
+        TnHolidaySyncScheduler.observePeriodicWorkState(appContext),
+        TnHolidaySyncScheduler.observeImmediateWorkState(appContext)
+      ) { periodicInfo, immediateInfo -> periodicInfo to immediateInfo }
+        .collect { (periodicInfo, immediateInfo) ->
+          val activeImmediate = immediateInfo?.state == WorkInfo.State.RUNNING ||
+            immediateInfo?.state == WorkInfo.State.ENQUEUED
+          val activePeriodic = periodicInfo?.state == WorkInfo.State.RUNNING
+          val runningNow = immediateInfo?.state == WorkInfo.State.RUNNING || activePeriodic
+
+          val stateLabel = when {
+            runningNow -> "WORKER SYNCING..."
+            immediateInfo?.state == WorkInfo.State.SUCCEEDED -> "API + AI KB SYNCED"
+            immediateInfo?.state == WorkInfo.State.FAILED -> "SYNC RETRY QUEUED"
+            periodicInfo?.state == WorkInfo.State.ENQUEUED -> "AUTO-SYNC SCHEDULED"
+            activeImmediate -> "WORKER QUEUED"
+            else -> if (TnHolidayBackgroundSyncService.isAutoYearRolloverSyncEnabled(appContext)) {
+              "AUTO-SYNC SCHEDULED"
+            } else {
+              "WORKER PAUSED"
+            }
+          }
+
+          val completedInfo = when {
+            immediateInfo?.state == WorkInfo.State.SUCCEEDED -> immediateInfo
+            periodicInfo?.state == WorkInfo.State.SUCCEEDED -> periodicInfo
+            else -> null
+          }
+
+          if (completedInfo != null) {
+            val out = completedInfo.outputData
+            val syncedSource = out.getString(TnHolidaySyncWorker.KEY_OUT_SOURCE)
+            val syncedTime = out.getString(TnHolidaySyncWorker.KEY_OUT_SYNC_TIME)
+            val syncedSummary = out.getString(TnHolidaySyncWorker.KEY_OUT_SUMMARY)
+            val totalGh = out.getInt(TnHolidaySyncWorker.KEY_OUT_TOTAL_GH, _holidaySyncStatus.value.totalGhCount)
+            val totalRh = out.getInt(TnHolidaySyncWorker.KEY_OUT_TOTAL_RH, _holidaySyncStatus.value.totalRhCount)
+            val apiParsed = out.getInt(TnHolidaySyncWorker.KEY_OUT_API_PARSED, _holidaySyncStatus.value.apiHolidaysParsedCount)
+            val kbRev = out.getLong(TnHolidaySyncWorker.KEY_OUT_KB_REVISION, TnHolidays2027Catalog.knowledgeBaseRevision)
+
+            _holidaySyncStatus.value = _holidaySyncStatus.value.copy(
+              isSyncing = false,
+              hasError = false,
+              totalGhCount = totalGh,
+              totalRhCount = totalRh,
+              lastSyncSource = syncedSource ?: _holidaySyncStatus.value.lastSyncSource,
+              lastSyncedFormatted = syncedTime ?: _holidaySyncStatus.value.lastSyncedFormatted,
+              statusSummary = syncedSummary ?: _holidaySyncStatus.value.statusSummary,
+              workerScheduleLabel = TnHolidaySyncScheduler.formatScheduleLabel(appContext),
+              workerStateLabel = stateLabel,
+              apiHolidaysParsedCount = apiParsed,
+              knowledgeBaseRevision = kbRev
+            )
+            _holidayDbVersion.value = System.currentTimeMillis()
+          } else {
+            _holidaySyncStatus.value = _holidaySyncStatus.value.copy(
+              isSyncing = runningNow,
+              hasError = immediateInfo?.state == WorkInfo.State.FAILED,
+              workerScheduleLabel = TnHolidaySyncScheduler.formatScheduleLabel(appContext),
+              workerStateLabel = stateLabel
+            )
+          }
+        }
+    }
+
+    // 5. Run initial Firebase Remote Config fetch + enqueue WorkManager sync if stale/new year
     viewModelScope.launch {
       localHolidayRepository.ensureSeededWithDefaultsIfEmpty()
       val rcInitial = com.example.domain.TnHolidayRemoteConfigService.fetchAndApplyRemoteHolidays(
@@ -169,7 +243,11 @@ class LeaveViewModel(
       )
       _holidayDbVersion.value = System.currentTimeMillis()
       if (TnHolidayBackgroundSyncService.shouldRunAutomaticBackgroundSync(appContext)) {
-        triggerHolidaySync(customUrlOrFeedNote = "", isAutomaticBackground = true)
+        TnHolidaySyncScheduler.enqueueImmediateSync(
+          context = appContext,
+          customSourceUrl = "",
+          isManual = false
+        )
       }
     }
   }
@@ -257,28 +335,18 @@ class LeaveViewModel(
     if (_holidaySyncStatus.value.isSyncing) return
     _holidaySyncStatus.value = _holidaySyncStatus.value.copy(
       isSyncing = true,
-      hasError = false
+      hasError = false,
+      workerStateLabel = "WORKER RUNNING..."
     )
-    viewModelScope.launch {
-      val syncResult = TnHolidayBackgroundSyncService.syncLatestHolidaysToLocalDb(
-        context = appContext,
-        localRepo = localHolidayRepository,
-        customSourceUrlOrNote = customUrlOrFeedNote
-      )
-      syncResult.onSuccess { updatedStatus ->
-        _holidaySyncStatus.value = updatedStatus
-        _holidayDbVersion.value = System.currentTimeMillis()
-        if (!isAutomaticBackground) {
-          _statusBanner.value =
-            "Synced TN Holiday Room DB (${updatedStatus.totalGhCount} GH • ${updatedStatus.totalRhCount} RH). Optimizer updated!"
-        }
-      }.onFailure { err ->
-        _holidaySyncStatus.value = _holidaySyncStatus.value.copy(
-          isSyncing = false,
-          hasError = true,
-          statusSummary = err.localizedMessage ?: "Holiday sync encountered an error."
-        )
-      }
+    // Enqueue via AndroidX WorkManager so sync survives app backgrounding & retries on flaky hospital Wi-Fi
+    TnHolidaySyncScheduler.enqueueImmediateSync(
+      context = appContext,
+      customSourceUrl = customUrlOrFeedNote,
+      isManual = !isAutomaticBackground
+    )
+    if (!isAutomaticBackground) {
+      _statusBanner.value =
+        "Background Holiday Worker started — fetching latest TN Govt public API calendar & refreshing AI Optimizer..."
     }
   }
 

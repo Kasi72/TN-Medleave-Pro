@@ -94,6 +94,14 @@ object TnHolidays2027Catalog {
   var tnRestrictedHolidays2027: List<TnHolidayItem> = defaultRestrictedHolidays2027
     private set
 
+  @Volatile
+  var knowledgeBaseRevision: Long = 1L
+    private set
+
+  @Volatile
+  var lastKnowledgeBaseSource: String = "TN Public (Misc) Dept G.O. (2026 & 2027)"
+    private set
+
   fun updateLiveHolidayCache2027(
     ghList2027Plus: List<TnHolidayItem>,
     rhList2027Plus: List<TnHolidayItem>
@@ -104,6 +112,14 @@ object TnHolidays2027Catalog {
     if (rhList2027Plus.isNotEmpty()) {
       tnRestrictedHolidays2027 = rhList2027Plus.sortedBy { it.dateIso }
     }
+    knowledgeBaseRevision++
+  }
+
+  fun notifyKnowledgeBaseRefreshed(sourceLabel: String) {
+    if (sourceLabel.isNotBlank()) {
+      lastKnowledgeBaseSource = sourceLabel
+    }
+    knowledgeBaseRevision++
   }
 
   fun allSyncedPublicHolidays(): List<TnHolidayItem> =

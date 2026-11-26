@@ -123,7 +123,8 @@ fun AiLeaveRecommendationSection(
 
   val allGh = TnHolidays2027Catalog.allSyncedPublicHolidays()
   val allRh = TnHolidays2027Catalog.allSyncedRestrictedHolidays()
-  val totalSyncedHolidays = remember(allGh.size, allRh.size) {
+  val kbRevision = TnHolidays2027Catalog.knowledgeBaseRevision
+  val totalSyncedHolidays = remember(allGh.size, allRh.size, kbRevision) {
     allGh.size + allRh.size
   }
 
@@ -178,7 +179,7 @@ fun AiLeaveRecommendationSection(
     effectiveUiConstraints.buildStrategySummary(base)
   }
 
-  // Live Constraint-Aware Holiday DB Scanner (adjacency-aware, OPD-aware, 0.5 CL, Rule-8 EL, FIFO COL)
+  // Live Constraint-Aware Holiday DB Scanner (automatically refreshes on WorkManager KB updates)
   val instantHolidayDbScan = remember(
     summary2026,
     summary2027,
@@ -186,7 +187,8 @@ fun AiLeaveRecommendationSection(
     state.allRecords,
     activeStrategyString,
     effectiveUiConstraints,
-    totalSyncedHolidays
+    totalSyncedHolidays,
+    kbRevision
   ) {
     AiLeaveRecommendationEngine.scanHolidayDatabaseForLongWeekends(
       summary2026 = summary2026,

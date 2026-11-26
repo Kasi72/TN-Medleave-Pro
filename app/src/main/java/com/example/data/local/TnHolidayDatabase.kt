@@ -112,6 +112,7 @@ class LocalHolidayRepository(private val dao: TnHolidayDao) {
 
   val domainHolidaysFlow: Flow<Pair<List<TnHolidayItem>, List<TnHolidayItem>>> =
     dao.observeAllHolidays().map { entities ->
+      syncEntitiesIntoInMemoryKnowledgeBase(entities)
       val gh = entities.filter { !it.isRestrictedHoliday }.map { it.toDomainModel() }
       val rh = entities.filter { it.isRestrictedHoliday }.map { it.toDomainModel() }
       Pair(gh, rh)
@@ -194,6 +195,10 @@ class LocalHolidayRepository(private val dao: TnHolidayDao) {
 
   suspend fun refreshInMemoryCacheFromRoom() {
     val all = dao.getAllHolidaysOnce()
+    syncEntitiesIntoInMemoryKnowledgeBase(all)
+  }
+
+  private fun syncEntitiesIntoInMemoryKnowledgeBase(all: List<TnHolidayEntity>) {
     if (all.isNotEmpty()) {
       val gh2026 = all.filter { !it.isRestrictedHoliday && it.dateIso.startsWith("2026-") }.map { it.toDomainModel() }
       val rh2026 = all.filter { it.isRestrictedHoliday && it.dateIso.startsWith("2026-") }.map { it.toDomainModel() }

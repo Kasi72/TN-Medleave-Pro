@@ -15,13 +15,10 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.json.JSONObject
 
 data class HolidaySyncStatus(
@@ -33,12 +30,16 @@ data class HolidaySyncStatus(
   val gh2027Count: Int = 23,
   val rh2027Count: Int = 26,
   val lastSyncedFormatted: String = "Initial 2026–2027 Seed Ready",
-  val lastSyncSource: String = "Firebase Remote Config + TN G.O. (2026 & 2027)",
-  val statusSummary: String = "Local Room Holiday DB synced with Firebase Remote Config & 2026–2027 TN GH/RL calendars.",
+  val lastSyncSource: String = "WorkManager Public API + TN G.O. (2026–2027)",
+  val statusSummary: String = "WorkManager background sync active — AI Optimizer knowledge base hydrated with 2026–2027 TN GH/RL calendars.",
   val newlySyncedItems: List<String> = emptyList(),
   val hasError: Boolean = false,
   val remoteConfigVersion: String = "2026.11-GO-Ms-842-DME-Erode",
-  val remoteConfigBanner: String = "Dynamic Tamil Nadu 2026–2027 Holiday DB Active via Firebase Remote Config"
+  val remoteConfigBanner: String = "Dynamic Tamil Nadu 2026–2027 Holiday DB Active via WorkManager + Public API",
+  val workerScheduleLabel: String = "WorkManager • Daily (24h)",
+  val workerStateLabel: String = "AUTO-SYNC SCHEDULED",
+  val apiHolidaysParsedCount: Int = 0,
+  val knowledgeBaseRevision: Long = 1L
 )
 
 object TnHolidayBackgroundSyncService {
@@ -50,14 +51,6 @@ object TnHolidayBackgroundSyncService {
   private const val KEY_LAST_SUMMARY = "last_sync_summary"
   private const val KEY_AUTO_ROLLOVER_SYNC = "auto_rollover_sync_enabled"
   private const val KEY_LAST_ROLLOVER_YEAR = "last_rollover_synced_year"
-
-  private val okHttpClient by lazy {
-    OkHttpClient.Builder()
-      .connectTimeout(12, TimeUnit.SECONDS)
-      .readTimeout(12, TimeUnit.SECONDS)
-      .followRedirects(true)
-      .build()
-  }
 
   private val scrapedHolidaySchema = Schema.obj(
     properties = mapOf(
@@ -110,6 +103,11 @@ object TnHolidayBackgroundSyncService {
       .edit()
       .putBoolean(KEY_AUTO_ROLLOVER_SYNC, enabled)
       .apply()
+    if (enabled) {
+      TnHolidaySyncScheduler.schedulePeriodicSync(context, replaceExisting = false)
+    } else {
+      TnHolidaySyncScheduler.cancelPeriodicSync(context)
+    }
   }
 
   fun readPersistedSyncStatus(
@@ -126,11 +124,12 @@ object TnHolidayBackgroundSyncService {
     val totalRh = maxOf(rhCount, rh2026 + rh2027)
 
     val lastTime = prefs.getString(KEY_LAST_SYNC_TIME, null) ?: "Seeded 2026 & 2027"
-    val lastSource = prefs.getString(KEY_LAST_SOURCE, null) ?: "TN Public (Misc) Dept G.O. (2026 & 2027)"
+    val lastSource = prefs.getString(KEY_LAST_SOURCE, null) ?: "Public API + TN G.O. (2026 & 2027)"
     val lastSummary = prefs.getString(KEY_LAST_SUMMARY, null)
-      ?: "Room DB active: 2026 ($gh2026 GH + $rh2026 RL) & 2027 ($gh2027 GH + $rh2027 RL) ready for calculation."
+      ?: "Room DB & AI Knowledge Base active: 2026 ($gh2026 GH + $rh2026 RL) & 2027 ($gh2027 GH + $rh2027 RL)."
 
     val rcSnapshot = TnHolidayRemoteConfigService.getPersistedSnapshot(context)
+    val isAutoEnabled = isAutoYearRolloverSyncEnabled(context)
     return HolidaySyncStatus(
       isSyncing = false,
       totalGhCount = totalGh,
@@ -143,7 +142,10 @@ object TnHolidayBackgroundSyncService {
       lastSyncSource = lastSource,
       statusSummary = lastSummary,
       remoteConfigVersion = rcSnapshot.catalogVersion,
-      remoteConfigBanner = rcSnapshot.announcementBanner
+      remoteConfigBanner = rcSnapshot.announcementBanner,
+      workerScheduleLabel = TnHolidaySyncScheduler.formatScheduleLabel(context),
+      workerStateLabel = if (isAutoEnabled) "AUTO-SYNC SCHEDULED" else "WORKER PAUSED",
+      knowledgeBaseRevision = TnHolidays2027Catalog.knowledgeBaseRevision
     )
   }
 
@@ -187,59 +189,42 @@ object TnHolidayBackgroundSyncService {
       val currentYear = LocalDate.now().year.coerceAtLeast(2026)
       val nextYear = currentYear + 1
 
-      // Step 2: Scrape live web/API sources for both current year (2026) and upcoming rollover year (2027+)
-      val targetUrls = buildList {
-        if (customSourceUrlOrNote.startsWith("http://") || customSourceUrlOrNote.startsWith("https://")) {
-          add(customSourceUrlOrNote.trim())
-        }
-        add("https://date.nager.at/api/v3/PublicHolidays/$nextYear/IN")
-        add("https://date.nager.at/api/v3/PublicHolidays/$currentYear/IN")
-        add("https://www.tn.gov.in/holiday_list.php")
-      }
+      // Step 2: Deterministic Public API & Official TN Govt Portal Fetch (Nager.Date IN-TN + OpenHolidays IN-TN + tn.gov.in)
+      val apiFetch = TnPublicHolidayApiClient.fetchOfficialTamilNaduHolidays(
+        years = listOf(currentYear, nextYear),
+        customSourceUrl = customSourceUrlOrNote
+      )
+      val successfulEndpoint = apiFetch.primarySourceLabel
+      val combinedScrapedSnippet = apiFetch.rawSnippetForAi
 
-      val scrapedChunks = mutableListOf<String>()
-      var successfulEndpoint = "TN Portal & $currentYear–$nextYear Holiday Feed"
-
-      for (url in targetUrls) {
-        val fetched = runCatching {
-          val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", "TNMedLeavePro-HolidaySync/2.0 (Android; GEMCH Erode; MultiYear)")
-            .build()
-          okHttpClient.newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-              val raw = response.body?.string().orEmpty()
-              cleanHtmlOrJsonToText(raw).take(2200)
-            } else {
-              ""
-            }
-          }
-        }.getOrDefault("")
-
-        if (fetched.isNotBlank()) {
-          scrapedChunks.add("[$url]: $fetched")
-          successfulEndpoint = url
-            .removePrefix("https://")
-            .removePrefix("http://")
-            .substringBefore("/")
-          if (scrapedChunks.size >= 2) break
-        }
-      }
-
-      val combinedScrapedSnippet = scrapedChunks.joinToString("\n\n").take(4000)
-
-      // Step 3: Parse & verify 2026 + 2027 GH and RH/RL via Gemini AI Structured Extractor
+      // Step 3: Convert deterministic Public API holidays directly into Room entities (works even if AI is offline/throttled)
       val nowMillis = System.currentTimeMillis()
       val newEntities = mutableListOf<TnHolidayEntity>()
       val syncedNames = mutableListOf<String>()
+      val seenDateTypeKeys = mutableSetOf<String>()
       var verificationSummary = ""
 
+      apiFetch.holidays.forEach { apiItem ->
+        val dedupeKey = "${apiItem.dateIso}_${apiItem.isRestrictedHoliday}"
+        if (seenDateTypeKeys.add(dedupeKey)) {
+          newEntities.add(
+            TnHolidayEntity.fromDomainModel(
+              item = apiItem,
+              sourceOrigin = "Public API ($successfulEndpoint)",
+              syncedAt = nowMillis
+            )
+          )
+          syncedNames.add("${apiItem.dateIso}: ${apiItem.nameEnglish} (${if (apiItem.isRestrictedHoliday) "RH" else "GH"})")
+        }
+      }
+
+      // Step 3.5: Optional Gemini AI enrichment for Tamil names & Erode District / DME G.O. notifications
       val aiParsedResult = runCatching {
-        withTimeout(35_000L) {
+        withTimeout(22_000L) {
           val prompt = """
             Analyze the following scraped $currentYear & $nextYear holiday feed / Tamil Nadu Government notification context and return verified Tamil Nadu Public Holidays (GH) and Restricted Holidays (RH/RL) for $currentYear and $nextYear (including Erode District / Perundurai Local Holiday updates) to upsert into our local Room database for leave optimization calculations.
 
-            SCRAPED WEB / API CONTENT ($successfulEndpoint):
+            PUBLIC API / PORTAL CONTENT ($successfulEndpoint — ${apiFetch.holidays.size} dates pre-parsed):
             ${combinedScrapedSnippet.ifBlank { "Standard 2026 & 2027 TN G.O. Public (Misc) Dept GH & RL verification check" }}
 
             USER / OFFICE SUPPLEMENTAL NOTE:
@@ -328,8 +313,9 @@ object TnHolidayBackgroundSyncService {
         }
       }
 
-      // Step 4: Upsert into Room Database & refresh 2026 + 2027 in-memory optimizer caches
+      // Step 4: Upsert into Room Database & refresh 2026 + 2027 AI Optimizer knowledge base caches
       localRepo.upsertSyncedHolidays(newEntities)
+      TnHolidays2027Catalog.notifyKnowledgeBaseRefreshed(successfulEndpoint)
 
       val gh2026 = InitialLeaveSeedData.tnGovtPublicHolidays2026.size
       val rh2026 = InitialLeaveSeedData.tnRestrictedHolidays2026.size
@@ -339,8 +325,13 @@ object TnHolidayBackgroundSyncService {
       val totalRh = rh2026 + rh2027
 
       val timeStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM, hh:mm a"))
+      val apiNote = if (apiFetch.holidays.isNotEmpty()) {
+        "Parsed ${apiFetch.holidays.size} public API dates from $successfulEndpoint. "
+      } else {
+        ""
+      }
       val finalSummary = verificationSummary.ifBlank {
-        "Synced 2026 ($gh2026 GH + $rh2026 RL) & 2027 ($gh2027 GH + $rh2027 RL) TN Govt calendars into Room DB for calculation."
+        "${apiNote}AI Optimizer knowledge base refreshed: 2026 ($gh2026 GH + $rh2026 RL) & 2027 ($gh2027 GH + $rh2027 RL)."
       }
 
       context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -362,12 +353,16 @@ object TnHolidayBackgroundSyncService {
           gh2027Count = gh2027,
           rh2027Count = rh2027,
           lastSyncedFormatted = timeStr,
-          lastSyncSource = "Firebase RC (${rcSnapshot.catalogVersion}) + $successfulEndpoint",
+          lastSyncSource = if (apiFetch.fetchedFromNetwork) successfulEndpoint else "Firebase RC (${rcSnapshot.catalogVersion}) + Room Seed",
           statusSummary = finalSummary,
-          newlySyncedItems = (rcSnapshot.parsedHolidaySummaries.take(3) + syncedNames).distinct().take(6),
+          newlySyncedItems = (syncedNames.take(4) + rcSnapshot.parsedHolidaySummaries.take(2)).distinct().take(6),
           hasError = false,
           remoteConfigVersion = rcSnapshot.catalogVersion,
-          remoteConfigBanner = rcSnapshot.announcementBanner
+          remoteConfigBanner = rcSnapshot.announcementBanner,
+          workerScheduleLabel = TnHolidaySyncScheduler.formatScheduleLabel(context),
+          workerStateLabel = if (apiFetch.fetchedFromNetwork) "API + AI KB SYNCED" else "ROOM SEED SYNCED",
+          apiHolidaysParsedCount = apiFetch.holidays.size,
+          knowledgeBaseRevision = TnHolidays2027Catalog.knowledgeBaseRevision
         )
       )
     } catch (e: CancellationException) {
@@ -383,14 +378,5 @@ object TnHolidayBackgroundSyncService {
         )
       )
     }
-  }
-
-  private fun cleanHtmlOrJsonToText(raw: String): String {
-    return raw
-      .replace(Regex("<script[^>]*>[\\s\\S]*?</script>", RegexOption.IGNORE_CASE), " ")
-      .replace(Regex("<style[^>]*>[\\s\\S]*?</style>", RegexOption.IGNORE_CASE), " ")
-      .replace(Regex("<[^>]+>"), " ")
-      .replace(Regex("\\s+"), " ")
-      .trim()
   }
 }

@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.TnHolidayItem
 import com.example.domain.HolidaySyncStatus
+import com.example.domain.TnHolidaySyncScheduler
 import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgePlGold
@@ -74,8 +76,12 @@ fun HolidaySyncStatusCard(
   onAddLocalHolidayToRoom: (TnHolidayItem) -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
   val neu = LocalNeumorphicColors.current
   var showAddOrScrapeDialog by remember { mutableStateOf(false) }
+  var selectedIntervalHours by remember {
+    mutableStateOf(TnHolidaySyncScheduler.getSyncIntervalHours(context))
+  }
 
   Box(
     modifier = modifier
@@ -165,16 +171,105 @@ fun HolidaySyncStatusCard(
             )
         ) {
           Text(
-            text = if (syncStatus.isSyncing) "SYNCING..." else "ROOM DB LIVE",
+            text = if (syncStatus.isSyncing) "SYNCING..." else syncStatus.workerStateLabel.take(18),
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-            fontSize = 11.sp,
-            lineHeight = 14.sp,
+            fontSize = 10.sp,
+            lineHeight = 13.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
             color = statusAccent,
             maxLines = 1,
             softWrap = false
           )
+        }
+      }
+
+      // WorkManager Auto-Sync & AI Optimizer Knowledge Base Cadence Bar
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.dp,
+            blurRadius = 4.dp,
+            accentTint = neu.primaryAccent,
+            accentTintAlpha = 0.06f,
+            borderColor = neu.primaryAccent.copy(alpha = 0.25f),
+            neu = neu
+          )
+          .padding(horizontal = 10.dp, vertical = 8.dp)
+          .testTag("workmanager_cadence_bar")
+      ) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+              text = "${syncStatus.workerScheduleLabel} • AI KB v${syncStatus.knowledgeBaseRevision}",
+              fontSize = 10.5.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = neu.primaryAccent,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+            Text(
+              text = if (syncStatus.apiHolidaysParsedCount > 0) {
+                "Auto-fetches TN Public API (${syncStatus.apiHolidaysParsedCount} API dates verified)"
+              } else {
+                "Auto-fetches Nager.Date IN-TN, OpenHolidays & tn.gov.in"
+              },
+              fontSize = 10.sp,
+              color = neu.textSecondary,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
+          Spacer(modifier = Modifier.width(6.dp))
+          Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            listOf(12L to "12h", 24L to "24h", 168L to "7d").forEach { (hrs, label) ->
+              val isChosen = selectedIntervalHours == hrs
+              Box(
+                modifier = Modifier
+                  .then(
+                    if (isChosen) {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpBadgeShape,
+                        elevation = 1.8.dp,
+                        blurRadius = 3.5.dp,
+                        surfaceColor = neu.primaryAccent,
+                        neu = neu
+                      )
+                    } else {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpBadgeShape,
+                        elevation = 1.5.dp,
+                        blurRadius = 3.dp,
+                        borderAlpha = 0.22f,
+                        neu = neu
+                      )
+                    }
+                  )
+                  .clickable {
+                    selectedIntervalHours = hrs
+                    TnHolidaySyncScheduler.setSyncIntervalHours(context, hrs)
+                  }
+                  .padding(horizontal = 7.dp, vertical = 4.dp)
+                  .testTag("worker_interval_${hrs}h")
+              ) {
+                Text(
+                  text = label,
+                  fontFamily = FontFamily.Monospace,
+                  fontSize = 9.5.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = if (isChosen) Color.White else neu.textSecondary,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
+            }
+          }
         }
       }
 
