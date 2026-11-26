@@ -9,6 +9,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
@@ -27,15 +28,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.min
 
 /**
- * Mathematical Apple iOS Continuous Superellipse Squircle Shape with crisp, sharper edge geometry.
- * Extends CornerBasedShape so it integrates natively with MaterialTheme.shapes as well as Modifier.clip/border.
+ * Tactile Continuous Superellipse Squircle Shape tuned for Soft-UI Neumorphic relief.
+ * Extends CornerBasedShape so it integrates natively with MaterialTheme.shapes as well as Canvas shadow paths.
  */
 class IosSharpSquircleShape(
   topStart: CornerSize,
   topEnd: CornerSize,
   bottomEnd: CornerSize,
   bottomStart: CornerSize,
-  private val sharpnessBias: Float = 0.82f
+  private val sharpnessBias: Float = 0.74f
 ) : CornerBasedShape(
   topStart = topStart,
   topEnd = topEnd,
@@ -48,7 +49,7 @@ class IosSharpSquircleShape(
     topEnd: Dp,
     bottomEnd: Dp,
     bottomStart: Dp,
-    sharpnessBias: Float = 0.82f
+    sharpnessBias: Float = 0.74f
   ) : this(
     topStart = CornerSize(topStart),
     topEnd = CornerSize(topEnd),
@@ -57,7 +58,7 @@ class IosSharpSquircleShape(
     sharpnessBias = sharpnessBias
   )
 
-  constructor(cornerRadius: Dp, sharpnessBias: Float = 0.82f) : this(
+  constructor(cornerRadius: Dp, sharpnessBias: Float = 0.74f) : this(
     topStart = CornerSize(cornerRadius),
     topEnd = CornerSize(cornerRadius),
     bottomEnd = CornerSize(cornerRadius),
@@ -97,7 +98,7 @@ class IosSharpSquircleShape(
     val br = (if (layoutDirection == LayoutDirection.Ltr) bottomEnd else bottomStart).coerceIn(0f, maxR)
     val bl = (if (layoutDirection == LayoutDirection.Ltr) bottomStart else bottomEnd).coerceIn(0f, maxR)
 
-    val k = sharpnessBias.coerceIn(0.65f, 0.90f)
+    val k = sharpnessBias.coerceIn(0.60f, 0.88f)
 
     val path = Path().apply {
       moveTo(tl, 0f)
@@ -139,14 +140,77 @@ class IosSharpSquircleShape(
   }
 }
 
-// Global Sharp-Edged iOS Squircle Presets
-val IosSharpMicroShape = IosSharpSquircleShape(4.dp, sharpnessBias = 0.84f)
-val IosSharpBadgeShape = IosSharpSquircleShape(5.dp, sharpnessBias = 0.84f)
-val IosSharpButtonShape = IosSharpSquircleShape(6.dp, sharpnessBias = 0.84f)
-val IosSharpTabShape = IosSharpSquircleShape(7.dp, sharpnessBias = 0.84f)
-val IosSharpWellShape = IosSharpSquircleShape(8.dp, sharpnessBias = 0.82f)
-val IosSharpCardShape = IosSharpSquircleShape(10.dp, sharpnessBias = 0.82f)
-val IosSharpHeroShape = IosSharpSquircleShape(12.dp, sharpnessBias = 0.80f)
+// Smooth Tactile Neumorphic Squircle Presets
+val IosSharpMicroShape = IosSharpSquircleShape(7.dp, sharpnessBias = 0.72f)
+val IosSharpBadgeShape = IosSharpSquircleShape(9.dp, sharpnessBias = 0.72f)
+val IosSharpButtonShape = IosSharpSquircleShape(12.dp, sharpnessBias = 0.74f)
+val IosSharpTabShape = IosSharpSquircleShape(13.dp, sharpnessBias = 0.74f)
+val IosSharpWellShape = IosSharpSquircleShape(15.dp, sharpnessBias = 0.74f)
+val IosSharpCardShape = IosSharpSquircleShape(18.dp, sharpnessBias = 0.74f)
+val IosSharpHeroShape = IosSharpSquircleShape(22.dp, sharpnessBias = 0.74f)
+
+@Immutable
+data class NeumorphicColors(
+  val isDark: Boolean,
+  val baseBg: Color,
+  val surfaceRaised: Color,
+  val surfaceInset: Color,
+  val lightShadow: Color,
+  val darkShadow: Color,
+  val bevelHighlight: Color,
+  val primaryAccent: Color,
+  val secondaryAccent: Color,
+  val textPrimary: Color,
+  val textSecondary: Color,
+  val hairlineDivider: Color
+)
+
+private val MintNeumorphicColors = NeumorphicColors(
+  isDark = false,
+  baseBg = NeuMintBase,
+  surfaceRaised = NeuMintRaised,
+  surfaceInset = NeuMintInset,
+  lightShadow = NeuMintShadowLight,
+  darkShadow = NeuMintShadowDark,
+  bevelHighlight = NeuMintBevel,
+  primaryAccent = Color(0xFF047857),
+  secondaryAccent = Color(0xFF0E7490),
+  textPrimary = Color(0xFF062C22),
+  textSecondary = Color(0xFF28584B),
+  hairlineDivider = Color(0xFFA9C0B6).copy(alpha = 0.55f)
+)
+
+private val LightClayNeumorphicColors = NeumorphicColors(
+  isDark = false,
+  baseBg = NeuLightBase,
+  surfaceRaised = NeuLightRaised,
+  surfaceInset = NeuLightInset,
+  lightShadow = NeuLightShadowLight,
+  darkShadow = NeuLightShadowDark,
+  bevelHighlight = NeuLightBevel,
+  primaryAccent = Color(0xFF0284C7),
+  secondaryAccent = Color(0xFF059669),
+  textPrimary = Color(0xFF1E293B),
+  textSecondary = Color(0xFF475569),
+  hairlineDivider = Color(0xFFB8C4D8).copy(alpha = 0.60f)
+)
+
+private val DarkNeumorphicColors = NeumorphicColors(
+  isDark = true,
+  baseBg = NeuDarkBase,
+  surfaceRaised = NeuDarkRaised,
+  surfaceInset = NeuDarkInset,
+  lightShadow = NeuDarkShadowLight,
+  darkShadow = NeuDarkShadowDark,
+  bevelHighlight = NeuDarkBevel,
+  primaryAccent = Color(0xFF34D399),
+  secondaryAccent = Color(0xFF38BDF8),
+  textPrimary = Color(0xFFF1F5F9),
+  textSecondary = Color(0xFF94A3B8),
+  hairlineDivider = Color(0xFF383F49).copy(alpha = 0.70f)
+)
+
+val LocalNeumorphicColors = compositionLocalOf { MintNeumorphicColors }
 
 enum class AppThemeMode(
   val id: String,
@@ -156,21 +220,21 @@ enum class AppThemeMode(
 ) {
   GREEN_EMERALD(
     id = "green_emerald",
-    displayName = "Emerald Green",
-    shortBadge = "GREEN THEME",
-    subtitle = "Botanical Mint & Clinical Emerald"
+    displayName = "Mint Soft UI",
+    shortBadge = "MINT NEU",
+    subtitle = "Neumorphic Sage Mint & Emerald"
   ),
   WHITE_CLINICAL(
     id = "white_clinical",
-    displayName = "Clinical White",
-    shortBadge = "WHITE THEME",
-    subtitle = "Pure Daylight Paper & Sapphire"
+    displayName = "Soft Clay Light",
+    shortBadge = "CLAY LIGHT",
+    subtitle = "Classic ui-neumorphism Daylight Clay"
   ),
   DARK_OBSIDIAN(
     id = "dark_obsidian",
-    displayName = "Obsidian Dark",
-    shortBadge = "DARK THEME",
-    subtitle = "OLED Midnight & Neon Aqua"
+    displayName = "Dark Neumorphic",
+    shortBadge = "DARK #292E35",
+    subtitle = "ui-neumorphism Slate Charcoal"
   );
 
   companion object {
@@ -214,70 +278,69 @@ object AppThemeController {
 
 val LocalAppThemeMode = compositionLocalOf { AppThemeMode.GREEN_EMERALD }
 
-// 1. EMERALD GREEN THEME (Signature Clinical Mint & Jade Palette)
+// 1. MINT SOFT UI THEME (Single-Hue Botanical Sage-Mint Neumorphism)
 private val GreenEmeraldColorScheme = lightColorScheme(
   primary = Color(0xFF047857),
   onPrimary = Color.White,
-  primaryContainer = Color(0xFFD1FAE5),
-  onPrimaryContainer = Color(0xFF064E3B),
+  primaryContainer = Color(0xFFC2E5D6),
+  onPrimaryContainer = Color(0xFF062C22),
   secondary = EmeraldOptimal,
   onSecondary = Color.White,
-  secondaryContainer = Color(0xFFA7F3D0),
+  secondaryContainer = Color(0xFFD0E5DC),
   onSecondaryContainer = Color(0xFF064E3B),
-  tertiary = Color(0xFF0891B2),
-  background = Color(0xFFECFDF5),
-  onBackground = Color(0xFF052E16),
-  surface = Color(0xFFF6FEF9),
-  onSurface = Color(0xFF064E3B),
-  surfaceVariant = Color(0xFFD1FAE5),
-  onSurfaceVariant = Color(0xFF047857),
-  outline = Color(0xFF6EE7B7),
-  outlineVariant = Color(0xFFA7F3D0)
+  tertiary = Color(0xFF0E7490),
+  background = NeuMintBase,
+  onBackground = Color(0xFF062C22),
+  surface = NeuMintRaised,
+  onSurface = Color(0xFF062C22),
+  surfaceVariant = NeuMintInset,
+  onSurfaceVariant = Color(0xFF28584B),
+  outline = NeuMintShadowDark,
+  outlineVariant = Color(0xFFB5CDC2)
 )
 
-// 2. CLINICAL WHITE THEME (Pure Daylight Alabaster & iOS Grouped Paper Palette)
+// 2. CLASSIC SOFT CLAY LIGHT THEME (Single-Hue #E4EBF5 ui-neumorphism Daylight)
 private val WhiteClinicalColorScheme = lightColorScheme(
-  primary = SapphirePrimary,
+  primary = Color(0xFF0284C7),
   onPrimary = Color.White,
-  primaryContainer = Color(0xFFE0F2FE),
-  onPrimaryContainer = SapphirePrimary,
+  primaryContainer = Color(0xFFD2E4F6),
+  onPrimaryContainer = Color(0xFF0C4A6E),
   secondary = EmeraldOptimal,
   onSecondary = Color.White,
-  secondaryContainer = Color(0xFFF1F5F9),
-  onSecondaryContainer = Color(0xFF0F172A),
+  secondaryContainer = NeuLightInset,
+  onSecondaryContainer = Color(0xFF1E293B),
   tertiary = Color(0xFFD97706),
-  background = Color(0xFFF2F2F7), // Authentic iOS systemGroupedBackground
-  onBackground = Color(0xFF0F172A),
-  surface = Color(0xFFFFFFFF),
-  onSurface = Color(0xFF0F172A),
-  surfaceVariant = Color(0xFFE5E5EA), // Authentic iOS systemFill
-  onSurfaceVariant = Color(0xFF3C3C43),
-  outline = Color(0xFFC6C6C8),
-  outlineVariant = Color(0xFFD1D1D6)
+  background = NeuLightBase,
+  onBackground = Color(0xFF1E293B),
+  surface = NeuLightRaised,
+  onSurface = Color(0xFF1E293B),
+  surfaceVariant = NeuLightInset,
+  onSurfaceVariant = Color(0xFF475569),
+  outline = NeuLightShadowDark,
+  outlineVariant = Color(0xFFC7D2E3)
 )
 
-// 3. OBSIDIAN DARK THEME (OLED Midnight Sapphire & Neon Aqua Palette)
+// 3. DARK NEUMORPHIC THEME (Classic ui-neumorphism #292E35 Slate Charcoal)
 private val DarkObsidianColorScheme = darkColorScheme(
-  primary = Color(0xFF38BDF8),
-  onPrimary = Color(0xFF061527),
-  primaryContainer = Color(0xFF143252),
-  onPrimaryContainer = Color(0xFFE0F2FE),
-  secondary = Color(0xFF34D399),
-  onSecondary = Color(0xFF042F2E),
-  secondaryContainer = Color(0xFF064E3B),
-  onSecondaryContainer = Color(0xFFD1FAE5),
+  primary = Color(0xFF34D399),
+  onPrimary = Color(0xFF0B1F1A),
+  primaryContainer = Color(0xFF1E3A34),
+  onPrimaryContainer = Color(0xFFD1FAE5),
+  secondary = Color(0xFF38BDF8),
+  onSecondary = Color(0xFF0C2334),
+  secondaryContainer = Color(0xFF22272D),
+  onSecondaryContainer = Color(0xFFE0F2FE),
   tertiary = Color(0xFFFBBF24),
-  background = IosGroupedBgDark,
+  background = NeuDarkBase,
   onBackground = Color(0xFFF1F5F9),
-  surface = IosSurfaceCardDark,
-  onSurface = Color(0xFFF8FAFC),
-  surfaceVariant = IosElevatedGlassDark,
+  surface = NeuDarkRaised,
+  onSurface = Color(0xFFF1F5F9),
+  surfaceVariant = NeuDarkInset,
   onSurfaceVariant = Color(0xFF94A3B8),
-  outline = Color(0xFF334155),
-  outlineVariant = Color(0xFF1E293B)
+  outline = NeuDarkShadowLight,
+  outlineVariant = NeuDarkShadowDark
 )
 
-// Sharp-Edged iOS Continuous Squircle Shapes applied globally to MaterialTheme
 val IosSquircleShapes = Shapes(
   extraSmall = IosSharpMicroShape,
   small = IosSharpButtonShape,
@@ -304,7 +367,16 @@ fun MyApplicationTheme(
     AppThemeMode.DARK_OBSIDIAN -> DarkObsidianColorScheme
   }
 
-  CompositionLocalProvider(LocalAppThemeMode provides activeMode) {
+  val neuColors = when (activeMode) {
+    AppThemeMode.GREEN_EMERALD -> MintNeumorphicColors
+    AppThemeMode.WHITE_CLINICAL -> LightClayNeumorphicColors
+    AppThemeMode.DARK_OBSIDIAN -> DarkNeumorphicColors
+  }
+
+  CompositionLocalProvider(
+    LocalAppThemeMode provides activeMode,
+    LocalNeumorphicColors provides neuColors
+  ) {
     MaterialTheme(
       colorScheme = colorScheme,
       typography = Typography,

@@ -461,11 +461,12 @@ fun EnterpriseHolidayDashboardScreen(
   ) {
     // 1. Enterprise Holiday Dashboard Hero Banner
     item {
+      val neu = com.example.ui.theme.LocalNeumorphicColors.current
       EnterpriseMeshHeroContainer(
-        cornerRadius = 28.dp,
-        primaryGlowColor = Color(0xFF10B981),
-        secondaryGlowColor = Color(0xFF0EA5E9),
-        contentPadding = PaddingValues(20.dp)
+        cornerRadius = 20.dp,
+        primaryGlowColor = neu.primaryAccent,
+        secondaryGlowColor = neu.secondaryAccent,
+        contentPadding = PaddingValues(18.dp)
       ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
           Row(
@@ -481,7 +482,7 @@ fun EnterpriseHolidayDashboardScreen(
                 Icon(
                   imageVector = Icons.Default.AutoAwesome,
                   contentDescription = null,
-                  tint = Color(0xFF34D399),
+                  tint = neu.primaryAccent,
                   modifier = Modifier.size(16.dp)
                 )
                 Text(
@@ -490,7 +491,7 @@ fun EnterpriseHolidayDashboardScreen(
                   fontSize = 10.sp,
                   lineHeight = 13.sp,
                   fontWeight = FontWeight.Bold,
-                  color = Color(0xFF6EE7B7),
+                  color = neu.primaryAccent,
                   maxLines = 1,
                   softWrap = false
                 )
@@ -499,28 +500,35 @@ fun EnterpriseHolidayDashboardScreen(
               Text(
                 text = "2026 Holiday & Leave Bridge Dashboard",
                 style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
+                color = neu.textPrimary,
                 fontWeight = FontWeight.Bold
               )
             }
 
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = Color.White.copy(alpha = 0.14f),
-              border = BorderStroke(1.dp, Color(0xFF34D399).copy(alpha = 0.45f))
+            Box(
+              modifier = Modifier
+                .neumorphicInset(
+                  shape = com.example.ui.theme.IosSharpBadgeShape,
+                  depth = 2.dp,
+                  blurRadius = 4.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.10f,
+                  borderColor = neu.primaryAccent.copy(alpha = 0.32f),
+                  neu = neu
+                )
             ) {
               Text(
                 text = "${liveGhList.size} GH • ${liveRhList.size} RH",
                 fontFamily = JetBrainsMonoFontFamily,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF6EE7B7),
+                color = neu.primaryAccent,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
               )
             }
           }
 
-          // 3 Uniform Hero KPI Pills
+          // 3 Uniform Inset Neumorphic Hero KPI Wells
           Row(
             modifier = Modifier
               .fillMaxWidth()
@@ -531,7 +539,7 @@ fun EnterpriseHolidayDashboardScreen(
               label = "Upcoming",
               value = "$upcomingCount Left",
               sub = "Nov–Dec 2026",
-              accent = Color(0xFF38BDF8),
+              accent = BadgeColCyan,
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
@@ -540,7 +548,7 @@ fun EnterpriseHolidayDashboardScreen(
               label = "Leave Bridges",
               value = "$bridgeCount Windows",
               sub = "3 to 9 Days Off",
-              accent = Color(0xFF4ADE80),
+              accent = EmeraldOptimal,
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
@@ -549,7 +557,7 @@ fun EnterpriseHolidayDashboardScreen(
               label = "RH Quota Left",
               value = "${state.summary2026.rhRemaining} / 3",
               sub = "${state.summary2026.clRemaining.toInt()} CL Available",
-              accent = Color(0xFFFBBF24),
+              accent = BadgePlGold,
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
@@ -1048,11 +1056,18 @@ private fun HolidayHeroGlassPill(
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(16.dp),
-    color = Color.White.copy(alpha = 0.09f),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.40f)),
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
+  Box(
     modifier = modifier
+      .neumorphicInset(
+        shape = com.example.ui.theme.IosSharpButtonShape,
+        depth = 2.5.dp,
+        blurRadius = 5.dp,
+        accentTint = accent,
+        accentTintAlpha = 0.06f,
+        borderColor = accent.copy(alpha = 0.25f),
+        neu = neu
+      )
   ) {
     Column(
       modifier = Modifier
@@ -1062,7 +1077,7 @@ private fun HolidayHeroGlassPill(
     ) {
       Text(
         text = label,
-        color = Color(0xFFCBD5E1),
+        color = neu.textSecondary,
         fontSize = 10.sp,
         lineHeight = 12.sp,
         fontWeight = FontWeight.SemiBold,
@@ -1081,7 +1096,7 @@ private fun HolidayHeroGlassPill(
       )
       Text(
         text = sub,
-        color = Color.White.copy(alpha = 0.80f),
+        color = neu.textSecondary,
         fontSize = 10.sp,
         lineHeight = 12.sp,
         maxLines = 1,

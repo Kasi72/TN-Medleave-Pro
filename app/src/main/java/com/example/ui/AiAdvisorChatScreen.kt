@@ -65,8 +65,10 @@ import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgeElNeutral
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.EmeraldOptimal
-import com.example.ui.theme.SapphireAccent
-import com.example.ui.theme.SapphirePrimary
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpWellShape
+import com.example.ui.theme.LocalNeumorphicColors
 
 @Composable
 fun AiAdvisorChatTabScreen(
@@ -135,26 +137,24 @@ fun AiAdvisorChatTabScreen(
 
     when (selectedSubTab) {
       0 -> {
-        // Compact Executive Grounding Banner so Chat Thread gets maximum vertical space
-        Surface(
-          shape = RoundedCornerShape(18.dp),
-          color = MaterialTheme.colorScheme.surface,
-          tonalElevation = 3.dp,
-          shadowElevation = 3.dp,
+        val neu = LocalNeumorphicColors.current
+        // Compact Neumorphic Executive Grounding Banner
+        Box(
           modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
+            .neumorphicExtruded(
+              shape = IosSharpCardShape,
+              elevation = 4.dp,
+              blurRadius = 8.dp,
+              accentTint = neu.primaryAccent,
+              borderAlpha = 0.34f,
+              neu = neu
+            )
         ) {
           Row(
             modifier = Modifier
-              .background(
-                Brush.linearGradient(
-                  listOf(
-                    SapphirePrimary.copy(alpha = 0.95f),
-                    SapphireAccent.copy(alpha = 0.88f)
-                  )
-                )
-              )
+              .fillMaxWidth()
               .padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -165,15 +165,21 @@ fun AiAdvisorChatTabScreen(
             ) {
               Box(
                 modifier = Modifier
-                  .size(32.dp)
-                  .clip(RoundedCornerShape(10.dp))
-                  .background(EmeraldOptimal.copy(alpha = 0.22f)),
+                  .size(34.dp)
+                  .neumorphicInset(
+                    shape = IosSharpButtonShape,
+                    depth = 2.dp,
+                    blurRadius = 4.dp,
+                    accentTint = neu.primaryAccent,
+                    accentTintAlpha = 0.12f,
+                    neu = neu
+                  ),
                 contentAlignment = Alignment.Center
               ) {
                 Icon(
                   imageVector = Icons.Default.Psychology,
                   contentDescription = "AI Leave Advisor",
-                  tint = Color(0xFF6EE7B7),
+                  tint = neu.primaryAccent,
                   modifier = Modifier.size(18.dp)
                 )
               }
@@ -186,21 +192,21 @@ fun AiAdvisorChatTabScreen(
                   Text(
                     text = chatState.selectedTier.displayName.uppercase(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF6EE7B7),
+                    color = neu.primaryAccent,
                     fontWeight = FontWeight.Bold,
                     fontSize = 10.sp
                   )
                   Text(
                     text = "• Grounded (${leaveState.allRecords.size} entries)",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = neu.textSecondary,
                     fontSize = 10.sp
                   )
                 }
                 Text(
                   text = "2026 Left: ${formatDoubleDays(remCl2026)} CL, $remRh2026 RH, ${auditYear.availableUnusedGhCount} GH • 2027 DB: $gh2027Count GH, $rh2027Count RL",
                   style = MaterialTheme.typography.bodySmall,
-                  color = Color.White.copy(alpha = 0.9f),
+                  color = neu.textPrimary,
                   fontSize = 11.sp,
                   maxLines = 1,
                   softWrap = false,
@@ -215,14 +221,19 @@ fun AiAdvisorChatTabScreen(
               onClick = { chatViewModel.clearConversation() },
               modifier = Modifier
                 .size(34.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color.White.copy(alpha = 0.14f))
+                .neumorphicExtruded(
+                  shape = IosSharpButtonShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  borderAlpha = 0.25f,
+                  neu = neu
+                )
                 .testTag("clear_chat_button")
             ) {
               Icon(
                 imageVector = Icons.Default.DeleteSweep,
                 contentDescription = "Reset Chat",
-                tint = Color.White,
+                tint = neu.textPrimary,
                 modifier = Modifier.size(18.dp)
               )
             }
@@ -267,15 +278,19 @@ fun AiAdvisorChatTabScreen(
           }
         }
 
-        // Message Composer Input Bar
-        Surface(
-          shape = RoundedCornerShape(22.dp),
-          color = MaterialTheme.colorScheme.surface,
-          tonalElevation = 4.dp,
-          shadowElevation = 6.dp,
+        // Neumorphic Message Composer Input Bar
+        Box(
           modifier = Modifier
             .fillMaxWidth()
             .padding(top = 6.dp, bottom = 96.dp)
+            .neumorphicExtruded(
+              shape = IosSharpCardShape,
+              elevation = 4.5.dp,
+              blurRadius = 9.dp,
+              accentTint = neu.primaryAccent,
+              borderAlpha = 0.28f,
+              neu = neu
+            )
         ) {
           Row(
             modifier = Modifier
@@ -290,51 +305,52 @@ fun AiAdvisorChatTabScreen(
                 Text(
                   text = "Ask about TN Leave Rules, COL audit, or 2026–2027 bridges...",
                   style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                  color = neu.textSecondary
                 )
               },
               modifier = Modifier
                 .weight(1f)
                 .testTag("chat_input_field"),
-              shape = RoundedCornerShape(16.dp),
+              shape = IosSharpWellShape,
               maxLines = 3,
               colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = EmeraldOptimal,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                focusedTextColor = neu.textPrimary,
+                unfocusedTextColor = neu.textPrimary,
+                focusedContainerColor = neu.surfaceInset,
+                unfocusedContainerColor = neu.surfaceInset,
+                focusedBorderColor = neu.primaryAccent,
+                unfocusedBorderColor = neu.hairlineDivider
               )
             )
 
             Spacer(modifier = Modifier.width(8.dp))
 
+            val canSend = inputPrompt.isNotBlank() && !chatState.isGenerating
             IconButton(
               onClick = {
                 val toSend = inputPrompt
-                if (toSend.isNotBlank() && !chatState.isGenerating) {
+                if (canSend) {
                   inputPrompt = ""
                   chatViewModel.sendMessage(toSend)
                 }
               },
-              enabled = inputPrompt.isNotBlank() && !chatState.isGenerating,
+              enabled = canSend,
               modifier = Modifier
                 .size(48.dp)
-                .clip(CircleShape)
-                .background(
-                  if (inputPrompt.isNotBlank() && !chatState.isGenerating) {
-                    EmeraldOptimal
-                  } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                  }
+                .neumorphicExtruded(
+                  shape = CircleShape,
+                  elevation = if (canSend) 3.5.dp else 1.5.dp,
+                  blurRadius = 7.dp,
+                  surfaceColor = if (canSend) MaterialTheme.colorScheme.primary else neu.surfaceRaised,
+                  borderAlpha = 0.40f,
+                  neu = neu
                 )
                 .testTag("send_chat_button")
             ) {
               Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
                 contentDescription = "Send Message",
-                tint = if (inputPrompt.isNotBlank() && !chatState.isGenerating) {
-                  Color.White
-                } else {
-                  MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                tint = if (canSend) MaterialTheme.colorScheme.onPrimary else neu.textSecondary
               )
             }
           }
@@ -359,32 +375,37 @@ fun AiAdvisorChatTabScreen(
           )
         )
 
+        val neu = LocalNeumorphicColors.current
         LazyColumn(
           modifier = Modifier.fillMaxSize(),
-          contentPadding = PaddingValues(bottom = 104.dp),
-          verticalArrangement = Arrangement.spacedBy(12.dp)
+          contentPadding = PaddingValues(top = 4.dp, bottom = 104.dp),
+          verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
           item {
-            Surface(
-              shape = RoundedCornerShape(20.dp),
-              color = MaterialTheme.colorScheme.surface,
-              tonalElevation = 2.dp,
+            Box(
               modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, EmeraldOptimal.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+                .neumorphicExtruded(
+                  shape = IosSharpCardShape,
+                  elevation = 4.5.dp,
+                  blurRadius = 9.dp,
+                  accentTint = neu.primaryAccent,
+                  borderAlpha = 0.30f,
+                  neu = neu
+                )
             ) {
               Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                   text = "GEMINI AI MODEL TIER SELECTOR",
                   style = MaterialTheme.typography.labelMedium,
-                  color = EmeraldOptimal,
+                  color = neu.primaryAccent,
                   fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                   text = chatState.selectedTier.subtitle,
                   style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                  color = neu.textSecondary
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -392,9 +413,13 @@ fun AiAdvisorChatTabScreen(
                   modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
-                    .padding(4.dp),
+                    .neumorphicInset(
+                      shape = IosSharpWellShape,
+                      depth = 2.5.dp,
+                      blurRadius = 5.dp,
+                      neu = neu
+                    )
+                    .padding(5.dp),
                   horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                   GeminiModelTier.entries.forEach { tier ->
@@ -403,8 +428,20 @@ fun AiAdvisorChatTabScreen(
                       modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(if (selected) EmeraldOptimal else Color.Transparent)
+                        .then(
+                          if (selected) {
+                            Modifier.neumorphicExtruded(
+                              shape = IosSharpButtonShape,
+                              elevation = 3.dp,
+                              blurRadius = 6.dp,
+                              surfaceColor = MaterialTheme.colorScheme.primary,
+                              borderAlpha = 0.45f,
+                              neu = neu
+                            )
+                          } else {
+                            Modifier.clip(IosSharpButtonShape)
+                          }
+                        )
                         .clickable { chatViewModel.selectModelTier(tier) }
                         .padding(vertical = 9.dp, horizontal = 4.dp)
                         .testTag("model_tier_${tier.name.lowercase()}"),
@@ -413,7 +450,7 @@ fun AiAdvisorChatTabScreen(
                       Text(
                         text = tier.displayName,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+                        color = if (selected) MaterialTheme.colorScheme.onPrimary else neu.textPrimary,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                         fontSize = 11.sp,
                         maxLines = 1,
@@ -429,16 +466,15 @@ fun AiAdvisorChatTabScreen(
 
           promptGroups.forEachIndexed { groupIdx, (groupTitle, prompts) ->
             item(key = "group_$groupIdx") {
-              Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp,
+              Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .border(
-                    1.dp,
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.14f),
-                    RoundedCornerShape(20.dp)
+                  .neumorphicExtruded(
+                    shape = IosSharpCardShape,
+                    elevation = 4.5.dp,
+                    blurRadius = 9.dp,
+                    borderAlpha = 0.25f,
+                    neu = neu
                   )
               ) {
                 Column(
@@ -448,16 +484,19 @@ fun AiAdvisorChatTabScreen(
                   Text(
                     text = groupTitle.uppercase(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = EmeraldOptimal,
+                    color = neu.primaryAccent,
                     fontWeight = FontWeight.Bold
                   )
                   prompts.forEachIndexed { idx, prompt ->
-                    Surface(
-                      shape = RoundedCornerShape(14.dp),
-                      color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    Box(
                       modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .neumorphicInset(
+                          shape = IosSharpWellShape,
+                          depth = 2.dp,
+                          blurRadius = 4.dp,
+                          neu = neu
+                        )
                         .clickable(enabled = !chatState.isGenerating) {
                           selectedSubTab = 0
                           chatViewModel.sendMessage(prompt)
@@ -471,14 +510,14 @@ fun AiAdvisorChatTabScreen(
                         Icon(
                           imageVector = Icons.Default.AutoAwesome,
                           contentDescription = null,
-                          tint = EmeraldOptimal,
+                          tint = neu.primaryAccent,
                           modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                           text = prompt,
                           style = MaterialTheme.typography.bodySmall,
-                          color = MaterialTheme.colorScheme.onSurface,
+                          color = neu.textPrimary,
                           fontWeight = FontWeight.Medium
                         )
                       }
@@ -541,13 +580,18 @@ private fun RuleReferenceCard(
   title: String,
   bullets: List<String>
 ) {
-  Surface(
-    shape = RoundedCornerShape(20.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.dp, EmeraldOptimal.copy(alpha = 0.22f), RoundedCornerShape(20.dp))
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 4.5.dp,
+        blurRadius = 9.dp,
+        accentTint = neu.primaryAccent,
+        borderAlpha = 0.28f,
+        neu = neu
+      )
   ) {
     Column(
       modifier = Modifier.padding(16.dp),
@@ -560,13 +604,13 @@ private fun RuleReferenceCard(
         Icon(
           imageVector = Icons.Default.VerifiedUser,
           contentDescription = null,
-          tint = EmeraldOptimal,
+          tint = neu.primaryAccent,
           modifier = Modifier.size(15.dp)
         )
         Text(
           text = badge,
           style = MaterialTheme.typography.labelSmall,
-          color = EmeraldOptimal,
+          color = neu.primaryAccent,
           fontWeight = FontWeight.Bold
         )
       }
@@ -574,7 +618,7 @@ private fun RuleReferenceCard(
         text = title,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface
+        color = neu.textPrimary
       )
       bullets.forEach { bullet ->
         Row(
@@ -583,13 +627,13 @@ private fun RuleReferenceCard(
         ) {
           Text(
             text = "• ",
-            color = EmeraldOptimal,
+            color = neu.primaryAccent,
             fontWeight = FontWeight.Bold
           )
           Text(
             text = bullet,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = neu.textSecondary,
             lineHeight = 18.sp
           )
         }
@@ -600,6 +644,7 @@ private fun RuleReferenceCard(
 
 @Composable
 private fun ChatBubbleRow(message: ChatMessageItem) {
+  val neu = LocalNeumorphicColors.current
   val alignment = if (message.isUser) Alignment.CenterEnd else Alignment.CenterStart
   val bubbleShape = if (message.isUser) {
     RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 20.dp, bottomEnd = 6.dp)
@@ -610,34 +655,32 @@ private fun ChatBubbleRow(message: ChatMessageItem) {
   val containerColor = when {
     message.isUser -> MaterialTheme.colorScheme.primary
     message.isError -> MaterialTheme.colorScheme.errorContainer
-    else -> MaterialTheme.colorScheme.surface
+    else -> neu.surfaceRaised
   }
 
   val contentColor = when {
     message.isUser -> MaterialTheme.colorScheme.onPrimary
     message.isError -> MaterialTheme.colorScheme.onErrorContainer
-    else -> MaterialTheme.colorScheme.onSurface
+    else -> neu.textPrimary
   }
 
   Box(
-    modifier = Modifier.fillMaxWidth(),
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(horizontal = 4.dp),
     contentAlignment = alignment
   ) {
-    Surface(
-      shape = bubbleShape,
-      color = containerColor,
-      tonalElevation = if (message.isUser) 0.dp else 2.dp,
-      shadowElevation = 2.dp,
+    Box(
       modifier = Modifier
         .widthIn(max = 330.dp)
-        .border(
-          width = 1.dp,
-          color = if (message.isUser) {
-            Color.Transparent
-          } else {
-            MaterialTheme.colorScheme.outline.copy(alpha = 0.14f)
-          },
-          shape = bubbleShape
+        .neumorphicExtruded(
+          shape = bubbleShape,
+          elevation = 3.5.dp,
+          blurRadius = 7.dp,
+          surfaceColor = containerColor,
+          accentTint = if (message.isUser) null else neu.primaryAccent,
+          borderAlpha = if (message.isUser) 0.45f else 0.25f,
+          neu = neu
         )
     ) {
       Column(
@@ -653,10 +696,10 @@ private fun ChatBubbleRow(message: ChatMessageItem) {
               .clip(CircleShape)
               .background(
                 when {
-                  message.isUser -> BadgeClGreen
+                  message.isUser -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
                   message.modelLabel.contains("Argon") -> BadgeColCyan
                   message.modelLabel.contains("Lite") -> BadgeElNeutral
-                  else -> EmeraldOptimal
+                  else -> neu.primaryAccent
                 }
               )
           )
@@ -664,9 +707,9 @@ private fun ChatBubbleRow(message: ChatMessageItem) {
             text = message.modelLabel.uppercase(),
             style = MaterialTheme.typography.labelSmall,
             color = if (message.isUser) {
-              Color.White.copy(alpha = 0.8f)
+              MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
             } else {
-              EmeraldOptimal
+              neu.primaryAccent
             },
             fontWeight = FontWeight.Bold,
             fontSize = 10.sp

@@ -63,7 +63,10 @@ import com.example.ui.theme.BadgeGhLime
 import com.example.ui.theme.BadgeInLieuLavender
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
 import com.example.ui.theme.StatusVerifiedGreen
@@ -137,11 +140,12 @@ fun ColGhAuditTabScreen(
       }
       val matchPct = (matchRatio * 100).toInt()
 
+      val neu = LocalNeumorphicColors.current
       EnterpriseMeshHeroContainer(
-        cornerRadius = 28.dp,
-        primaryGlowColor = Color(0xFF10B981),
-        secondaryGlowColor = Color(0xFF0EA5E9),
-        contentPadding = PaddingValues(20.dp)
+        cornerRadius = 22.dp,
+        primaryGlowColor = neu.primaryAccent,
+        secondaryGlowColor = neu.secondaryAccent,
+        contentPadding = PaddingValues(18.dp)
       ) {
         Column {
           Row(
@@ -156,14 +160,15 @@ fun ColGhAuditTabScreen(
               Icon(
                 imageVector = Icons.Default.Verified,
                 contentDescription = null,
-                tint = Color(0xFF34D399),
+                tint = neu.primaryAccent,
                 modifier = Modifier.size(20.dp)
               )
               Spacer(modifier = Modifier.width(8.dp))
               Text(
                 text = "COL ↔ GH WORKED AUDIT",
                 style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFF34D399),
+                color = neu.primaryAccent,
+                fontWeight = FontWeight.ExtraBold,
                 maxLines = 1,
                 softWrap = false
               )
@@ -171,34 +176,37 @@ fun ColGhAuditTabScreen(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = Color.White.copy(alpha = 0.14f),
+            Box(
               modifier = Modifier
                 .height(32.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                .clickable { showAllYears = !showAllYears }
-                .testTag("toggle_audit_all_years")
-            ) {
-              Box(
-                modifier = Modifier.padding(horizontal = 12.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Text(
-                  text = if (showAllYears) "All Years (23–27)" else "Year: ${state.selectedYear}",
-                  style = MaterialTheme.typography.labelMedium,
-                  color = Color.White,
-                  maxLines = 1,
-                  softWrap = false
+                .neumorphicExtruded(
+                  shape = IosSharpBadgeShape,
+                  elevation = 2.5.dp,
+                  blurRadius = 5.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.08f,
+                  borderAlpha = 0.38f,
+                  neu = neu
                 )
-              }
+                .clickable { showAllYears = !showAllYears }
+                .padding(horizontal = 12.dp)
+                .testTag("toggle_audit_all_years"),
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = if (showAllYears) "All Years (23–27)" else "Year: ${state.selectedYear}",
+                style = MaterialTheme.typography.labelMedium,
+                color = neu.textPrimary,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false
+              )
             }
           }
 
           Spacer(modifier = Modifier.height(14.dp))
 
-          // 4 Geometrically Uniform Audit Metrics Pill Boxes
+          // 4 Geometrically Uniform Audit Metrics Inset Wells
           Row(
             modifier = Modifier
               .fillMaxWidth()
@@ -209,7 +217,7 @@ fun ColGhAuditTabScreen(
               label = "COL Taken",
               value = "${audit.totalColTaken}",
               sub = "${audit.fullyAccountedColCount} Verified",
-              accent = Color(0xFF38BDF8),
+              accent = Color(0xFF0284C7),
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
@@ -218,7 +226,7 @@ fun ColGhAuditTabScreen(
               label = "GH Worked",
               value = "${audit.totalGhWorked}",
               sub = "Hospital Duty",
-              accent = Color(0xFFA3E635),
+              accent = Color(0xFF0D9488),
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
@@ -227,7 +235,7 @@ fun ColGhAuditTabScreen(
               label = "Unpaired",
               value = "${audit.unaccountedColCount}",
               sub = if (audit.unaccountedColCount == 0) "100% Clean" else "Needs Pair",
-              accent = if (audit.unaccountedColCount == 0) Color(0xFF4ADE80) else Color(0xFFF87171),
+              accent = if (audit.unaccountedColCount == 0) EmeraldOptimal else Color(0xFFDC2626),
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
@@ -236,7 +244,7 @@ fun ColGhAuditTabScreen(
               label = "Unused GH",
               value = "${audit.availableUnusedGhCount}",
               sub = "Ready for COL",
-              accent = Color(0xFFFBBF24),
+              accent = Color(0xFFD97706),
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
@@ -245,8 +253,8 @@ fun ColGhAuditTabScreen(
 
           Spacer(modifier = Modifier.height(14.dp))
 
-          // Live Reconciliation Integrity Telemetry Bar
-          Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+          // Live Reconciliation Integrity Telemetry Bar (Inset Trough)
+          Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.SpaceBetween,
@@ -257,7 +265,7 @@ fun ColGhAuditTabScreen(
                 fontFamily = JetBrainsMonoFontFamily,
                 fontSize = 10.sp,
                 lineHeight = 13.sp,
-                color = Color(0xFFBAE6FD),
+                color = neu.textSecondary,
                 maxLines = 1,
                 softWrap = false
               )
@@ -267,30 +275,16 @@ fun ColGhAuditTabScreen(
                 fontSize = 11.sp,
                 lineHeight = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (matchPct == 100) Color(0xFF4ADE80) else Color(0xFFFBBF24),
+                color = if (matchPct == 100) neu.primaryAccent else Color(0xFFD97706),
                 maxLines = 1,
                 softWrap = false
               )
             }
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(Color.White.copy(alpha = 0.14f))
-            ) {
-              Box(
-                modifier = Modifier
-                  .fillMaxWidth(matchRatio.coerceIn(0.08f, 1f))
-                  .height(6.dp)
-                  .clip(RoundedCornerShape(3.dp))
-                  .background(
-                    Brush.horizontalGradient(
-                      colors = listOf(Color(0xFF38BDF8), Color(0xFF34D399))
-                    )
-                  )
-              )
-            }
+            NeumorphicLinearProgress(
+              progress = matchRatio,
+              accentColor = neu.primaryAccent,
+              height = 8.dp
+            )
           }
 
           Spacer(modifier = Modifier.height(14.dp))
@@ -300,10 +294,10 @@ fun ColGhAuditTabScreen(
             onClick = {
               onAutoReconcileYear(if (showAllYears) null else state.selectedYear)
             },
-            shape = RoundedCornerShape(16.dp),
+            shape = IosSharpButtonShape,
             colors = ButtonDefaults.buttonColors(
-              containerColor = Color(0xFF10B981),
-              contentColor = Color(0xFF042F2E)
+              containerColor = MaterialTheme.colorScheme.primary,
+              contentColor = MaterialTheme.colorScheme.onPrimary
             ),
             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
             modifier = Modifier
@@ -715,10 +709,18 @@ private fun AuditStatMiniCard(
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(18.dp),
-    color = Color.White.copy(alpha = 0.1f),
-    modifier = modifier.border(1.dp, accent.copy(alpha = 0.38f), RoundedCornerShape(18.dp))
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
+  Box(
+    modifier = modifier
+      .neumorphicInset(
+        shape = com.example.ui.theme.IosSharpButtonShape,
+        depth = 2.5.dp,
+        blurRadius = 5.dp,
+        accentTint = accent,
+        accentTintAlpha = 0.06f,
+        borderColor = accent.copy(alpha = 0.25f),
+        neu = neu
+      )
   ) {
     Column(
       modifier = Modifier
@@ -729,7 +731,7 @@ private fun AuditStatMiniCard(
     ) {
       Text(
         text = label,
-        color = Color(0xFFCBD5E1),
+        color = neu.textSecondary,
         fontSize = 10.sp,
         lineHeight = 12.sp,
         fontWeight = FontWeight.SemiBold,
@@ -749,7 +751,7 @@ private fun AuditStatMiniCard(
       )
       Text(
         text = sub,
-        color = Color.White.copy(alpha = 0.82f),
+        color = neu.textSecondary,
         fontSize = 9.sp,
         lineHeight = 11.sp,
         fontWeight = FontWeight.Medium,

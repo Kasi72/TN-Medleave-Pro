@@ -62,44 +62,27 @@ import com.example.data.TnHolidayItem
 import com.example.domain.TnHolidays2027Catalog
 import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
-import com.example.ui.theme.BadgeGhLime
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
-import com.example.ui.theme.IosDarkDockSurface
-import com.example.ui.theme.IosSquircleGlassFill
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpHeroShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
-import com.example.ui.theme.NeonAquaAccent
-import com.example.ui.theme.NeonCyanBright
-import com.example.ui.theme.NeonCyanText
+import com.example.ui.theme.LocalNeumorphicColors
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-// Luminous Jewel-Glass Calendar Palette (Tuned for Maximum Contrast & Apple iOS 18 Aesthetics)
 private val GoldHolidayHighlight = Color(0xFFF59E0B)
-private val GoldHolidayBrightText = Color(0xFFFDE68A)
-private val GoldHolidayDeepFill = Color(0xFF3B2307)
-
 private val TealRhHighlight = Color(0xFF14B8A6)
-private val TealRhBrightText = Color(0xFF99F6E4)
-private val TealRhDeepFill = Color(0xFF0B2E2F)
-
 private val CyanColHighlight = Color(0xFF06B6D4)
-private val CyanColBrightText = Color(0xFF67E8F9)
-private val CyanColDeepFill = Color(0xFF082C42)
-
 private val EmeraldLeaveHighlight = Color(0xFF10B981)
-private val EmeraldLeaveBrightText = Color(0xFF6EE7B7)
-private val EmeraldLeaveDeepFill = Color(0xFF073229)
-
-private val CalendarCardDeepBg = Color(0xFF071627)
-private val CalendarWeekdayTileBg = Color(0xFF0D223A)
-private val CalendarWeekdayTileBorder = Color(0xFF1B385A)
-private val CalendarWeekendTileBg = Color(0xFF102844)
-private val CalendarWeekendTileBorder = Color(0xFF23456E)
 
 @Composable
 fun IosCalendarTabScreen(
@@ -259,14 +242,25 @@ fun IosCalendarTabScreen(
           }
 
           item {
-            Surface(
-              shape = RoundedCornerShape(24.dp),
-              color = CalendarCardDeepBg,
-              tonalElevation = 4.dp,
-              border = BorderStroke(1.dp, NeonCyanText.copy(alpha = 0.32f)),
-              modifier = Modifier.fillMaxWidth()
+            val neu = LocalNeumorphicColors.current
+            val goldText = if (neu.isDark) Color(0xFFFDE68A) else Color(0xFFB45309)
+            val tealText = if (neu.isDark) Color(0xFF99F6E4) else Color(0xFF0F766E)
+            val emeraldText = if (neu.isDark) Color(0xFF6EE7B7) else Color(0xFF047857)
+
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .neumorphicExtruded(
+                  shape = IosSharpCardShape,
+                  elevation = 5.dp,
+                  blurRadius = 10.dp,
+                  accentTint = GoldHolidayHighlight,
+                  borderAlpha = 0.30f,
+                  neu = neu
+                )
+                .padding(18.dp)
             ) {
-              Column(modifier = Modifier.padding(18.dp)) {
+              Column {
                 Row(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.SpaceBetween,
@@ -283,7 +277,7 @@ fun IosCalendarTabScreen(
                     Text(
                       text = "${currentYearMonth.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)} ${currentYearMonth.year} Holidays & RL Planner",
                       style = MaterialTheme.typography.titleMedium,
-                      color = Color.White,
+                      color = neu.textPrimary,
                       fontWeight = FontWeight.Bold
                     )
                   }
@@ -296,27 +290,24 @@ fun IosCalendarTabScreen(
                   Text(
                     text = "No notified Public or Restricted Holidays in ${currentYearMonth.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)} ${currentYearMonth.year}. Switch to 2026 or 2027 to view synced TN Government GH & RL dates.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NeonCyanBright.copy(alpha = 0.8f)
+                    color = neu.textSecondary
                   )
                 } else {
                   combinedMonthHolidays.forEach { hItem ->
                     val alreadyLogged = recordsByDate[hItem.dateIso]?.firstOrNull()
+                    val hAccent = if (hItem.isRestrictedHoliday) TealRhHighlight else GoldHolidayHighlight
                     Row(
                       modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 5.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                          if (hItem.isRestrictedHoliday) TealRhDeepFill else GoldHolidayDeepFill
-                        )
-                        .border(
-                          width = 1.dp,
-                          color = if (hItem.isRestrictedHoliday) {
-                            TealRhHighlight.copy(alpha = 0.45f)
-                          } else {
-                            GoldHolidayHighlight.copy(alpha = 0.50f)
-                          },
-                          shape = RoundedCornerShape(14.dp)
+                        .neumorphicInset(
+                          shape = IosSharpWellShape,
+                          depth = 2.5.dp,
+                          blurRadius = 5.dp,
+                          accentTint = hAccent,
+                          accentTintAlpha = 0.08f,
+                          borderColor = hAccent.copy(alpha = 0.35f),
+                          neu = neu
                         )
                         .clickable {
                           selectedDateIso = hItem.dateIso
@@ -326,8 +317,8 @@ fun IosCalendarTabScreen(
                       verticalAlignment = Alignment.CenterVertically
                     ) {
                       Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (hItem.isRestrictedHoliday) TealRhHighlight else GoldHolidayHighlight
+                        shape = IosSharpMicroShape,
+                        color = hAccent
                       ) {
                         Text(
                           text = if (hItem.isRestrictedHoliday) "RL" else "GH",
@@ -342,7 +333,7 @@ fun IosCalendarTabScreen(
                         Text(
                           text = "${ClinicalDateFormatter.formatFriendlyWithDay(hItem.dateIso)} • ${hItem.nameTamil}",
                           style = MaterialTheme.typography.labelLarge,
-                          color = Color.White,
+                          color = neu.textPrimary,
                           fontWeight = FontWeight.Bold,
                           maxLines = 1,
                           softWrap = false,
@@ -352,30 +343,42 @@ fun IosCalendarTabScreen(
                           text = hItem.nameEnglish,
                           style = MaterialTheme.typography.bodyMedium,
                           fontSize = 12.sp,
-                          color = if (hItem.isRestrictedHoliday) TealRhBrightText else GoldHolidayBrightText
+                          color = if (hItem.isRestrictedHoliday) tealText else goldText
                         )
                       }
                       if (alreadyLogged != null) {
-                        Surface(
-                          shape = RoundedCornerShape(8.dp),
-                          color = EmeraldLeaveHighlight.copy(alpha = 0.22f),
-                          border = BorderStroke(1.dp, EmeraldLeaveHighlight)
+                        Box(
+                          modifier = Modifier
+                            .neumorphicInset(
+                              shape = IosSharpMicroShape,
+                              depth = 1.5.dp,
+                              blurRadius = 3.dp,
+                              accentTint = EmeraldLeaveHighlight,
+                              accentTintAlpha = 0.12f,
+                              borderColor = EmeraldLeaveHighlight.copy(alpha = 0.55f),
+                              neu = neu
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                           Text(
                             text = alreadyLogged.leaveType,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = EmeraldLeaveBrightText,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            color = emeraldText
                           )
                         }
                       } else {
-                        Surface(
-                          shape = RoundedCornerShape(10.dp),
-                          color = IosSquircleGlassFill,
-                          border = BorderStroke(1.dp, NeonAquaAccent.copy(alpha = 0.55f)),
+                        Box(
                           modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .neumorphicExtruded(
+                              shape = IosSharpBadgeShape,
+                              elevation = 2.dp,
+                              blurRadius = 4.dp,
+                              accentTint = neu.primaryAccent,
+                              accentTintAlpha = 0.08f,
+                              borderAlpha = 0.35f,
+                              neu = neu
+                            )
                             .clickable {
                               if (hItem.isRestrictedHoliday) {
                                 onQuickLogLeave("RH", hItem.dateIso, "${hItem.nameEnglish} (${hItem.nameTamil})")
@@ -383,13 +386,13 @@ fun IosCalendarTabScreen(
                                 onQuickLogLeave("GH_WORKED", hItem.dateIso, "GH Worked: ${hItem.nameEnglish}")
                               }
                             }
+                            .padding(horizontal = 9.dp, vertical = 5.dp)
                         ) {
                           Text(
                             text = if (hItem.isRestrictedHoliday) "+ Log RH" else "+ GH Duty",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = NeonAquaAccent,
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                            color = neu.primaryAccent
                           )
                         }
                       }
@@ -434,29 +437,30 @@ fun IosCalendarTabScreen(
             }
           }
 
-          // 2. Main Luxury iOS 18 Bento Squircle Calendar Card
+          // 2. Main Neumorphic Bento Squircle Calendar Card
           item {
-            Surface(
-              shape = RoundedCornerShape(28.dp),
-              color = CalendarCardDeepBg,
-              tonalElevation = 6.dp,
-              shadowElevation = 12.dp,
+            val neu = LocalNeumorphicColors.current
+            val goldText = if (neu.isDark) Color(0xFFFDE68A) else Color(0xFFB45309)
+            val tealText = if (neu.isDark) Color(0xFF99F6E4) else Color(0xFF0F766E)
+            val cyanText = if (neu.isDark) Color(0xFF67E8F9) else Color(0xFF0369A1)
+            val emeraldText = if (neu.isDark) Color(0xFF6EE7B7) else Color(0xFF047857)
+            val sunColor = if (neu.isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+            val satColor = if (neu.isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+
+            Box(
               modifier = Modifier
                 .fillMaxWidth()
-                .border(
-                  width = 1.2.dp,
-                  brush = Brush.linearGradient(
-                    listOf(
-                      NeonAquaAccent.copy(alpha = 0.50f),
-                      NeonCyanText.copy(alpha = 0.28f),
-                      GoldHolidayHighlight.copy(alpha = 0.32f)
-                    )
-                  ),
-                  shape = RoundedCornerShape(28.dp)
+                .neumorphicExtruded(
+                  shape = IosSharpHeroShape,
+                  elevation = 6.dp,
+                  blurRadius = 12.dp,
+                  accentTint = neu.primaryAccent,
+                  borderAlpha = 0.34f,
+                  neu = neu
                 )
             ) {
               Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp)) {
-                // Calendar Month Header + High-Contrast Neon Squircle Prev/Next Buttons
+                // Calendar Month Header + Neumorphic Tactile Prev/Next Buttons
                 Row(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.SpaceBetween,
@@ -471,12 +475,12 @@ fun IosCalendarTabScreen(
                         modifier = Modifier
                           .size(7.dp)
                           .clip(CircleShape)
-                          .background(NeonAquaAccent)
+                          .background(neu.primaryAccent)
                       )
                       Text(
                         text = "TN MEDLEAVE BENTO CALENDAR",
                         style = MaterialTheme.typography.labelSmall,
-                        color = NeonAquaAccent,
+                        color = neu.primaryAccent,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 10.sp,
                         letterSpacing = 0.5.sp
@@ -488,49 +492,57 @@ fun IosCalendarTabScreen(
                       style = MaterialTheme.typography.headlineMedium,
                       fontWeight = FontWeight.ExtraBold,
                       fontSize = 24.sp,
-                      color = Color.White
+                      color = neu.textPrimary
                     )
                   }
 
                   Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                   ) {
-                    Surface(
-                      shape = RoundedCornerShape(12.dp),
-                      color = NeonAquaAccent.copy(alpha = 0.16f),
-                      border = BorderStroke(1.dp, NeonAquaAccent.copy(alpha = 0.55f)),
+                    Box(
                       modifier = Modifier
                         .height(38.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .neumorphicExtruded(
+                          shape = IosSharpButtonShape,
+                          elevation = 3.dp,
+                          blurRadius = 6.dp,
+                          accentTint = neu.primaryAccent,
+                          accentTintAlpha = 0.08f,
+                          borderAlpha = 0.35f,
+                          neu = neu
+                        )
                         .clickable {
                           onSelectYear(2026L)
                           currentMonthValue = 11
                           selectedDateIso = "2026-11-08"
                         }
-                        .testTag("calendar_today_quick_jump")
+                        .padding(horizontal = 10.dp)
+                        .testTag("calendar_today_quick_jump"),
+                      contentAlignment = Alignment.Center
                     ) {
-                      Box(
-                        modifier = Modifier.padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.Center
-                      ) {
-                        Text(
-                          text = "Today",
-                          fontFamily = JetBrainsMonoFontFamily,
-                          fontSize = 11.sp,
-                          fontWeight = FontWeight.ExtraBold,
-                          color = NeonAquaAccent,
-                          maxLines = 1,
-                          softWrap = false
-                        )
-                      }
+                      Text(
+                        text = "Today",
+                        fontFamily = JetBrainsMonoFontFamily,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = neu.primaryAccent,
+                        maxLines = 1,
+                        softWrap = false
+                      )
                     }
 
-                    Surface(
-                      shape = RoundedCornerShape(13.dp),
-                      color = IosSquircleGlassFill,
-                      border = BorderStroke(1.dp, NeonCyanText.copy(alpha = 0.45f)),
-                      modifier = Modifier.size(38.dp)
+                    Box(
+                      modifier = Modifier
+                        .size(38.dp)
+                        .neumorphicExtruded(
+                          shape = IosSharpButtonShape,
+                          elevation = 3.dp,
+                          blurRadius = 6.dp,
+                          borderAlpha = 0.28f,
+                          neu = neu
+                        ),
+                      contentAlignment = Alignment.Center
                     ) {
                       IconButton(
                         onClick = {
@@ -546,16 +558,22 @@ fun IosCalendarTabScreen(
                         Icon(
                           imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                           contentDescription = "Previous Month",
-                          tint = NeonCyanBright
+                          tint = neu.textPrimary
                         )
                       }
                     }
 
-                    Surface(
-                      shape = RoundedCornerShape(13.dp),
-                      color = IosSquircleGlassFill,
-                      border = BorderStroke(1.dp, NeonCyanText.copy(alpha = 0.45f)),
-                      modifier = Modifier.size(38.dp)
+                    Box(
+                      modifier = Modifier
+                        .size(38.dp)
+                        .neumorphicExtruded(
+                          shape = IosSharpButtonShape,
+                          elevation = 3.dp,
+                          blurRadius = 6.dp,
+                          borderAlpha = 0.28f,
+                          neu = neu
+                        ),
+                      contentAlignment = Alignment.Center
                     ) {
                       IconButton(
                         onClick = {
@@ -571,7 +589,7 @@ fun IosCalendarTabScreen(
                         Icon(
                           imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                           contentDescription = "Next Month",
-                          tint = NeonCyanBright
+                          tint = neu.textPrimary
                         )
                       }
                     }
@@ -580,36 +598,33 @@ fun IosCalendarTabScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // 3 Uniform Monthly Summary Telemetry Chips
+                // 3 Uniform Monthly Summary Telemetry Inset Wells
                 Row(
                   modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                  horizontalArrangement = Arrangement.spacedBy(6.dp)
+                  horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                   CalendarHeaderStatChip(
                     label = "${monthRecords.size} Leaves / Duties",
-                    accentColor = CyanColBrightText,
+                    accentColor = cyanText,
                     borderColor = CyanColHighlight,
-                    bgColor = CyanColDeepFill,
                     modifier = Modifier
                       .weight(1f)
                       .fillMaxHeight()
                   )
                   CalendarHeaderStatChip(
                     label = "${monthGhList.size} TN Public GH",
-                    accentColor = GoldHolidayBrightText,
+                    accentColor = goldText,
                     borderColor = GoldHolidayHighlight,
-                    bgColor = GoldHolidayDeepFill,
                     modifier = Modifier
                       .weight(1f)
                       .fillMaxHeight()
                   )
                   CalendarHeaderStatChip(
                     label = "${monthRhList.size} Restricted RL",
-                    accentColor = TealRhBrightText,
+                    accentColor = tealText,
                     borderColor = TealRhHighlight,
-                    bgColor = TealRhDeepFill,
                     modifier = Modifier
                       .weight(1f)
                       .fillMaxHeight()
@@ -618,36 +633,35 @@ fun IosCalendarTabScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Recessed iOS Capsule Weekday Header Bar (SUN .. SAT)
+                // Recessed Inset Capsule Weekday Header Bar (SUN .. SAT)
                 val weekLabels = listOf("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT")
-                Surface(
-                  shape = RoundedCornerShape(12.dp),
-                  color = Color(0xFF0B1F36),
-                  border = BorderStroke(1.dp, Color(0xFF1A3656)),
-                  modifier = Modifier.fillMaxWidth()
+                Row(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .neumorphicInset(
+                      shape = IosSharpButtonShape,
+                      depth = 2.5.dp,
+                      blurRadius = 5.dp,
+                      neu = neu
+                    )
+                    .padding(vertical = 8.dp)
                 ) {
-                  Row(
-                    modifier = Modifier
-                      .fillMaxWidth()
-                      .padding(vertical = 8.dp)
-                  ) {
-                    weekLabels.forEachIndexed { idx, wLabel ->
-                      val headerColor = when (idx) {
-                        0 -> Color(0xFFFBBF24) // Warm Gold for Sunday
-                        6 -> Color(0xFF38BDF8) // Sky Cyan for Saturday
-                        else -> NeonCyanBright // Crisp Neon Cyan for Mon–Fri
-                      }
-                      Text(
-                        text = wLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 11.sp,
-                        letterSpacing = 0.5.sp,
-                        color = headerColor,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f)
-                      )
+                  weekLabels.forEachIndexed { idx, wLabel ->
+                    val headerColor = when (idx) {
+                      0 -> sunColor
+                      6 -> satColor
+                      else -> neu.textSecondary
                     }
+                    Text(
+                      text = wLabel,
+                      style = MaterialTheme.typography.labelMedium,
+                      fontWeight = FontWeight.ExtraBold,
+                      fontSize = 11.sp,
+                      letterSpacing = 0.5.sp,
+                      color = headerColor,
+                      textAlign = TextAlign.Center,
+                      modifier = Modifier.weight(1f)
+                    )
                   }
                 }
 
@@ -660,11 +674,11 @@ fun IosCalendarTabScreen(
                 val totalCells = ((leadingEmptyCells + daysInMonth + 6) / 7) * 7
                 val rows = totalCells / 7
 
-                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                   for (rowIdx in 0 until rows) {
                     Row(
                       modifier = Modifier.fillMaxWidth(),
-                      horizontalArrangement = Arrangement.spacedBy(6.dp)
+                      horizontalArrangement = Arrangement.spacedBy(7.dp)
                     ) {
                       for (colIdx in 0 until 7) {
                         val cellIndex = rowIdx * 7 + colIdx
@@ -696,17 +710,16 @@ fun IosCalendarTabScreen(
                             modifier = Modifier.weight(1f)
                           )
                         } else {
-                          // Recessed subtle ghost tile so the 7x5 matrix stays geometrically uniform
+                          // Recessed subtle ghost inset tile so the 7x5 matrix stays geometrically uniform
                           Box(
                             modifier = Modifier
                               .weight(1f)
                               .aspectRatio(0.84f)
-                              .clip(RoundedCornerShape(14.dp))
-                              .background(Color(0xFF091829).copy(alpha = 0.42f))
-                              .border(
-                                width = 0.6.dp,
-                                color = Color(0xFF132942).copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(14.dp)
+                              .neumorphicInset(
+                                shape = IosSharpButtonShape,
+                                depth = 1.5.dp,
+                                blurRadius = 3.dp,
+                                neu = neu
                               )
                           )
                         }
@@ -717,20 +730,19 @@ fun IosCalendarTabScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // 2x2 High-Contrast Jewel Squircle Legend Grid
+                // 2x2 Neumorphic Legend Grid
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                   Row(
                     modifier = Modifier
                       .fillMaxWidth()
                       .height(IntrinsicSize.Min),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                   ) {
                     CalendarLegendPill(
                       label = "Leave Taken (CL/EL)",
                       badgeCode = "CL",
                       dotColor = EmeraldLeaveHighlight,
-                      textColor = EmeraldLeaveBrightText,
-                      bgColor = EmeraldLeaveDeepFill,
+                      textColor = emeraldText,
                       modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -739,8 +751,7 @@ fun IosCalendarTabScreen(
                       label = "COL / GH Duty",
                       badgeCode = "COL",
                       dotColor = CyanColHighlight,
-                      textColor = CyanColBrightText,
-                      bgColor = CyanColDeepFill,
+                      textColor = cyanText,
                       modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -750,14 +761,13 @@ fun IosCalendarTabScreen(
                     modifier = Modifier
                       .fillMaxWidth()
                       .height(IntrinsicSize.Min),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                   ) {
                     CalendarLegendPill(
                       label = "TN Public Holiday",
                       badgeCode = "GH",
                       dotColor = GoldHolidayHighlight,
-                      textColor = GoldHolidayBrightText,
-                      bgColor = GoldHolidayDeepFill,
+                      textColor = goldText,
                       modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -766,8 +776,7 @@ fun IosCalendarTabScreen(
                       label = "Restricted Holiday",
                       badgeCode = "RL",
                       dotColor = TealRhHighlight,
-                      textColor = TealRhBrightText,
-                      bgColor = TealRhDeepFill,
+                      textColor = tealText,
                       modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -807,11 +816,13 @@ private fun MonthScrubberBar(
   allPublicHolidays: List<TnHolidayItem>,
   onSelectMonth: (Int) -> Unit
 ) {
+  val neu = LocalNeumorphicColors.current
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .horizontalScroll(rememberScrollState()),
-    horizontalArrangement = Arrangement.spacedBy(6.dp)
+      .horizontalScroll(rememberScrollState())
+      .padding(vertical = 5.dp, horizontal = 2.dp),
+    horizontalArrangement = Arrangement.spacedBy(8.dp)
   ) {
     val shortMonths = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
     shortMonths.forEachIndexed { idx, mLabel ->
@@ -821,18 +832,31 @@ private fun MonthScrubberBar(
       val hasLeaves = allRecords.any { it.dateIso.startsWith(mPrefix) }
       val hasGh = allPublicHolidays.any { it.dateIso.startsWith(mPrefix) }
 
-      Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = if (isSelected) IosSquircleGlassFill else IosDarkDockSurface,
-        tonalElevation = if (isSelected) 4.dp else 1.dp,
-        border = BorderStroke(
-          width = if (isSelected) 1.4.dp else 1.dp,
-          color = if (isSelected) NeonAquaAccent else NeonCyanText.copy(alpha = 0.25f)
-        ),
+      Box(
         modifier = Modifier
           .width(58.dp)
           .height(48.dp)
-          .clip(RoundedCornerShape(14.dp))
+          .then(
+            if (isSelected) {
+              Modifier.neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 3.dp,
+                blurRadius = 6.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.14f,
+                borderColor = neu.primaryAccent.copy(alpha = 0.55f),
+                neu = neu
+              )
+            } else {
+              Modifier.neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 2.5.dp,
+                blurRadius = 5.dp,
+                borderAlpha = 0.25f,
+                neu = neu
+              )
+            }
+          )
           .clickable { onSelectMonth(mNum) }
           .testTag("month_pill_$mNum")
       ) {
@@ -850,7 +874,7 @@ private fun MonthScrubberBar(
             letterSpacing = 0.3.sp,
             maxLines = 1,
             softWrap = false,
-            color = if (isSelected) NeonAquaAccent else NeonCyanBright
+            color = if (isSelected) neu.primaryAccent else neu.textPrimary
           )
           Row(
             modifier = Modifier.height(6.dp),
@@ -862,7 +886,7 @@ private fun MonthScrubberBar(
                 modifier = Modifier
                   .size(5.dp)
                   .clip(CircleShape)
-                  .background(NeonAquaAccent)
+                  .background(neu.primaryAccent)
               )
             }
             if (hasGh) {
@@ -885,30 +909,33 @@ private fun CalendarHeaderStatChip(
   label: String,
   accentColor: Color,
   borderColor: Color,
-  bgColor: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    modifier = modifier,
-    shape = RoundedCornerShape(11.dp),
-    color = bgColor,
-    border = BorderStroke(1.dp, borderColor.copy(alpha = 0.55f))
-  ) {
-    Box(
-      modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
-      contentAlignment = Alignment.Center
-    ) {
-      Text(
-        text = label,
-        fontFamily = JetBrainsMonoFontFamily,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.Bold,
-        color = accentColor,
-        maxLines = 1,
-        softWrap = false,
-        overflow = TextOverflow.Ellipsis
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier
+      .neumorphicInset(
+        shape = IosSharpBadgeShape,
+        depth = 2.dp,
+        blurRadius = 4.dp,
+        accentTint = borderColor,
+        accentTintAlpha = 0.09f,
+        borderColor = borderColor.copy(alpha = 0.42f),
+        neu = neu
       )
-    }
+      .padding(horizontal = 8.dp, vertical = 7.dp),
+    contentAlignment = Alignment.Center
+  ) {
+    Text(
+      text = label,
+      fontFamily = JetBrainsMonoFontFamily,
+      fontSize = 10.sp,
+      fontWeight = FontWeight.Bold,
+      color = accentColor,
+      maxLines = 1,
+      softWrap = false,
+      overflow = TextOverflow.Ellipsis
+    )
   }
 }
 
@@ -932,43 +959,38 @@ private fun IosCalendarDayCell(
   onClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val neu = LocalNeumorphicColors.current
   val primaryRecord = dayRecords.firstOrNull()
   val recordCode = primaryRecord?.category?.shortLabel?.uppercase()
 
-  // Classify visual theme of the tile for razor-sharp dark-glass legibility
   val isColOrDuty = recordCode == "COL" || recordCode == "GHW" || primaryRecord?.leaveType == "GH_WORKED"
   val isPlRecord = recordCode == "PL"
   val isLeaveRecord = primaryRecord != null && !isColOrDuty && !isPlRecord
 
-  val tileBgColor = when {
-    isColOrDuty -> CyanColDeepFill
-    isPlRecord || ghItem != null -> GoldHolidayDeepFill
-    isLeaveRecord -> EmeraldLeaveDeepFill
-    rhItem != null -> TealRhDeepFill
-    isSunday || isSaturday -> CalendarWeekendTileBg
-    else -> CalendarWeekdayTileBg
+  val goldText = if (neu.isDark) Color(0xFFFDE68A) else Color(0xFFB45309)
+  val tealText = if (neu.isDark) Color(0xFF99F6E4) else Color(0xFF0F766E)
+  val cyanText = if (neu.isDark) Color(0xFF67E8F9) else Color(0xFF0369A1)
+  val emeraldText = if (neu.isDark) Color(0xFF6EE7B7) else Color(0xFF047857)
+  val sunColor = if (neu.isDark) Color(0xFFFCD34D) else Color(0xFFD97706)
+  val satColor = if (neu.isDark) Color(0xFF7DD3FC) else Color(0xFF0284C7)
+
+  val tileAccent: Color? = when {
+    isColOrDuty -> CyanColHighlight
+    isPlRecord || ghItem != null -> GoldHolidayHighlight
+    isLeaveRecord -> EmeraldLeaveHighlight
+    rhItem != null -> TealRhHighlight
+    else -> null
   }
 
-  val tileBorderColor = when {
-    isSelected -> NeonAquaAccent
-    isColOrDuty -> CyanColHighlight.copy(alpha = 0.80f)
-    isPlRecord || ghItem != null -> GoldHolidayHighlight.copy(alpha = 0.80f)
-    isLeaveRecord -> EmeraldLeaveHighlight.copy(alpha = 0.80f)
-    rhItem != null -> TealRhHighlight.copy(alpha = 0.70f)
-    isSunday || isSaturday -> CalendarWeekendTileBorder
-    else -> CalendarWeekdayTileBorder
-  }
-
-  // Always high-luminance text on dark glass so no number is ever dim or muddy
   val dayNumberColor = when {
-    isSelected -> Color.White
-    isColOrDuty -> CyanColBrightText
-    isPlRecord || ghItem != null -> GoldHolidayBrightText
-    isLeaveRecord -> EmeraldLeaveBrightText
-    rhItem != null -> TealRhBrightText
-    isSunday -> Color(0xFFFCD34D)
-    isSaturday -> Color(0xFF7DD3FC)
-    else -> Color(0xFFF8FAFC)
+    isSelected -> neu.primaryAccent
+    isColOrDuty -> cyanText
+    isPlRecord || ghItem != null -> goldText
+    isLeaveRecord -> emeraldText
+    rhItem != null -> tealText
+    isSunday -> sunColor
+    isSaturday -> satColor
+    else -> neu.textPrimary
   }
 
   val badgeLabel: String? = when {
@@ -995,35 +1017,38 @@ private fun IosCalendarDayCell(
   Box(
     modifier = modifier
       .aspectRatio(0.84f)
-      .clip(RoundedCornerShape(14.dp))
       .then(
         if (isSelected) {
-          Modifier.background(
-            Brush.verticalGradient(
-              listOf(
-                NeonAquaAccent.copy(alpha = 0.30f),
-                tileBgColor
-              )
-            )
+          Modifier.neumorphicInset(
+            shape = IosSharpButtonShape,
+            depth = 3.dp,
+            blurRadius = 6.dp,
+            accentTint = tileAccent ?: neu.primaryAccent,
+            accentTintAlpha = 0.16f,
+            borderColor = neu.primaryAccent,
+            neu = neu
           )
         } else {
-          Modifier.background(tileBgColor)
+          Modifier.neumorphicExtruded(
+            shape = IosSharpButtonShape,
+            elevation = 2.5.dp,
+            blurRadius = 5.dp,
+            accentTint = tileAccent,
+            accentTintAlpha = if (tileAccent != null) 0.11f else 0.0f,
+            borderAlpha = if (tileAccent != null) 0.45f else 0.20f,
+            neu = neu
+          )
         }
-      )
-      .border(
-        width = if (isSelected) 2.dp else 1.dp,
-        color = tileBorderColor,
-        shape = RoundedCornerShape(14.dp)
       )
       .clickable { onClick() }
       .padding(horizontal = 3.dp, vertical = 4.dp)
       .testTag("calendar_day_$dateIso")
   ) {
-    // Multi-Record Count Badge (top-left) when 2+ entries exist on the same date (e.g., GH_WORKED + IN_LIEU or FN + AN)
+    // Multi-Record Count Badge (top-left)
     if (dayRecords.size > 1) {
       Surface(
         shape = RoundedCornerShape(4.dp),
-        color = NeonAquaAccent.copy(alpha = 0.25f),
+        color = neu.primaryAccent.copy(alpha = 0.22f),
         modifier = Modifier
           .align(Alignment.TopStart)
           .padding(top = 1.dp, start = 1.dp)
@@ -1034,7 +1059,7 @@ private fun IosCalendarDayCell(
           fontSize = 7.sp,
           lineHeight = 8.sp,
           fontWeight = FontWeight.ExtraBold,
-          color = NeonAquaAccent,
+          color = neu.primaryAccent,
           modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
         )
       }
@@ -1048,7 +1073,7 @@ private fun IosCalendarDayCell(
           .padding(top = 2.dp, end = 2.dp)
           .size(6.dp)
           .clip(CircleShape)
-          .background(NeonAquaAccent)
+          .background(neu.primaryAccent)
       )
     }
 
@@ -1086,7 +1111,6 @@ private fun IosCalendarDayCell(
           )
         }
       } else {
-        // Subtle dot on weekends to preserve vertical balance across all tiles
         Spacer(modifier = Modifier.height(5.dp))
         Box(
           modifier = Modifier
@@ -1094,9 +1118,9 @@ private fun IosCalendarDayCell(
             .clip(CircleShape)
             .background(
               when {
-                isSunday -> Color(0xFFFBBF24).copy(alpha = 0.45f)
-                isSaturday -> Color(0xFF38BDF8).copy(alpha = 0.45f)
-                else -> Color.White.copy(alpha = 0.14f)
+                isSunday -> sunColor.copy(alpha = 0.55f)
+                isSaturday -> satColor.copy(alpha = 0.55f)
+                else -> neu.textSecondary.copy(alpha = 0.28f)
               }
             )
         )
@@ -1111,14 +1135,19 @@ private fun CalendarLegendPill(
   badgeCode: String,
   dotColor: Color,
   textColor: Color,
-  bgColor: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    modifier = modifier,
-    shape = RoundedCornerShape(11.dp),
-    color = bgColor,
-    border = BorderStroke(1.dp, dotColor.copy(alpha = 0.50f))
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier.neumorphicInset(
+      shape = IosSharpBadgeShape,
+      depth = 2.dp,
+      blurRadius = 4.dp,
+      accentTint = dotColor,
+      accentTintAlpha = 0.08f,
+      borderColor = dotColor.copy(alpha = 0.40f),
+      neu = neu
+    )
   ) {
     Row(
       modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
@@ -1160,6 +1189,12 @@ private fun SelectedDayInspectorCard(
   onQuickLogLeave: (leaveType: String, dateIso: String, notes: String) -> Unit,
   onOpenFullAddDialog: () -> Unit
 ) {
+  val neu = LocalNeumorphicColors.current
+  val goldText = if (neu.isDark) Color(0xFFFDE68A) else Color(0xFFB45309)
+  val tealText = if (neu.isDark) Color(0xFF99F6E4) else Color(0xFF0F766E)
+  val cyanText = if (neu.isDark) Color(0xFF67E8F9) else Color(0xFF0369A1)
+  val emeraldText = if (neu.isDark) Color(0xFF6EE7B7) else Color(0xFF047857)
+
   val parsedDayOfWeek = remember(selectedDateIso) {
     try {
       LocalDate.parse(selectedDateIso, DateTimeFormatter.ISO_LOCAL_DATE)
@@ -1169,13 +1204,17 @@ private fun SelectedDayInspectorCard(
     }
   }
 
-  Surface(
-    shape = RoundedCornerShape(24.dp),
-    color = CalendarCardDeepBg,
-    tonalElevation = 4.dp,
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.2.dp, NeonAquaAccent.copy(alpha = 0.42f), RoundedCornerShape(24.dp))
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = neu.primaryAccent,
+        borderAlpha = 0.34f,
+        neu = neu
+      )
   ) {
     Column(modifier = Modifier.padding(18.dp)) {
       Row(
@@ -1187,7 +1226,7 @@ private fun SelectedDayInspectorCard(
           Text(
             text = "SELECTED DATE INSPECTOR",
             style = MaterialTheme.typography.labelMedium,
-            color = NeonAquaAccent,
+            color = neu.primaryAccent,
             fontSize = 10.sp,
             lineHeight = 13.sp,
             letterSpacing = 0.4.sp,
@@ -1198,7 +1237,7 @@ private fun SelectedDayInspectorCard(
             text = "${ClinicalDateFormatter.formatFriendlyDate(selectedDateIso)} • $parsedDayOfWeek",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.ExtraBold,
-            color = Color.White,
+            color = neu.textPrimary,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis
@@ -1207,22 +1246,25 @@ private fun SelectedDayInspectorCard(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Surface(
-          shape = RoundedCornerShape(12.dp),
-          color = IosSquircleGlassFill,
-          border = BorderStroke(1.dp, NeonAquaAccent.copy(alpha = 0.55f)),
+        Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = neu.primaryAccent,
+              accentTintAlpha = 0.08f,
+              borderAlpha = 0.38f,
+              neu = neu
+            )
             .clickable { onOpenFullAddDialog() }
+            .padding(horizontal = 10.dp, vertical = 7.dp)
         ) {
-          Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
               imageVector = Icons.Default.Add,
               contentDescription = null,
-              tint = NeonAquaAccent,
+              tint = neu.primaryAccent,
               modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -1233,7 +1275,7 @@ private fun SelectedDayInspectorCard(
               fontWeight = FontWeight.Bold,
               maxLines = 1,
               softWrap = false,
-              color = NeonAquaAccent
+              color = neu.primaryAccent
             )
           }
         }
@@ -1242,18 +1284,22 @@ private fun SelectedDayInspectorCard(
       Spacer(modifier = Modifier.height(10.dp))
 
       if (ghItem != null) {
-        Surface(
-          shape = RoundedCornerShape(14.dp),
-          color = GoldHolidayDeepFill,
-          border = BorderStroke(1.dp, GoldHolidayHighlight.copy(alpha = 0.6f)),
+        Box(
           modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = GoldHolidayHighlight,
+              accentTintAlpha = 0.10f,
+              borderColor = GoldHolidayHighlight.copy(alpha = 0.55f),
+              neu = neu
+            )
+            .padding(12.dp)
         ) {
-          Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
               imageVector = Icons.Default.Star,
               contentDescription = null,
@@ -1265,13 +1311,13 @@ private fun SelectedDayInspectorCard(
               Text(
                 text = "TN Govt Public Holiday: ${ghItem.nameTamil}",
                 style = MaterialTheme.typography.labelLarge,
-                color = GoldHolidayBrightText,
+                color = goldText,
                 fontWeight = FontWeight.Bold
               )
               Text(
                 text = "${ghItem.nameEnglish} — Eligible for PL or GH Worked (+1 COL credit)",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.85f),
+                color = neu.textSecondary,
                 fontSize = 12.sp
               )
             }
@@ -1280,18 +1326,22 @@ private fun SelectedDayInspectorCard(
       }
 
       if (rhItem != null) {
-        Surface(
-          shape = RoundedCornerShape(14.dp),
-          color = TealRhDeepFill,
-          border = BorderStroke(1.dp, TealRhHighlight.copy(alpha = 0.6f)),
+        Box(
           modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = TealRhHighlight,
+              accentTintAlpha = 0.10f,
+              borderColor = TealRhHighlight.copy(alpha = 0.55f),
+              neu = neu
+            )
+            .padding(12.dp)
         ) {
-          Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
               imageVector = Icons.Default.EventAvailable,
               contentDescription = null,
@@ -1303,13 +1353,13 @@ private fun SelectedDayInspectorCard(
               Text(
                 text = "TN Restricted Holiday (RL): ${rhItem.nameTamil}",
                 style = MaterialTheme.typography.labelLarge,
-                color = TealRhBrightText,
+                color = tealText,
                 fontWeight = FontWeight.Bold
               )
               Text(
                 text = "${rhItem.nameEnglish} — Eligible for 1 of your 3 annual RH credits",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.85f),
+                color = neu.textSecondary,
                 fontSize = 12.sp
               )
             }
@@ -1320,20 +1370,24 @@ private fun SelectedDayInspectorCard(
       if (dayRecords.isNotEmpty()) {
         dayRecords.forEach { rec ->
           val accent = rec.category.accentColor()
-          Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = Color(0xFF0E253E),
-            border = BorderStroke(1.dp, accent.copy(alpha = 0.55f)),
+          Box(
             modifier = Modifier
               .fillMaxWidth()
               .padding(vertical = 4.dp)
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = accent,
+                accentTintAlpha = 0.08f,
+                borderColor = accent.copy(alpha = 0.45f),
+                neu = neu
+              )
+              .padding(12.dp)
           ) {
-            Row(
-              modifier = Modifier.padding(12.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
               Surface(
-                shape = RoundedCornerShape(10.dp),
+                shape = IosSharpMicroShape,
                 color = accent
               ) {
                 Text(
@@ -1349,28 +1403,28 @@ private fun SelectedDayInspectorCard(
                 Text(
                   text = rec.category.fullTitle,
                   style = MaterialTheme.typography.labelLarge,
-                  color = Color.White,
+                  color = neu.textPrimary,
                   fontWeight = FontWeight.Bold
                 )
                 Text(
                   text = rec.notes.ifBlank { "Logged in HOD Leave Ledger" },
                   style = MaterialTheme.typography.bodyMedium,
                   fontSize = 12.sp,
-                  color = NeonCyanBright.copy(alpha = 0.85f)
+                  color = neu.textSecondary
                 )
                 if (rec.pairedDateIso.isNotBlank()) {
                   Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                       imageVector = Icons.Default.Link,
                       contentDescription = null,
-                      tint = NeonAquaAccent,
+                      tint = neu.primaryAccent,
                       modifier = Modifier.size(13.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                       text = "Paired with: ${ClinicalDateFormatter.formatFriendlyWithDay(rec.pairedDateIso)}",
                       style = MaterialTheme.typography.labelMedium,
-                      color = NeonAquaAccent,
+                      color = neu.primaryAccent,
                       fontSize = 11.sp
                     )
                   }
@@ -1383,9 +1437,9 @@ private fun SelectedDayInspectorCard(
         Text(
           text = "No leave or hospital duty logged on ${ClinicalDateFormatter.formatFriendlyDate(selectedDateIso)} yet. Quick-log for this date:",
           style = MaterialTheme.typography.bodyMedium,
-          color = NeonCyanBright.copy(alpha = 0.85f)
+          color = neu.textSecondary
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1393,14 +1447,14 @@ private fun SelectedDayInspectorCard(
           QuickActionChip(
             label = "+ Log CL",
             color = EmeraldLeaveHighlight,
-            textColor = EmeraldLeaveBrightText,
+            textColor = emeraldText,
             onClick = { onQuickLogLeave("CL", selectedDateIso, "Casual Leave on $selectedDateIso") },
             modifier = Modifier.weight(1f)
           )
           QuickActionChip(
             label = "+ Log COL",
             color = CyanColHighlight,
-            textColor = CyanColBrightText,
+            textColor = cyanText,
             onClick = { onQuickLogLeave("COL", selectedDateIso, "Compensatory Off on $selectedDateIso") },
             modifier = Modifier.weight(1f)
           )
@@ -1408,7 +1462,7 @@ private fun SelectedDayInspectorCard(
             QuickActionChip(
               label = "+ Log RH",
               color = TealRhHighlight,
-              textColor = TealRhBrightText,
+              textColor = tealText,
               onClick = { onQuickLogLeave("RH", selectedDateIso, "RH: ${rhItem.nameEnglish} (${rhItem.nameTamil})") },
               modifier = Modifier.weight(1f)
             )
@@ -1416,7 +1470,7 @@ private fun SelectedDayInspectorCard(
             QuickActionChip(
               label = "+ GH Worked",
               color = GoldHolidayHighlight,
-              textColor = GoldHolidayBrightText,
+              textColor = goldText,
               onClick = { onQuickLogLeave("GH_WORKED", selectedDateIso, "GH Duty: ${ghItem.nameEnglish}") },
               modifier = Modifier.weight(1f)
             )
@@ -1424,7 +1478,7 @@ private fun SelectedDayInspectorCard(
             QuickActionChip(
               label = "+ Log PL",
               color = GoldHolidayHighlight,
-              textColor = GoldHolidayBrightText,
+              textColor = goldText,
               onClick = { onQuickLogLeave("PL", selectedDateIso, "Public Holiday Leave on $selectedDateIso") },
               modifier = Modifier.weight(1f)
             )
@@ -1443,25 +1497,28 @@ private fun QuickActionChip(
   onClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(12.dp),
-    color = color.copy(alpha = 0.18f),
-    border = BorderStroke(1.dp, color.copy(alpha = 0.55f)),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = modifier
-      .clip(RoundedCornerShape(12.dp))
-      .clickable { onClick() }
-  ) {
-    Box(
-      modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
-      contentAlignment = Alignment.Center
-    ) {
-      Text(
-        text = label,
-        color = textColor,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 11.sp,
-        letterSpacing = 0.25.sp
+      .neumorphicExtruded(
+        shape = IosSharpButtonShape,
+        elevation = 2.5.dp,
+        blurRadius = 5.dp,
+        accentTint = color,
+        accentTintAlpha = 0.08f,
+        borderAlpha = 0.35f,
+        neu = neu
       )
-    }
+      .clickable { onClick() }
+      .padding(vertical = 10.dp, horizontal = 8.dp),
+    contentAlignment = Alignment.Center
+  ) {
+    Text(
+      text = label,
+      color = textColor,
+      fontWeight = FontWeight.ExtraBold,
+      fontSize = 11.sp,
+      letterSpacing = 0.25.sp
+    )
   }
 }

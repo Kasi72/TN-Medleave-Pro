@@ -82,7 +82,12 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.example.R
 import com.example.domain.BiometricLockManager
 import com.example.domain.HardwareBiometricStatus
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -294,416 +299,455 @@ fun AuthScreen(
     )
   }
 
-  Box(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(
-        Brush.verticalGradient(
-          colors = listOf(
-            Color(0xFF040D1A),
-            Color(0xFF081C33),
-            Color(0xFF062C30)
-          )
-        )
-      )
-      .statusBarsPadding()
-      .navigationBarsPadding()
-      .verticalScroll(rememberScrollState())
-      .padding(horizontal = 20.dp, vertical = 18.dp),
-    contentAlignment = Alignment.Center
-  ) {
-    EnterpriseMeshHeroContainer(
-      cornerRadius = 32.dp,
-      primaryGlowColor = Color(0xFF10B981),
-      secondaryGlowColor = Color(0xFF38BDF8),
-      contentPadding = PaddingValues(24.dp)
+  val neu = LocalNeumorphicColors.current
+
+  IosAmbientGlassBackdrop {
+    Box(
+      modifier = Modifier
+        .fillMaxSize()
+        .statusBarsPadding()
+        .navigationBarsPadding()
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 20.dp, vertical = 18.dp),
+      contentAlignment = Alignment.Center
     ) {
-      Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+      EnterpriseMeshHeroContainer(
+        cornerRadius = 22.dp,
+        primaryGlowColor = neu.primaryAccent,
+        secondaryGlowColor = neu.secondaryAccent,
+        contentPadding = PaddingValues(22.dp)
       ) {
-        // Top Institutional Security Pill
-        Surface(
-          shape = RoundedCornerShape(14.dp),
-          color = Color(0xFF10B981).copy(alpha = 0.16f),
-          border = BorderStroke(1.dp, Color(0xFF34D399).copy(alpha = 0.45f))
+        Column(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalAlignment = Alignment.CenterHorizontally
         ) {
-          Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+          // Top Institutional Security Pill (Inset Soft-UI Capsule)
+          Box(
+            modifier = Modifier
+              .neumorphicInset(
+                shape = IosSharpBadgeShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.08f,
+                borderColor = neu.primaryAccent.copy(alpha = 0.35f),
+                neu = neu
+              )
+              .padding(horizontal = 12.dp, vertical = 6.dp)
+          ) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(7.dp)
+                  .clip(CircleShape)
+                  .background(neu.primaryAccent)
+              )
+              Text(
+                text = "TN MES • EXECUTIVE BIOMETRIC PORTAL",
+                fontFamily = JetBrainsMonoFontFamily,
+                fontSize = 10.sp,
+                lineHeight = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = neu.primaryAccent,
+                maxLines = 1,
+                softWrap = false
+              )
+            }
+          }
+
+          Spacer(modifier = Modifier.height(18.dp))
+
+          // Interactive Pulsing Extruded Biometric Crest Dome
+          Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+              .size(106.dp)
+              .scale(if (isBiometricScanning) 1.10f else pulseScale)
+              .neumorphicExtruded(
+                shape = CircleShape,
+                elevation = 6.dp,
+                blurRadius = 12.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.08f,
+                borderAlpha = 0.42f,
+                neu = neu
+              )
+              .clickable(enabled = !isBiometricScanning && !isGoogleLoading) {
+                triggerFrontPageBiometricSignIn()
+              }
+              .testTag("front_page_biometric_scanner_orb")
           ) {
             Box(
               modifier = Modifier
-                .size(7.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF34D399))
-            )
-            Text(
-              text = "TN MES • EXECUTIVE BIOMETRIC PORTAL",
-              fontFamily = JetBrainsMonoFontFamily,
-              fontSize = 10.sp,
-              lineHeight = 13.sp,
-              fontWeight = FontWeight.Bold,
-              color = Color(0xFF6EE7B7),
-              maxLines = 1,
-              softWrap = false
-            )
-          }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // Interactive Pulsing Biometric Crest Orb (Tappable directly on the Front Page)
-        Box(
-          contentAlignment = Alignment.Center,
-          modifier = Modifier
-            .size(104.dp)
-            .scale(if (isBiometricScanning) 1.12f else pulseScale)
-            .clip(CircleShape)
-            .background(
-              Brush.radialGradient(
-                colors = listOf(
-                  Color(0xFF10B981).copy(alpha = 0.34f),
-                  Color(0xFF0EA5E9).copy(alpha = 0.10f),
-                  Color.Transparent
+                .size(82.dp)
+                .neumorphicInset(
+                  shape = CircleShape,
+                  depth = 3.dp,
+                  blurRadius = 6.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.10f,
+                  neu = neu
+                ),
+              contentAlignment = Alignment.Center
+            ) {
+              if (isBiometricScanning) {
+                CircularProgressIndicator(
+                  modifier = Modifier.size(40.dp),
+                  color = neu.primaryAccent,
+                  strokeWidth = 3.dp
                 )
-              )
-            )
-            .border(
-              width = 1.8.dp,
-              brush = Brush.linearGradient(
-                colors = listOf(Color(0xFF34D399), Color(0xFF38BDF8))
-              ),
-              shape = CircleShape
-            )
-            .clickable(enabled = !isBiometricScanning && !isGoogleLoading) {
-              triggerFrontPageBiometricSignIn()
+              } else {
+                Icon(
+                  imageVector = Icons.Default.Fingerprint,
+                  contentDescription = "Tap to Sign in with Biometrics",
+                  tint = neu.primaryAccent,
+                  modifier = Modifier.size(48.dp)
+                )
+              }
             }
-            .testTag("front_page_biometric_scanner_orb")
-        ) {
-          if (isBiometricScanning) {
-            CircularProgressIndicator(
-              modifier = Modifier.size(44.dp),
-              color = Color(0xFF34D399),
-              strokeWidth = 3.dp
-            )
-          } else {
-            Icon(
-              imageVector = Icons.Default.Fingerprint,
-              contentDescription = "Tap to Sign in with Biometrics",
-              tint = Color(0xFF34D399),
-              modifier = Modifier.size(54.dp)
-            )
           }
-        }
 
-        Spacer(modifier = Modifier.height(14.dp))
+          Spacer(modifier = Modifier.height(14.dp))
 
-        Text(
-          text = "TN MedLeave Pro",
-          style = MaterialTheme.typography.headlineLarge,
-          color = Color.White,
-          fontWeight = FontWeight.Bold,
-          textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-          text = "$officerName • $designation, $department\n$college",
-          style = MaterialTheme.typography.bodyMedium,
-          color = Color(0xFFBAE6FD),
-          textAlign = TextAlign.Center,
-          lineHeight = 18.sp
-        )
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // 1. PRIMARY CTA: SIGN IN WITH BIOMETRICS (Front Page)
-        Button(
-          onClick = { triggerFrontPageBiometricSignIn() },
-          enabled = !isBiometricScanning && !isGoogleLoading,
-          shape = RoundedCornerShape(18.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF10B981),
-            contentColor = Color(0xFF042F2E)
-          ),
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(58.dp)
-            .testTag("biometric_sign_in_button")
-        ) {
-          Icon(
-            imageVector = Icons.Default.Fingerprint,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp)
+          Text(
+            text = "TN MedLeave Pro",
+            style = MaterialTheme.typography.headlineLarge,
+            color = neu.textPrimary,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
           )
-          Spacer(modifier = Modifier.width(10.dp))
-          Column(horizontalAlignment = Alignment.Start) {
-            Text(
-              text = "Sign in with Biometrics",
-              fontSize = 16.sp,
-              lineHeight = 20.sp,
-              fontWeight = FontWeight.Bold,
-              maxLines = 1,
-              softWrap = false
-            )
-            Text(
-              text = if (hardwareStatus == HardwareBiometricStatus.READY) {
-                "Fingerprint / Face ID Hardware Ready"
-              } else {
-                "Instant Touch Sensor & HOD Vault Access"
-              },
-              fontSize = 11.sp,
-              lineHeight = 13.sp,
-              fontWeight = FontWeight.SemiBold,
-              color = Color(0xFF042F2E).copy(alpha = 0.80f),
-              maxLines = 1,
-              softWrap = false
-            )
-          }
-        }
 
-        Spacer(modifier = Modifier.height(10.dp))
+          Spacer(modifier = Modifier.height(4.dp))
 
-        // Quick 4-Digit Executive PIN Sign-In Toggle on the Front Page
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.Center,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          TextButton(
-            onClick = { showPinInput = !showPinInput },
-            modifier = Modifier.testTag("toggle_front_page_pin_button")
-          ) {
-            Icon(
-              imageVector = Icons.Default.Dialpad,
-              contentDescription = null,
-              tint = Color(0xFF38BDF8),
-              modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-              text = if (showPinInput) {
-                "Hide 4-Digit Executive PIN"
-              } else {
-                "Or Sign in with 4-Digit Executive PIN ($configuredPin)"
-              },
-              color = Color(0xFF38BDF8),
-              fontSize = 12.sp,
-              fontWeight = FontWeight.SemiBold
-            )
-          }
-        }
+          Text(
+            text = "$officerName • $designation, $department\n$college",
+            style = MaterialTheme.typography.bodyMedium,
+            color = neu.textSecondary,
+            textAlign = TextAlign.Center,
+            lineHeight = 18.sp
+          )
 
-        AnimatedVisibility(visible = showPinInput) {
-          Surface(
-            shape = RoundedCornerShape(18.dp),
-            color = Color.White.copy(alpha = 0.07f),
-            border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.35f)),
+          Spacer(modifier = Modifier.height(18.dp))
+
+          // 1. PRIMARY CTA: SIGN IN WITH BIOMETRICS (Front Page)
+          Button(
+            onClick = { triggerFrontPageBiometricSignIn() },
+            enabled = !isBiometricScanning && !isGoogleLoading,
+            shape = IosSharpButtonShape,
+            colors = ButtonDefaults.buttonColors(
+              containerColor = MaterialTheme.colorScheme.primary,
+              contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
             modifier = Modifier
               .fillMaxWidth()
-              .padding(bottom = 12.dp)
+              .height(58.dp)
+              .testTag("biometric_sign_in_button")
           ) {
-            Row(
+            Icon(
+              imageVector = Icons.Default.Fingerprint,
+              contentDescription = null,
+              modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(horizontalAlignment = Alignment.Start) {
+              Text(
+                text = "Sign in with Biometrics",
+                fontSize = 16.sp,
+                lineHeight = 20.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false
+              )
+              Text(
+                text = if (hardwareStatus == HardwareBiometricStatus.READY) {
+                  "Fingerprint / Face ID Hardware Ready"
+                } else {
+                  "Instant Touch Sensor & HOD Vault Access"
+                },
+                fontSize = 11.sp,
+                lineHeight = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
+                maxLines = 1,
+                softWrap = false
+              )
+            }
+          }
+
+          Spacer(modifier = Modifier.height(10.dp))
+
+          // Quick 4-Digit Executive PIN Sign-In Toggle on the Front Page
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            TextButton(
+              onClick = { showPinInput = !showPinInput },
+              modifier = Modifier.testTag("toggle_front_page_pin_button")
+            ) {
+              Icon(
+                imageVector = Icons.Default.Dialpad,
+                contentDescription = null,
+                tint = neu.secondaryAccent,
+                modifier = Modifier.size(16.dp)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = if (showPinInput) {
+                  "Hide 4-Digit Executive PIN"
+                } else {
+                  "Or Sign in with 4-Digit Executive PIN ($configuredPin)"
+                },
+                color = neu.secondaryAccent,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold
+              )
+            }
+          }
+
+          AnimatedVisibility(visible = showPinInput) {
+            Box(
               modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(bottom = 12.dp)
+                .neumorphicInset(
+                  shape = IosSharpWellShape,
+                  depth = 3.dp,
+                  blurRadius = 6.dp,
+                  accentTint = neu.secondaryAccent,
+                  borderColor = neu.secondaryAccent.copy(alpha = 0.35f),
+                  neu = neu
+                )
             ) {
-              OutlinedTextField(
-                value = pinInputText,
-                onValueChange = { raw ->
-                  val digits = raw.filter { it.isDigit() }.take(4)
-                  pinInputText = digits
-                  if (digits.length == 4) {
-                    if (BiometricLockManager.verifyPin(context, digits)) {
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+              ) {
+                OutlinedTextField(
+                  value = pinInputText,
+                  onValueChange = { raw ->
+                    val digits = raw.filter { it.isDigit() }.take(4)
+                    pinInputText = digits
+                    if (digits.length == 4) {
+                      if (BiometricLockManager.verifyPin(context, digits)) {
+                        errorMsg = null
+                        onBiometricSignInSuccess()
+                      } else {
+                        errorMsg = "Incorrect 4-digit Executive PIN (Default: $configuredPin)"
+                      }
+                    }
+                  },
+                  label = { Text("4-Digit PIN (e.g. $configuredPin)", color = neu.textSecondary) },
+                  singleLine = true,
+                  shape = IosSharpButtonShape,
+                  colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = neu.textPrimary,
+                    unfocusedTextColor = neu.textPrimary,
+                    focusedBorderColor = neu.primaryAccent,
+                    unfocusedBorderColor = neu.hairlineDivider
+                  ),
+                  modifier = Modifier
+                    .weight(1f)
+                    .testTag("front_page_pin_input")
+                )
+
+                Button(
+                  onClick = {
+                    if (BiometricLockManager.verifyPin(context, pinInputText)) {
                       errorMsg = null
                       onBiometricSignInSuccess()
                     } else {
                       errorMsg = "Incorrect 4-digit Executive PIN (Default: $configuredPin)"
                     }
-                  }
-                },
-                label = { Text("4-Digit PIN (e.g. $configuredPin)", color = Color(0xFFBAE6FD)) },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                  focusedTextColor = Color.White,
-                  unfocusedTextColor = Color.White,
-                  focusedBorderColor = Color(0xFF34D399),
-                  unfocusedBorderColor = Color.White.copy(alpha = 0.25f)
-                ),
-                modifier = Modifier
-                  .weight(1f)
-                  .testTag("front_page_pin_input")
-              )
-
-              Button(
-                onClick = {
-                  if (BiometricLockManager.verifyPin(context, pinInputText)) {
-                    errorMsg = null
-                    onBiometricSignInSuccess()
-                  } else {
-                    errorMsg = "Incorrect 4-digit Executive PIN (Default: $configuredPin)"
-                  }
-                },
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                  containerColor = Color(0xFF38BDF8),
-                  contentColor = Color(0xFF042F2E)
-                ),
-                modifier = Modifier.height(52.dp)
-              ) {
-                Icon(Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Unlock", fontWeight = FontWeight.Bold)
+                  },
+                  shape = IosSharpButtonShape,
+                  colors = ButtonDefaults.buttonColors(
+                    containerColor = neu.secondaryAccent,
+                    contentColor = Color.White
+                  ),
+                  modifier = Modifier.height(52.dp)
+                ) {
+                  Icon(Icons.Default.LockOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Unlock", fontWeight = FontWeight.Bold)
+                }
               }
             }
           }
-        }
 
-        if (statusBanner != null) {
-          Surface(
-            color = Color(0xFF064E3B),
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, Color(0xFF34D399).copy(alpha = 0.5f)),
+          if (statusBanner != null) {
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp)
+                .neumorphicInset(
+                  shape = IosSharpButtonShape,
+                  depth = 2.5.dp,
+                  blurRadius = 5.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.14f,
+                  borderColor = neu.primaryAccent.copy(alpha = 0.45f),
+                  neu = neu
+                )
+            ) {
+              Text(
+                text = statusBanner ?: "",
+                color = neu.primaryAccent,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(12.dp),
+                textAlign = TextAlign.Center
+              )
+            }
+          }
+
+          if (errorMsg != null) {
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp)
+                .neumorphicInset(
+                  shape = IosSharpButtonShape,
+                  depth = 2.5.dp,
+                  blurRadius = 5.dp,
+                  accentTint = Color(0xFFDC2626),
+                  accentTintAlpha = 0.16f,
+                  borderColor = Color(0xFFDC2626).copy(alpha = 0.55f),
+                  neu = neu
+                )
+            ) {
+              Text(
+                text = errorMsg ?: "",
+                color = Color(0xFFEF4444),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(12.dp),
+                textAlign = TextAlign.Center
+              )
+            }
+          }
+
+          // Divider between Biometric Sign-In and Google Sign-In
+          Row(
             modifier = Modifier
               .fillMaxWidth()
-              .padding(bottom = 12.dp)
+              .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
           ) {
+            HorizontalDivider(
+              modifier = Modifier.weight(1f),
+              color = neu.hairlineDivider
+            )
             Text(
-              text = statusBanner ?: "",
-              color = Color(0xFFA7F3D0),
-              style = MaterialTheme.typography.labelLarge,
-              modifier = Modifier.padding(12.dp),
-              textAlign = TextAlign.Center
+              text = "  CLOUD ACCOUNT SYNC  ",
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 10.sp,
+              color = neu.textSecondary
+            )
+            HorizontalDivider(
+              modifier = Modifier.weight(1f),
+              color = neu.hairlineDivider
             )
           }
-        }
 
-        if (errorMsg != null) {
-          Surface(
-            color = Color(0xFF7F1D1D),
-            shape = RoundedCornerShape(14.dp),
+          Spacer(modifier = Modifier.height(6.dp))
+
+          // 2. SECONDARY CTA: SIGN IN WITH GOOGLE (Extruded Soft-UI Tactile Button)
+          Box(
+            contentAlignment = Alignment.Center,
             modifier = Modifier
               .fillMaxWidth()
-              .padding(bottom = 12.dp)
-          ) {
-            Text(
-              text = errorMsg ?: "",
-              color = Color(0xFFFECACA),
-              style = MaterialTheme.typography.bodyMedium,
-              modifier = Modifier.padding(12.dp),
-              textAlign = TextAlign.Center
-            )
-          }
-        }
-
-        // Divider between Biometric Sign-In and Google Sign-In
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          HorizontalDivider(
-            modifier = Modifier.weight(1f),
-            color = Color.White.copy(alpha = 0.14f)
-          )
-          Text(
-            text = "  CLOUD ACCOUNT SYNC  ",
-            fontFamily = JetBrainsMonoFontFamily,
-            fontSize = 10.sp,
-            color = Color(0xFF94A3B8)
-          )
-          HorizontalDivider(
-            modifier = Modifier.weight(1f),
-            color = Color.White.copy(alpha = 0.14f)
-          )
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // 2. SECONDARY CTA: SIGN IN WITH GOOGLE
-        OutlinedButton(
-          onClick = {
-            isGoogleLoading = true
-            errorMsg = null
-            onGoogleSignInClicked(
-              context = context,
-              credentialManager = credentialManager,
-              onAuthSuccess = {
-                isGoogleLoading = false
-                onAuthSuccess()
-              },
-              onAuthError = { msg ->
-                isGoogleLoading = false
-                errorMsg = msg
-              },
-              scope = scope,
-              onAuthCancelled = {
-                isGoogleLoading = false
+              .height(54.dp)
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 3.5.dp,
+                blurRadius = 7.dp,
+                accentTint = neu.secondaryAccent,
+                accentTintAlpha = 0.06f,
+                borderAlpha = 0.40f,
+                neu = neu
+              )
+              .clickable(enabled = !isGoogleLoading && !isBiometricScanning) {
+                isGoogleLoading = true
+                errorMsg = null
+                onGoogleSignInClicked(
+                  context = context,
+                  credentialManager = credentialManager,
+                  onAuthSuccess = {
+                    isGoogleLoading = false
+                    onAuthSuccess()
+                  },
+                  onAuthError = { msg ->
+                    isGoogleLoading = false
+                    errorMsg = msg
+                  },
+                  scope = scope,
+                  onAuthCancelled = {
+                    isGoogleLoading = false
+                  }
+                )
               }
-            )
-          },
-          enabled = !isGoogleLoading && !isBiometricScanning,
-          shape = RoundedCornerShape(18.dp),
-          border = BorderStroke(1.2.dp, Color(0xFF38BDF8).copy(alpha = 0.55f)),
-          colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = Color.White.copy(alpha = 0.08f),
-            contentColor = Color.White
-          ),
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(54.dp)
-            .testTag("google_sign_in_button")
-        ) {
-          if (isGoogleLoading) {
-            CircularProgressIndicator(
-              modifier = Modifier.size(22.dp),
-              color = Color(0xFF38BDF8),
-              strokeWidth = 2.5.dp
-            )
-          } else {
-            Icon(
-              imageVector = Icons.Default.VerifiedUser,
-              contentDescription = null,
-              tint = Color(0xFF38BDF8),
-              modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-              text = "Sign in with Google",
-              fontSize = 15.sp,
-              fontWeight = FontWeight.Bold,
-              color = Color.White
-            )
+              .testTag("google_sign_in_button")
+          ) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.Center
+            ) {
+              if (isGoogleLoading) {
+                CircularProgressIndicator(
+                  modifier = Modifier.size(22.dp),
+                  color = neu.secondaryAccent,
+                  strokeWidth = 2.5.dp
+                )
+              } else {
+                Icon(
+                  imageVector = Icons.Default.VerifiedUser,
+                  contentDescription = null,
+                  tint = neu.secondaryAccent,
+                  modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                  text = "Sign in with Google",
+                  fontSize = 15.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = neu.textPrimary
+                )
+              }
+            }
           }
+
+          Spacer(modifier = Modifier.height(20.dp))
+
+          // Enterprise Feature Highlights (Inset Soft-UI Wells)
+          FeatureBulletRow(
+            icon = Icons.Default.CalendarMonth,
+            title = "2023–2027 Multi-Year Leave Ledger",
+            subtitle = "198+ historical CL, COL, In-Lieu, PL, GH Worked, ML, RH, EL & OD records"
+          )
+          Spacer(modifier = Modifier.height(10.dp))
+          FeatureBulletRow(
+            icon = Icons.Default.AutoAwesome,
+            title = "AI Smart Bridge & 2026–2027 Holiday Sync",
+            subtitle = "Auto-syncs 2026 & 2027 TN Govt Holidays (GH) + Restricted Holidays (RL)"
+          )
+          Spacer(modifier = Modifier.height(10.dp))
+          FeatureBulletRow(
+            icon = Icons.Default.AccountBalance,
+            title = "TN Leave Rules 1933 & Official A4 PDF Audit",
+            subtitle = "12 CL quota, 3 RH quota, 10-day stretch validator & COL ↔ GH pairing"
+          )
         }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Enterprise Feature Highlights
-        FeatureBulletRow(
-          icon = Icons.Default.CalendarMonth,
-          title = "2023–2027 Multi-Year Leave Ledger",
-          subtitle = "198+ historical CL, COL, In-Lieu, PL, GH Worked, ML, RH, EL & OD records"
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        FeatureBulletRow(
-          icon = Icons.Default.AutoAwesome,
-          title = "AI Smart Bridge & 2026–2027 Holiday Sync",
-          subtitle = "Auto-syncs 2026 & 2027 TN Govt Holidays (GH) + Restricted Holidays (RL)"
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        FeatureBulletRow(
-          icon = Icons.Default.AccountBalance,
-          title = "TN Leave Rules 1933 & Official A4 PDF Audit",
-          subtitle = "12 CL quota, 3 RH quota, 10-day stretch validator & COL ↔ GH pairing"
-        )
       }
     }
   }
@@ -715,35 +759,46 @@ private fun FeatureBulletRow(
   title: String,
   subtitle: String
 ) {
+  val neu = LocalNeumorphicColors.current
   Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(16.dp))
-      .background(Color.White.copy(alpha = 0.06f))
-      .border(1.dp, Color.White.copy(alpha = 0.09f), RoundedCornerShape(16.dp))
+      .neumorphicInset(
+        shape = IosSharpWellShape,
+        depth = 2.5.dp,
+        blurRadius = 5.dp,
+        neu = neu
+      )
       .padding(12.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Surface(
-      shape = RoundedCornerShape(12.dp),
-      color = Color(0xFF38BDF8).copy(alpha = 0.18f),
-      modifier = Modifier.size(40.dp)
+    Box(
+      modifier = Modifier
+        .size(40.dp)
+        .neumorphicExtruded(
+          shape = IosSharpButtonShape,
+          elevation = 2.5.dp,
+          blurRadius = 5.dp,
+          accentTint = neu.secondaryAccent,
+          accentTintAlpha = 0.08f,
+          borderAlpha = 0.30f,
+          neu = neu
+        ),
+      contentAlignment = Alignment.Center
     ) {
-      Box(contentAlignment = Alignment.Center) {
-        Icon(
-          imageVector = icon,
-          contentDescription = null,
-          tint = Color(0xFF38BDF8),
-          modifier = Modifier.size(20.dp)
-        )
-      }
+      Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = neu.secondaryAccent,
+        modifier = Modifier.size(20.dp)
+      )
     }
     Spacer(modifier = Modifier.width(12.dp))
     Column(modifier = Modifier.weight(1f)) {
       Text(
         text = title,
         style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
+        color = neu.textPrimary,
         fontSize = 13.sp,
         lineHeight = 17.sp,
         fontWeight = FontWeight.Bold,
@@ -753,7 +808,7 @@ private fun FeatureBulletRow(
       Text(
         text = subtitle,
         style = MaterialTheme.typography.bodyMedium,
-        color = Color(0xFF94A3B8),
+        color = neu.textSecondary,
         fontSize = 11.sp,
         lineHeight = 15.sp
       )

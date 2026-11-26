@@ -114,47 +114,42 @@ fun IosSegmentedYearSelector(
   onSelectYear: (Long) -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = IosSharpWellShape,
-    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.90f),
-    tonalElevation = 2.dp,
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .border(
-        width = 1.dp,
-        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
-        shape = IosSharpWellShape
+      .neumorphicInset(
+        shape = IosSharpWellShape,
+        depth = 3.dp,
+        blurRadius = 6.dp,
+        neu = neu
       )
   ) {
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(3.dp),
-      horizontalArrangement = Arrangement.spacedBy(3.dp),
+        .padding(5.dp),
+      horizontalArrangement = Arrangement.spacedBy(5.dp),
       verticalAlignment = Alignment.CenterVertically
     ) {
-      years.forEachIndexed { idx, year ->
+      years.forEach { year ->
         val isSelected = year == selectedYear
-        val bgColor by animateColorAsState(
-          targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-          animationSpec = spring(),
-          label = "seg_bg"
-        )
         Box(
           modifier = Modifier
             .weight(1f)
             .height(38.dp)
-            .clip(IosSharpButtonShape)
-            .background(bgColor)
             .then(
               if (isSelected) {
-                Modifier.border(
-                  width = 1.1.dp,
-                  color = Color.White.copy(alpha = 0.35f),
-                  shape = IosSharpButtonShape
+                Modifier.neumorphicExtruded(
+                  shape = IosSharpButtonShape,
+                  elevation = 3.dp,
+                  blurRadius = 6.dp,
+                  surfaceColor = neu.primaryAccent,
+                  borderAlpha = 0.45f,
+                  neu = neu
                 )
               } else {
-                Modifier
+                Modifier.clip(IosSharpButtonShape)
               }
             )
             .clickable { onSelectYear(year) }
@@ -170,7 +165,7 @@ fun IosSegmentedYearSelector(
                 modifier = Modifier
                   .size(width = 5.dp, height = 5.dp)
                   .clip(IosSharpMicroShape)
-                  .background(Color(0xFF34D399))
+                  .background(Color.White)
               )
             }
             Text(
@@ -180,25 +175,11 @@ fun IosSegmentedYearSelector(
               lineHeight = 16.sp,
               letterSpacing = (-0.2).sp,
               fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-              color = if (isSelected) {
-                MaterialTheme.colorScheme.onPrimary
-              } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-              },
+              color = if (isSelected) Color.White else neu.textSecondary,
               maxLines = 1,
               softWrap = false
             )
           }
-        }
-
-        // Authentic Apple iOS UISegmentedControl Hairline Divider
-        if (idx < years.lastIndex && !isSelected && years[idx + 1] != selectedYear) {
-          Box(
-            modifier = Modifier
-              .width(0.8.dp)
-              .height(16.dp)
-              .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.38f))
-          )
         }
       }
     }
@@ -216,172 +197,142 @@ fun SquircleCreditCard(
   progressFraction: Float? = null,
   onClick: (() -> Unit)? = null
 ) {
-  // Automatically infer progress fraction from "X / Y" strings if not explicitly passed
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
   val computedProgress: Float? = progressFraction ?: remember(mainStat) {
-    val clean = mainStat.substringBefore(" ")
     val parts = if (mainStat.contains("/")) mainStat.split("/") else emptyList()
     if (parts.size == 2) {
       val num = parts[0].trim().filter { it.isDigit() || it == '.' }.toFloatOrNull()
       val den = parts[1].trim().takeWhile { it.isDigit() || it == '.' }.toFloatOrNull()
       if (num != null && den != null && den > 0f) (num / den).coerceIn(0f, 1f) else null
-    } else if (clean.contains("/")) {
-      null
     } else {
       null
     }
   }
 
-  Surface(
-    shape = IosSharpCardShape,
-    color = Color.Transparent,
-    tonalElevation = 0.dp,
-    shadowElevation = 3.dp,
+  Box(
     modifier = modifier
-      .iosFrostedGlassCard(
-        accentColor = accent,
+      .neumorphicExtruded(
         shape = IosSharpCardShape,
-        borderWidth = 1.15.dp,
-        borderAlpha = 0.50f
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = accent,
+        accentTintAlpha = 0.04f,
+        borderAlpha = 0.28f,
+        neu = neu
       )
       .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
   ) {
-    Box(
+    Column(
       modifier = Modifier
         .fillMaxSize()
-        .background(
-          androidx.compose.ui.graphics.Brush.radialGradient(
-            colors = listOf(
-              accent.copy(alpha = 0.10f),
-              Color.Transparent
-            ),
-            radius = 320f
-          )
-        )
+        .padding(14.dp),
+      verticalArrangement = Arrangement.SpaceBetween
     ) {
-      Column(modifier = Modifier.fillMaxSize()) {
-        // Sharp Top iOS Accent Laser Strip
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(2.5.dp)
-            .background(accent)
-        )
-
-        Column(
-          modifier = Modifier
-            .fillMaxSize()
-            .padding(14.dp),
-          verticalArrangement = Arrangement.SpaceBetween
+      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
         ) {
-          Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Surface(
+          Box(
+            modifier = Modifier
+              .neumorphicInset(
                 shape = IosSharpBadgeShape,
-                color = accent.copy(alpha = 0.15f),
-                modifier = Modifier.border(
-                  width = 0.9.dp,
-                  color = accent.copy(alpha = 0.38f),
-                  shape = IosSharpBadgeShape
-                )
-              ) {
-                Text(
-                  text = code,
-                  style = MaterialTheme.typography.labelMedium,
-                  fontWeight = FontWeight.ExtraBold,
-                  color = accent,
-                  lineHeight = 13.sp,
-                  maxLines = 1,
-                  softWrap = false,
-                  overflow = TextOverflow.Ellipsis,
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.5.dp)
-                )
-              }
-              if (computedProgress != null) {
-                MiniCircularQuotaRing(
-                  remainingFraction = (1f - computedProgress).coerceIn(0f, 1f),
-                  accentColor = accent,
-                  trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
-                  size = 26.dp,
-                  strokeWidth = 3.dp
-                )
-              } else {
-                Box(
-                  modifier = Modifier
-                    .size(20.dp)
-                    .clip(IosSharpMicroShape)
-                    .background(accent.copy(alpha = 0.14f)),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Box(
-                    modifier = Modifier
-                      .size(7.dp)
-                      .clip(IosSharpMicroShape)
-                      .background(accent)
-                  )
-                }
-              }
-            }
-
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = accent,
+                accentTintAlpha = 0.12f,
+                neu = neu
+              )
+          ) {
             Text(
-              text = mainStat,
-              fontFamily = JetBrainsMonoFontFamily,
+              text = code,
+              style = MaterialTheme.typography.labelMedium,
               fontWeight = FontWeight.ExtraBold,
-              fontSize = 19.sp,
-              lineHeight = 23.sp,
-              letterSpacing = (-0.3).sp,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = accent,
+              lineHeight = 13.sp,
               maxLines = 1,
               softWrap = false,
-              overflow = TextOverflow.Ellipsis
+              overflow = TextOverflow.Ellipsis,
+              modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
             )
-
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-              Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 15.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-              )
-              Text(
-                text = subStat,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 10.5.sp,
-                lineHeight = 13.sp,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-              )
-            }
           }
-
           if (computedProgress != null) {
-            Column(modifier = Modifier.padding(top = 7.dp)) {
+            MiniCircularQuotaRing(
+              remainingFraction = (1f - computedProgress).coerceIn(0f, 1f),
+              accentColor = accent,
+              trackColor = neu.darkShadow.copy(alpha = 0.35f),
+              size = 26.dp,
+              strokeWidth = 3.dp
+            )
+          } else {
+            Box(
+              modifier = Modifier
+                .size(22.dp)
+                .neumorphicInset(
+                  shape = IosSharpMicroShape,
+                  depth = 1.5.dp,
+                  blurRadius = 3.dp,
+                  accentTint = accent,
+                  accentTintAlpha = 0.12f,
+                  neu = neu
+                ),
+              contentAlignment = Alignment.Center
+            ) {
               Box(
                 modifier = Modifier
-                  .fillMaxWidth()
-                  .height(4.dp)
+                  .size(7.dp)
                   .clip(IosSharpMicroShape)
-                  .background(accent.copy(alpha = 0.16f))
-              ) {
-                Box(
-                  modifier = Modifier
-                    .fillMaxWidth(computedProgress.coerceIn(0.06f, 1f))
-                    .height(4.dp)
-                    .clip(IosSharpMicroShape)
-                    .background(accent)
-                )
-              }
+                  .background(accent)
+              )
             }
           }
+        }
+
+        Text(
+          text = mainStat,
+          fontFamily = JetBrainsMonoFontFamily,
+          fontWeight = FontWeight.ExtraBold,
+          fontSize = 19.sp,
+          lineHeight = 23.sp,
+          letterSpacing = (-0.3).sp,
+          color = neu.textPrimary,
+          maxLines = 1,
+          softWrap = false,
+          overflow = TextOverflow.Ellipsis
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+          Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 15.sp,
+            color = neu.textPrimary,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+          )
+          Text(
+            text = subStat,
+            style = MaterialTheme.typography.bodyMedium,
+            color = neu.textSecondary,
+            fontSize = 10.5.sp,
+            lineHeight = 13.sp,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+          )
+        }
+      }
+
+      if (computedProgress != null) {
+        Column(modifier = Modifier.padding(top = 8.dp)) {
+          NeumorphicLinearProgress(
+            progress = computedProgress,
+            accentColor = accent,
+            height = 7.dp
+          )
         }
       }
     }
@@ -398,6 +349,7 @@ fun LeaveRecordSquircleRow(
   onEditRecord: ((LeaveRecord) -> Unit)? = null
 ) {
   val context = LocalContext.current
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
   val cat = record.category
   val accent = cat.accentColor()
   val status = record.statusEnum
@@ -420,51 +372,52 @@ fun LeaveRecordSquircleRow(
     HighlightStatus.NORMAL -> accent
   }
 
-  Surface(
-    shape = IosSharpCardShape,
-    color = Color.Transparent,
-    tonalElevation = 0.dp,
-    shadowElevation = 2.dp,
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .iosFrostedGlassCard(
-        accentColor = rowGlassAccent,
+      .neumorphicExtruded(
         shape = IosSharpCardShape,
-        borderWidth = if (status != HighlightStatus.NORMAL) 1.4.dp else 1.1.dp,
-        borderAlpha = if (status != HighlightStatus.NORMAL) 0.62f else 0.36f
+        elevation = 4.5.dp,
+        blurRadius = 9.dp,
+        accentTint = rowGlassAccent,
+        accentTintAlpha = if (status != HighlightStatus.NORMAL) 0.06f else 0.03f,
+        borderAlpha = if (status != HighlightStatus.NORMAL) 0.45f else 0.25f,
+        neu = neu
       )
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(13.dp),
+        .padding(14.dp),
       verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
       ) {
-        // Sharp-Edged iOS Squircle Category Badge (6.dp)
-        Surface(
-          shape = IosSharpButtonShape,
-          color = accent.copy(alpha = 0.15f),
-          border = BorderStroke(1.dp, accent.copy(alpha = 0.40f)),
-          modifier = Modifier.size(46.dp)
+        // Inset Neumorphic Category Badge
+        Box(
+          modifier = Modifier
+            .size(46.dp)
+            .neumorphicInset(
+              shape = IosSharpButtonShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = accent,
+              accentTintAlpha = 0.14f,
+              neu = neu
+            ),
+          contentAlignment = Alignment.Center
         ) {
-          Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-          ) {
-            Text(
-              text = cat.shortLabel,
-              style = MaterialTheme.typography.labelLarge,
-              fontWeight = FontWeight.ExtraBold,
-              color = accent,
-              fontSize = if (cat.shortLabel.length > 4) 10.sp else 13.sp,
-              maxLines = 1,
-              softWrap = false
-            )
-          }
+          Text(
+            text = cat.shortLabel,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = accent,
+            fontSize = if (cat.shortLabel.length > 4) 10.sp else 13.sp,
+            maxLines = 1,
+            softWrap = false
+          )
         }
 
         Spacer(modifier = Modifier.width(12.dp))

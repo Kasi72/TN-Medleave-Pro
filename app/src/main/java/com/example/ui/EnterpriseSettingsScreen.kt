@@ -57,8 +57,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -109,18 +107,14 @@ import com.example.ui.theme.BadgeOnDutyBlue
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
-import com.example.ui.theme.IosDarkDockSurface
 import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
-import com.example.ui.theme.IosSquircleGlassFill
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.LocalAppThemeMode
-import com.example.ui.theme.NeonAquaAccent
-import com.example.ui.theme.NeonCyanBright
-import com.example.ui.theme.NeonCyanText
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import java.time.LocalDate
 import java.time.format.TextStyle
@@ -284,30 +278,35 @@ fun EnterpriseSettingsDialog(
     onDismissRequest = onDismiss,
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Surface(
+    Box(
       modifier = Modifier
         .fillMaxSize()
         .padding(horizontal = 10.dp, vertical = 18.dp)
-        .testTag("enterprise_settings_dialog"),
-      shape = RoundedCornerShape(28.dp),
-      color = MaterialTheme.colorScheme.background,
-      tonalElevation = 6.dp
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 8.dp,
+          blurRadius = 16.dp,
+          borderAlpha = 0.35f
+        )
+        .testTag("enterprise_settings_dialog")
     ) {
-      EnterpriseSettingsPageContent(
-        state = state,
-        userEmail = userEmail,
-        holidaySyncStatus = holidaySyncStatus,
-        onTriggerHolidaySync = onTriggerHolidaySync,
-        onAddLocalHolidayToRoom = onAddLocalHolidayToRoom,
-        onSelectYear = onSelectYear,
-        onOpenPdfExport = onOpenPdfExport,
-        onOpenNotificationCenter = onOpenNotificationCenter,
-        onLockVaultNow = onLockVaultNow,
-        onSignOut = onSignOut,
-        onShowStatusBanner = onShowStatusBanner,
-        onProfileUpdated = onProfileUpdated,
-        onClose = onDismiss
-      )
+      IosAmbientGlassBackdrop(modifier = Modifier.fillMaxSize()) {
+        EnterpriseSettingsPageContent(
+          state = state,
+          userEmail = userEmail,
+          holidaySyncStatus = holidaySyncStatus,
+          onTriggerHolidaySync = onTriggerHolidaySync,
+          onAddLocalHolidayToRoom = onAddLocalHolidayToRoom,
+          onSelectYear = onSelectYear,
+          onOpenPdfExport = onOpenPdfExport,
+          onOpenNotificationCenter = onOpenNotificationCenter,
+          onLockVaultNow = onLockVaultNow,
+          onSignOut = onSignOut,
+          onShowStatusBanner = onShowStatusBanner,
+          onProfileUpdated = onProfileUpdated,
+          onClose = onDismiss
+        )
+      }
     }
   }
 }
@@ -370,15 +369,23 @@ fun EnterpriseSettingsPageContent(
       .testTag("dedicated_settings_screen")
   ) {
     // Dedicated Settings Banner Header
-    Surface(
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 3.dp,
-      modifier = Modifier.fillMaxWidth()
+    val headerNeu = LocalNeumorphicColors.current
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 14.dp, vertical = 8.dp)
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 4.dp,
+          blurRadius = 8.dp,
+          borderAlpha = 0.28f,
+          neu = headerNeu
+        )
     ) {
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 18.dp, vertical = 14.dp),
+          .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
@@ -388,17 +395,23 @@ fun EnterpriseSettingsPageContent(
           modifier = Modifier.weight(1f)
         ) {
           if (onClose != null) {
-            IconButton(
-              onClick = onClose,
+            Box(
               modifier = Modifier
                 .size(38.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .testTag("back_from_settings_btn")
+                .neumorphicExtruded(
+                  shape = IosSharpButtonShape,
+                  elevation = 2.5.dp,
+                  blurRadius = 5.dp,
+                  neu = headerNeu
+                )
+                .clickable { onClose() }
+                .testTag("back_from_settings_btn"),
+              contentAlignment = Alignment.Center
             ) {
               Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back to Dashboard",
+                tint = headerNeu.textPrimary,
                 modifier = Modifier.size(18.dp)
               )
             }
@@ -406,18 +419,20 @@ fun EnterpriseSettingsPageContent(
             Box(
               modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                  Brush.linearGradient(
-                    listOf(EmeraldOptimal, BadgeColCyan)
-                  )
+                .neumorphicInset(
+                  shape = IosSharpButtonShape,
+                  depth = 2.5.dp,
+                  blurRadius = 5.dp,
+                  accentTint = headerNeu.primaryAccent,
+                  accentTintAlpha = 0.16f,
+                  neu = headerNeu
                 ),
               contentAlignment = Alignment.Center
             ) {
               Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Settings",
-                tint = Color.White,
+                tint = headerNeu.primaryAccent,
                 modifier = Modifier.size(22.dp)
               )
             }
@@ -426,12 +441,13 @@ fun EnterpriseSettingsPageContent(
             Text(
               text = "DEDICATED SETTINGS & GOVERNANCE",
               style = MaterialTheme.typography.labelSmall,
-              color = EmeraldOptimal,
+              color = headerNeu.primaryAccent,
               fontWeight = FontWeight.ExtraBold
             )
             Text(
               text = "Profile, Alerts, Calendar Sync & Config",
               style = MaterialTheme.typography.titleMedium,
+              color = headerNeu.textPrimary,
               fontWeight = FontWeight.ExtraBold,
               maxLines = 1,
               softWrap = false,
@@ -444,12 +460,17 @@ fun EnterpriseSettingsPageContent(
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = IosDarkDockSurface,
-            border = BorderStroke(1.dp, NeonCyanBright.copy(alpha = 0.65f)),
+          val neu = com.example.ui.theme.LocalNeumorphicColors.current
+          Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(12.dp))
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.08f,
+                neu = neu
+              )
               .clickable {
                 activeSubTab = 2
                 onShowStatusBanner("Opened GitHub APK Release & Sync Updater")
@@ -464,13 +485,13 @@ fun EnterpriseSettingsPageContent(
               Icon(
                 imageVector = Icons.Default.CloudSync,
                 contentDescription = "Update App from GitHub",
-                tint = NeonAquaAccent,
+                tint = neu.primaryAccent,
                 modifier = Modifier.size(15.dp)
               )
               Text(
                 text = "Update App",
                 style = MaterialTheme.typography.labelSmall,
-                color = NeonCyanText,
+                color = neu.primaryAccent,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 1,
                 softWrap = false
@@ -479,17 +500,23 @@ fun EnterpriseSettingsPageContent(
           }
 
           if (onClose != null) {
-            IconButton(
-              onClick = onClose,
+            Box(
               modifier = Modifier
                 .size(36.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .testTag("close_settings_btn")
+                .neumorphicExtruded(
+                  shape = CircleShape,
+                  elevation = 2.5.dp,
+                  blurRadius = 5.dp,
+                  neu = neu
+                )
+                .clickable { onClose() }
+                .testTag("close_settings_btn"),
+              contentAlignment = Alignment.Center
             ) {
               Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = "Close Settings",
+                tint = neu.textPrimary,
                 modifier = Modifier.size(18.dp)
               )
             }
@@ -612,13 +639,19 @@ private fun OfficerAndCollegeProfileSubTab(
     mutableStateOf(LedgerEnrichmentStore.getElSurrenderedDays(context).toString())
   }
 
-  Surface(
-    shape = RoundedCornerShape(22.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.35f)),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = Modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = BadgeColCyan,
+        accentTintAlpha = 0.03f,
+        borderAlpha = 0.28f,
+        neu = neu
+      )
       .testTag("settings_profile_section")
   ) {
     Column(
@@ -707,39 +740,59 @@ private fun OfficerAndCollegeProfileSubTab(
         fontWeight = FontWeight.Bold
       )
 
-      Row(
+      Box(
         modifier = Modifier
           .fillMaxWidth()
-          .height(IntrinsicSize.Min)
-          .clip(RoundedCornerShape(14.dp))
-          .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
-          .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            neu = neu
+          )
       ) {
-        listOf(2026L to "2026 Active Year", 2027L to "2027 Rollover Year").forEach { (yr, label) ->
-          val isSelected = defaultYear == yr
-          Box(
-            modifier = Modifier
-              .weight(1f)
-              .fillMaxHeight()
-              .clip(RoundedCornerShape(11.dp))
-              .background(if (isSelected) EmeraldOptimal else Color.Transparent)
-              .clickable {
-                defaultYear = yr
-                onSelectYear(yr)
-              }
-              .padding(vertical = 10.dp, horizontal = 8.dp)
-              .testTag("profile_default_year_$yr"),
-            contentAlignment = Alignment.Center
-          ) {
-            Text(
-              text = label,
-              style = MaterialTheme.typography.labelMedium,
-              color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
-              fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-              maxLines = 1,
-              softWrap = false
-            )
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .padding(4.dp),
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          listOf(2026L to "2026 Active Year", 2027L to "2027 Rollover Year").forEach { (yr, label) ->
+            val isSelected = defaultYear == yr
+            Box(
+              modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .then(
+                  if (isSelected) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 2.5.dp,
+                      blurRadius = 5.dp,
+                      surfaceColor = neu.primaryAccent,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.clip(IosSharpButtonShape)
+                  }
+                )
+                .clickable {
+                  defaultYear = yr
+                  onSelectYear(yr)
+                }
+                .padding(vertical = 10.dp, horizontal = 8.dp)
+                .testTag("profile_default_year_$yr"),
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isSelected) Color.White else neu.textPrimary,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 1,
+                softWrap = false
+              )
+            }
           }
         }
       }
@@ -849,16 +902,23 @@ private fun NotificationTogglesSubTab(
     )
   }
 
+  val neu = LocalNeumorphicColors.current
   Column(
     verticalArrangement = Arrangement.spacedBy(14.dp),
     modifier = Modifier.testTag("settings_notifications_section")
   ) {
-    Surface(
-      shape = RoundedCornerShape(22.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 2.dp,
-      border = BorderStroke(1.dp, BadgePlGold.copy(alpha = 0.40f)),
-      modifier = Modifier.fillMaxWidth()
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          accentTint = BadgePlGold,
+          accentTintAlpha = 0.03f,
+          borderAlpha = 0.28f,
+          neu = neu
+        )
     ) {
       Column(
         modifier = Modifier.padding(16.dp),
@@ -990,40 +1050,60 @@ private fun NotificationTogglesSubTab(
           fontWeight = FontWeight.Bold
         )
 
-        Row(
+        Box(
           modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
-            .padding(4.dp),
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              neu = neu
+            )
         ) {
-          listOf(1, 3, 7, 14).forEach { days ->
-            val selected = leadDays == days
-            Box(
-              modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(11.dp))
-                .background(if (selected) EmeraldOptimal else Color.Transparent)
-                .clickable {
-                  leadDays = days
-                  LeaveNotificationHelper.setLeadDaysPreference(context, days)
-                  onShowStatusBanner("Updated notification lead time to $days days before holiday")
-                }
-                .padding(vertical = 9.dp, horizontal = 4.dp)
-                .testTag("lead_days_option_$days"),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = "$days Days",
-                style = MaterialTheme.typography.labelMedium,
-                color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                maxLines = 1,
-                softWrap = false
-              )
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(IntrinsicSize.Min)
+              .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+          ) {
+            listOf(1, 3, 7, 14).forEach { days ->
+              val selected = leadDays == days
+              Box(
+                modifier = Modifier
+                  .weight(1f)
+                  .fillMaxHeight()
+                  .then(
+                    if (selected) {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpButtonShape,
+                        elevation = 2.5.dp,
+                        blurRadius = 5.dp,
+                        surfaceColor = neu.primaryAccent,
+                        neu = neu
+                      )
+                    } else {
+                      Modifier.clip(IosSharpButtonShape)
+                    }
+                  )
+                  .clickable {
+                    leadDays = days
+                    LeaveNotificationHelper.setLeadDaysPreference(context, days)
+                    onShowStatusBanner("Updated notification lead time to $days days before holiday")
+                  }
+                  .padding(vertical = 9.dp, horizontal = 4.dp)
+                  .testTag("lead_days_option_$days"),
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = "$days Days",
+                  style = MaterialTheme.typography.labelMedium,
+                  color = if (selected) Color.White else neu.textPrimary,
+                  fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
             }
           }
         }
@@ -1139,13 +1219,20 @@ private fun DataAndCalendarSyncSubTab(
       onShowStatusBanner = onShowStatusBanner
     )
 
+    val neu = LocalNeumorphicColors.current
     // 1. External Calendar Fetching & Synchronization Options Card
-    Surface(
-      shape = RoundedCornerShape(22.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 2.dp,
-      border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.40f)),
-      modifier = Modifier.fillMaxWidth()
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          accentTint = neu.primaryAccent,
+          accentTintAlpha = 0.03f,
+          borderAlpha = 0.28f,
+          neu = neu
+        )
     ) {
       Column(
         modifier = Modifier.padding(16.dp),
@@ -1238,46 +1325,52 @@ private fun DataAndCalendarSyncSubTab(
           modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min),
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
           feedPresets.forEachIndexed { idx, (label, presetUrl) ->
             val isSelected = externalFeedUrl == presetUrl
-            Surface(
-              shape = RoundedCornerShape(10.dp),
-              color = if (isSelected) {
-                EmeraldOptimal.copy(alpha = 0.18f)
-              } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-              },
-              border = BorderStroke(
-                1.dp,
-                if (isSelected) EmeraldOptimal else Color.Transparent
-              ),
+            Box(
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(10.dp))
+                .then(
+                  if (isSelected) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 2.5.dp,
+                      blurRadius = 5.dp,
+                      accentTint = neu.primaryAccent,
+                      accentTintAlpha = 0.14f,
+                      borderAlpha = 0.45f,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicInset(
+                      shape = IosSharpButtonShape,
+                      depth = 2.dp,
+                      blurRadius = 4.dp,
+                      neu = neu
+                    )
+                  }
+                )
                 .clickable {
                   externalFeedUrl = presetUrl
                   HodProfileSettingsStore.setExternalCalendarFeedUrl(context, presetUrl)
                 }
-                .testTag("calendar_feed_preset_$idx")
+                .testTag("calendar_feed_preset_$idx"),
+              contentAlignment = Alignment.Center
             ) {
-              Box(
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Text(
-                  text = label,
-                  style = MaterialTheme.typography.labelSmall,
-                  color = if (isSelected) EmeraldOptimal else MaterialTheme.colorScheme.onSurface,
-                  fontWeight = FontWeight.Bold,
-                  fontSize = 10.sp,
-                  maxLines = 1,
-                  softWrap = false,
-                  overflow = TextOverflow.Ellipsis
-                )
-              }
+              Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isSelected) neu.primaryAccent else neu.textPrimary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp)
+              )
             }
           }
         }
@@ -1403,11 +1496,16 @@ private fun DataAndCalendarSyncSubTab(
     }
 
     // 2. Add Custom 2026 or 2027 Collectorate / DME Local Holiday into Room DB
-    Surface(
-      shape = RoundedCornerShape(22.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 2.dp,
-      modifier = Modifier.fillMaxWidth()
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          borderAlpha = 0.28f,
+          neu = neu
+        )
     ) {
       Column(
         modifier = Modifier.padding(16.dp),
@@ -1421,19 +1519,29 @@ private fun DataAndCalendarSyncSubTab(
           Text(
             text = "Add Local Collectorate / DME Holiday to Room DB",
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
+            color = neu.textPrimary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
           )
-          Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = if (newHolIsRh) BadgeRhSlate.copy(alpha = 0.16f) else EmeraldOptimal.copy(alpha = 0.16f),
+          Spacer(modifier = Modifier.width(8.dp))
+          val holAccent = if (newHolIsRh) BadgeRhSlate else neu.primaryAccent
+          Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(10.dp))
+              .neumorphicInset(
+                shape = IosSharpBadgeShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = holAccent,
+                accentTintAlpha = 0.12f,
+                borderColor = holAccent.copy(alpha = 0.40f),
+                neu = neu
+              )
               .clickable { newHolIsRh = !newHolIsRh }
           ) {
             Text(
               text = if (newHolIsRh) "Type: RH / RL (Tap for GH)" else "Type: Public GH (Tap for RL)",
               style = MaterialTheme.typography.labelSmall,
-              color = if (newHolIsRh) BadgeRhSlate else EmeraldOptimal,
+              color = holAccent,
               fontWeight = FontWeight.Bold,
               modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
             )
@@ -1499,11 +1607,16 @@ private fun DataAndCalendarSyncSubTab(
     }
 
     // 3. Export External Device Calendar (.ICS)
-    Surface(
-      shape = RoundedCornerShape(22.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 2.dp,
-      modifier = Modifier.fillMaxWidth()
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          borderAlpha = 0.28f,
+          neu = neu
+        )
     ) {
       Column(
         modifier = Modifier.padding(16.dp),
@@ -1564,17 +1677,24 @@ private fun AppConfigSecurityAndExportSubTab(
     mutableStateOf(HodProfileSettingsStore.isIncludeSaturdayBridgeEnabled(context))
   }
 
+  val neu = LocalNeumorphicColors.current
   Column(
     verticalArrangement = Arrangement.spacedBy(14.dp),
     modifier = Modifier.testTag("settings_app_config_section")
   ) {
     // 1. Application Calculation & Rule Configurations Card
-    Surface(
-      shape = RoundedCornerShape(22.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 2.dp,
-      border = BorderStroke(1.dp, BadgeOnDutyBlue.copy(alpha = 0.35f)),
-      modifier = Modifier.fillMaxWidth()
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          accentTint = BadgeOnDutyBlue,
+          accentTintAlpha = 0.03f,
+          borderAlpha = 0.28f,
+          neu = neu
+        )
     ) {
       Column(
         modifier = Modifier.padding(16.dp),
@@ -1674,12 +1794,18 @@ private fun AppConfigSecurityAndExportSubTab(
     }
 
     // 2. Biometric Security Card
-    Surface(
-      shape = RoundedCornerShape(22.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 2.dp,
-      border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.35f)),
-      modifier = Modifier.fillMaxWidth()
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          accentTint = neu.primaryAccent,
+          accentTintAlpha = 0.03f,
+          borderAlpha = 0.28f,
+          neu = neu
+        )
     ) {
       Column(
         modifier = Modifier.padding(16.dp),
@@ -1741,11 +1867,16 @@ private fun AppConfigSecurityAndExportSubTab(
     }
 
     // 3. Official PDF, Digest & Account Card
-    Surface(
-      shape = RoundedCornerShape(22.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 2.dp,
-      modifier = Modifier.fillMaxWidth()
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          borderAlpha = 0.28f,
+          neu = neu
+        )
     ) {
       Column(
         modifier = Modifier.padding(16.dp),
@@ -1824,6 +1955,7 @@ private fun SettingToggleRow(
   testTag: String,
   onCheckedChange: (Boolean) -> Unit
 ) {
+  val neu = LocalNeumorphicColors.current
   Row(
     modifier = Modifier.fillMaxWidth(),
     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1833,22 +1965,20 @@ private fun SettingToggleRow(
       Text(
         text = title,
         style = MaterialTheme.typography.labelLarge,
+        color = neu.textPrimary,
         fontWeight = FontWeight.Bold
       )
       Text(
         text = subtitle,
         style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
+        color = neu.textSecondary
       )
     }
     Spacer(modifier = Modifier.width(10.dp))
-    Switch(
+    NeumorphicSwitch(
       checked = checked,
       onCheckedChange = onCheckedChange,
-      colors = SwitchDefaults.colors(
-        checkedThumbColor = Color.White,
-        checkedTrackColor = EmeraldOptimal
-      ),
+      accentColor = neu.primaryAccent,
       modifier = Modifier.testTag(testTag)
     )
   }
@@ -1861,11 +1991,18 @@ private fun SettingsMetricPill(
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    modifier = modifier,
-    shape = RoundedCornerShape(12.dp),
-    color = accent.copy(alpha = 0.10f),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.30f))
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier
+      .neumorphicInset(
+        shape = IosSharpButtonShape,
+        depth = 2.dp,
+        blurRadius = 4.dp,
+        accentTint = accent,
+        accentTintAlpha = 0.08f,
+        borderColor = accent.copy(alpha = 0.28f),
+        neu = neu
+      )
   ) {
     Column(
       modifier = Modifier
@@ -1877,7 +2014,7 @@ private fun SettingsMetricPill(
       Text(
         text = label,
         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -1906,335 +2043,345 @@ fun AppearanceThemeSelectorCard(
 ) {
   val context = LocalContext.current
   val currentTheme = LocalAppThemeMode.current
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
 
-  Surface(
-    shape = IosSharpCardShape,
-    color = Color.Transparent,
-    tonalElevation = 0.dp,
-    shadowElevation = 4.dp,
+  Box(
     modifier = Modifier
       .fillMaxWidth()
       .testTag("appearance_theme_selector_card")
-      .iosFrostedGlassCard(
-        accentColor = EmeraldOptimal,
+      .neumorphicExtruded(
         shape = IosSharpCardShape,
-        borderWidth = 1.25.dp,
-        borderAlpha = 0.50f
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = neu.primaryAccent,
+        accentTintAlpha = 0.035f,
+        borderAlpha = 0.30f,
+        neu = neu
       )
   ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-      // Sharp Top iOS Accent Laser Strip
+    Column(
+      modifier = Modifier.padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(10.dp),
+          modifier = Modifier.weight(1f)
+        ) {
+          Box(
+            modifier = Modifier
+              .size(36.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.AutoAwesome,
+              contentDescription = "Appearance & Theme Mode",
+              tint = neu.primaryAccent,
+              modifier = Modifier.size(19.dp)
+            )
+          }
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+              text = "NEUMORPHIC SOFT-UI THEME ENGINE",
+              style = MaterialTheme.typography.labelSmall,
+              color = neu.primaryAccent,
+              fontWeight = FontWeight.ExtraBold,
+              letterSpacing = 0.3.sp,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
+            Text(
+              text = "Mint Soft UI, Soft Clay Light or Dark #292E35",
+              style = MaterialTheme.typography.titleSmall,
+              fontWeight = FontWeight.ExtraBold,
+              letterSpacing = (-0.2).sp,
+              color = neu.textPrimary,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Box(
+          modifier = Modifier
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = neu.primaryAccent,
+              accentTintAlpha = 0.10f,
+              neu = neu
+            )
+        ) {
+          Text(
+            text = currentTheme.shortBadge,
+            fontFamily = JetBrainsMonoFontFamily,
+            fontSize = 9.5.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = neu.primaryAccent,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+          )
+        }
+      }
+
+      // Inset Neumorphic Segmented Track with Extruded Active Pill
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .height(2.5.dp)
-          .background(
-            Brush.horizontalGradient(
-              listOf(EmeraldOptimal, BadgeColCyan, EmeraldOptimal)
-            )
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            neu = neu
           )
-      )
-
-      Column(
-        modifier = Modifier.padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(11.dp)
       ) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.weight(1f)
-          ) {
-            Box(
-              modifier = Modifier
-                .size(36.dp)
-                .clip(IosSharpButtonShape)
-                .background(EmeraldOptimal.copy(alpha = 0.16f))
-                .border(1.dp, EmeraldOptimal.copy(alpha = 0.45f), IosSharpButtonShape),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = Icons.Default.AutoAwesome,
-                contentDescription = "Appearance & Theme Mode",
-                tint = EmeraldOptimal,
-                modifier = Modifier.size(19.dp)
-              )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-              Text(
-                text = "iOS 18 APPEARANCE & THEME ENGINE",
-                style = MaterialTheme.typography.labelSmall,
-                color = EmeraldOptimal,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 0.3.sp,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-              )
-              Text(
-                text = "Select Green, White or Dark Theme",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-0.2).sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-              )
-            }
-          }
-
-          Spacer(modifier = Modifier.width(8.dp))
-
-          Surface(
-            shape = IosSharpBadgeShape,
-            color = EmeraldOptimal.copy(alpha = 0.15f),
-            border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.45f))
-          ) {
-            Text(
-              text = currentTheme.shortBadge,
-              fontFamily = JetBrainsMonoFontFamily,
-              fontSize = 9.5.sp,
-              fontWeight = FontWeight.ExtraBold,
-              color = EmeraldOptimal,
-              maxLines = 1,
-              softWrap = false,
-              modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-            )
-          }
-        }
-
-        // Apple iOS UISegmentedControl Quick Theme Switcher Bar (Sharp Squircle Track & Thumb)
-        Surface(
-          shape = IosSharpWellShape,
-          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
-          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.40f)),
-          modifier = Modifier.fillMaxWidth()
-        ) {
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(3.dp),
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            AppThemeMode.entries.forEachIndexed { idx, mode ->
-              val isSelected = currentTheme == mode
-              Box(
-                modifier = Modifier
-                  .weight(1f)
-                  .height(32.dp)
-                  .clip(IosSharpButtonShape)
-                  .background(
-                    if (isSelected) EmeraldOptimal else Color.Transparent
-                  )
-                  .then(
-                    if (isSelected) {
-                      Modifier.border(1.dp, Color.White.copy(alpha = 0.40f), IosSharpButtonShape)
-                    } else {
-                      Modifier
-                    }
-                  )
-                  .clickable {
-                    HodProfileSettingsStore.setThemeMode(context, mode)
-                    onShowStatusBanner("Appearance switched to ${mode.displayName} (${mode.subtitle})!")
-                  },
-                contentAlignment = Alignment.Center
-              ) {
-                Text(
-                  text = mode.displayName,
-                  style = MaterialTheme.typography.labelMedium,
-                  fontSize = 11.sp,
-                  fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                  letterSpacing = (-0.15).sp,
-                  color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                  maxLines = 1,
-                  softWrap = false
-                )
-              }
-
-              if (idx < AppThemeMode.entries.lastIndex && !isSelected && AppThemeMode.entries[idx + 1] != currentTheme) {
-                Box(
-                  modifier = Modifier
-                    .width(0.8.dp)
-                    .height(14.dp)
-                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.40f))
-                )
-              }
-            }
-          }
-        }
-
-        // 3-Column Sharp-Edged Interactive Visual Theme Swatch Cards
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min),
-          horizontalArrangement = Arrangement.spacedBy(7.dp)
+            .padding(4.dp),
+          horizontalArrangement = Arrangement.spacedBy(5.dp),
+          verticalAlignment = Alignment.CenterVertically
         ) {
           AppThemeMode.entries.forEach { mode ->
             val isSelected = currentTheme == mode
-            val previewCanvasBg = when (mode) {
-              AppThemeMode.GREEN_EMERALD -> Color(0xFFECFDF5)
-              AppThemeMode.WHITE_CLINICAL -> Color(0xFFF2F2F7)
-              AppThemeMode.DARK_OBSIDIAN -> Color(0xFF07111E)
-            }
-            val previewCardBg = when (mode) {
-              AppThemeMode.GREEN_EMERALD -> Color(0xFFD1FAE5)
-              AppThemeMode.WHITE_CLINICAL -> Color(0xFFFFFFFF)
-              AppThemeMode.DARK_OBSIDIAN -> Color(0xFF102136)
-            }
-            val previewAccent = when (mode) {
-              AppThemeMode.GREEN_EMERALD -> Color(0xFF059669)
-              AppThemeMode.WHITE_CLINICAL -> Color(0xFF0A2540)
-              AppThemeMode.DARK_OBSIDIAN -> Color(0xFF38BDF8)
-            }
-            val previewText = when (mode) {
-              AppThemeMode.GREEN_EMERALD -> Color(0xFF064E3B)
-              AppThemeMode.WHITE_CLINICAL -> Color(0xFF0F172A)
-              AppThemeMode.DARK_OBSIDIAN -> Color(0xFFF8FAFC)
-            }
-
-            Surface(
-              shape = IosSharpWellShape,
-              color = if (isSelected) {
-                EmeraldOptimal.copy(alpha = 0.12f)
-              } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-              },
-              border = BorderStroke(
-                width = if (isSelected) 1.8.dp else 1.dp,
-                color = if (isSelected) EmeraldOptimal else MaterialTheme.colorScheme.outline.copy(alpha = 0.38f)
-              ),
+            Box(
               modifier = Modifier
                 .weight(1f)
-                .fillMaxHeight()
-                .clip(IosSharpWellShape)
+                .height(34.dp)
+                .then(
+                  if (isSelected) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 2.5.dp,
+                      blurRadius = 5.dp,
+                      surfaceColor = neu.primaryAccent,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.clip(IosSharpButtonShape)
+                  }
+                )
                 .clickable {
                   HodProfileSettingsStore.setThemeMode(context, mode)
                   onShowStatusBanner("Appearance switched to ${mode.displayName} (${mode.subtitle})!")
-                }
-                .testTag("theme_option_${mode.id}")
+                },
+              contentAlignment = Alignment.Center
             ) {
-              Column(
+              Text(
+                text = mode.displayName,
+                style = MaterialTheme.typography.labelMedium,
+                fontSize = 11.sp,
+                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                letterSpacing = (-0.15).sp,
+                color = if (isSelected) Color.White else neu.textSecondary,
+                maxLines = 1,
+                softWrap = false
+              )
+            }
+          }
+        }
+      }
+
+      // 3-Column Interactive Neumorphic Swatch Preview Cards
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(9.dp)
+      ) {
+        AppThemeMode.entries.forEach { mode ->
+          val isSelected = currentTheme == mode
+          val previewCanvasBg = when (mode) {
+            AppThemeMode.GREEN_EMERALD -> com.example.ui.theme.NeuMintBase
+            AppThemeMode.WHITE_CLINICAL -> com.example.ui.theme.NeuLightBase
+            AppThemeMode.DARK_OBSIDIAN -> com.example.ui.theme.NeuDarkBase
+          }
+          val previewDarkShadow = when (mode) {
+            AppThemeMode.GREEN_EMERALD -> com.example.ui.theme.NeuMintShadowDark
+            AppThemeMode.WHITE_CLINICAL -> com.example.ui.theme.NeuLightShadowDark
+            AppThemeMode.DARK_OBSIDIAN -> com.example.ui.theme.NeuDarkShadowDark
+          }
+          val previewLightShadow = when (mode) {
+            AppThemeMode.GREEN_EMERALD -> com.example.ui.theme.NeuMintShadowLight
+            AppThemeMode.WHITE_CLINICAL -> com.example.ui.theme.NeuLightShadowLight
+            AppThemeMode.DARK_OBSIDIAN -> com.example.ui.theme.NeuDarkShadowLight
+          }
+          val previewAccent = when (mode) {
+            AppThemeMode.GREEN_EMERALD -> Color(0xFF047857)
+            AppThemeMode.WHITE_CLINICAL -> Color(0xFF0284C7)
+            AppThemeMode.DARK_OBSIDIAN -> Color(0xFF34D399)
+          }
+          val previewText = when (mode) {
+            AppThemeMode.GREEN_EMERALD -> Color(0xFF062C22)
+            AppThemeMode.WHITE_CLINICAL -> Color(0xFF1E293B)
+            AppThemeMode.DARK_OBSIDIAN -> Color(0xFFF1F5F9)
+          }
+
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .fillMaxHeight()
+              .then(
+                if (isSelected) {
+                  Modifier.neumorphicInset(
+                    shape = IosSharpWellShape,
+                    depth = 2.5.dp,
+                    blurRadius = 5.dp,
+                    accentTint = neu.primaryAccent,
+                    accentTintAlpha = 0.08f,
+                    borderColor = neu.primaryAccent.copy(alpha = 0.45f),
+                    neu = neu
+                  )
+                } else {
+                  Modifier.neumorphicExtruded(
+                    shape = IosSharpWellShape,
+                    elevation = 2.5.dp,
+                    blurRadius = 5.dp,
+                    borderAlpha = 0.22f,
+                    neu = neu
+                  )
+                }
+              )
+              .clickable {
+                HodProfileSettingsStore.setThemeMode(context, mode)
+                onShowStatusBanner("Appearance switched to ${mode.displayName} (${mode.subtitle})!")
+              }
+              .testTag("theme_option_${mode.id}")
+          ) {
+            Column(
+              modifier = Modifier
+                .fillMaxHeight()
+                .padding(9.dp),
+              verticalArrangement = Arrangement.SpaceBetween
+            ) {
+              // Mini Neumorphic Preview Window showing extruded mini card on single-hue canvas
+              Box(
                 modifier = Modifier
-                  .fillMaxHeight()
-                  .padding(9.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                  .fillMaxWidth()
+                  .height(48.dp)
+                  .clip(IosSharpButtonShape)
+                  .background(previewCanvasBg)
+                  .border(1.dp, previewDarkShadow.copy(alpha = 0.55f), IosSharpButtonShape)
+                  .padding(6.dp)
               ) {
-                // Mini Sharp-Edged iOS Window Preview
-                Box(
-                  modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .clip(IosSharpButtonShape)
-                    .background(previewCanvasBg)
-                    .border(1.dp, previewAccent.copy(alpha = 0.40f), IosSharpButtonShape)
-                    .padding(5.dp)
-                ) {
-                  Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(
-                      modifier = Modifier.fillMaxWidth(),
-                      horizontalArrangement = Arrangement.SpaceBetween,
-                      verticalAlignment = Alignment.CenterVertically
-                    ) {
-                      Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Box(
-                          modifier = Modifier
-                            .size(6.dp)
-                            .clip(IosSharpMicroShape)
-                            .background(previewAccent)
-                        )
-                        Box(
-                          modifier = Modifier
-                            .size(6.dp)
-                            .clip(IosSharpMicroShape)
-                            .background(EmeraldOptimal)
-                        )
-                      }
-                      if (isSelected) {
-                        Icon(
-                          imageVector = Icons.Default.CheckCircle,
-                          contentDescription = "Selected Theme",
-                          tint = EmeraldOptimal,
-                          modifier = Modifier.size(13.dp)
-                        )
-                      }
-                    }
-                    Box(
-                      modifier = Modifier
-                        .fillMaxWidth()
-                        .height(14.dp)
-                        .clip(IosSharpMicroShape)
-                        .background(previewCardBg)
-                        .padding(horizontal = 4.dp),
-                      contentAlignment = Alignment.CenterStart
-                    ) {
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                       Box(
                         modifier = Modifier
-                          .width(24.dp)
-                          .height(4.dp)
+                          .size(6.dp)
                           .clip(IosSharpMicroShape)
-                          .background(previewText.copy(alpha = 0.65f))
+                          .background(previewAccent)
+                      )
+                      Box(
+                        modifier = Modifier
+                          .size(6.dp)
+                          .clip(IosSharpMicroShape)
+                          .background(previewText.copy(alpha = 0.35f))
+                      )
+                    }
+                    if (isSelected) {
+                      Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Selected Theme",
+                        tint = previewAccent,
+                        modifier = Modifier.size(13.dp)
                       )
                     }
                   }
-                }
-
-                Spacer(modifier = Modifier.height(7.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                  Text(
-                    text = mode.displayName,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 11.5.sp,
-                    lineHeight = 14.sp,
-                    letterSpacing = (-0.15).sp,
-                    color = if (isSelected) EmeraldOptimal else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis
-                  )
-                  Text(
-                    text = mode.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 9.sp,
-                    lineHeight = 11.5.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                  )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Surface(
-                  shape = IosSharpMicroShape,
-                  color = if (isSelected) EmeraldOptimal else MaterialTheme.colorScheme.surface,
-                  border = BorderStroke(
-                    1.dp,
-                    if (isSelected) EmeraldOptimal else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
-                  ),
-                  modifier = Modifier.fillMaxWidth()
-                ) {
-                  Text(
-                    text = if (isSelected) "ACTIVE" else "SELECT",
-                    fontFamily = JetBrainsMonoFontFamily,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    softWrap = false,
+                  Box(
                     modifier = Modifier
-                      .padding(vertical = 4.dp)
-                      .align(Alignment.CenterHorizontally)
-                  )
+                      .fillMaxWidth()
+                      .height(16.dp)
+                      .clip(IosSharpMicroShape)
+                      .background(previewCanvasBg)
+                      .border(
+                        width = 0.9.dp,
+                        brush = Brush.linearGradient(listOf(previewLightShadow, previewDarkShadow)),
+                        shape = IosSharpMicroShape
+                      )
+                      .padding(horizontal = 5.dp),
+                    contentAlignment = Alignment.CenterStart
+                  ) {
+                    Box(
+                      modifier = Modifier
+                        .width(26.dp)
+                        .height(4.dp)
+                        .clip(IosSharpMicroShape)
+                        .background(previewAccent.copy(alpha = 0.82f))
+                    )
+                  }
                 }
+              }
+
+              Spacer(modifier = Modifier.height(7.dp))
+
+              Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                  text = mode.displayName,
+                  style = MaterialTheme.typography.labelLarge,
+                  fontWeight = FontWeight.ExtraBold,
+                  fontSize = 11.5.sp,
+                  lineHeight = 14.sp,
+                  letterSpacing = (-0.15).sp,
+                  color = if (isSelected) neu.primaryAccent else neu.textPrimary,
+                  maxLines = 1,
+                  softWrap = false,
+                  overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                  text = mode.subtitle,
+                  style = MaterialTheme.typography.bodySmall,
+                  fontSize = 9.sp,
+                  lineHeight = 11.5.sp,
+                  color = neu.textSecondary,
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis
+                )
+              }
+
+              Spacer(modifier = Modifier.height(6.dp))
+
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clip(IosSharpMicroShape)
+                  .background(if (isSelected) neu.primaryAccent else neu.surfaceInset)
+                  .padding(vertical = 4.dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = if (isSelected) "ACTIVE" else "SELECT",
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 9.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = if (isSelected) Color.White else neu.textSecondary,
+                  maxLines = 1,
+                  softWrap = false
+                )
               }
             }
           }
@@ -2251,6 +2398,7 @@ private fun GitHubOtaAppUpdateCard(
 ) {
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
+  val neu = LocalNeumorphicColors.current
 
   var ghOwner by rememberSaveable {
     mutableStateOf(GitHubAppUpdaterService.getOwner(context))
@@ -2280,22 +2428,18 @@ private fun GitHubOtaAppUpdateCard(
     mutableStateOf(GitHubAppUpdaterService.getLastSyncedSha(context))
   }
 
-  Surface(
-    shape = RoundedCornerShape(22.dp),
-    color = IosDarkDockSurface,
-    tonalElevation = 4.dp,
-    border = BorderStroke(
-      width = 1.3.dp,
-      brush = Brush.linearGradient(
-        listOf(
-          NeonCyanBright.copy(alpha = 0.78f),
-          NeonAquaAccent.copy(alpha = 0.55f),
-          BadgeColCyan.copy(alpha = 0.45f)
-        )
-      )
-    ),
+  Box(
     modifier = Modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = neu.secondaryAccent,
+        accentTintAlpha = 0.035f,
+        borderAlpha = 0.30f,
+        neu = neu
+      )
       .testTag("github_ota_app_update_card")
   ) {
     Column(
@@ -2316,22 +2460,20 @@ private fun GitHubOtaAppUpdateCard(
           Box(
             modifier = Modifier
               .size(38.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .background(
-                Brush.linearGradient(
-                  listOf(
-                    NeonCyanBright.copy(alpha = 0.25f),
-                    NeonAquaAccent.copy(alpha = 0.15f)
-                  )
-                )
-              )
-              .border(1.dp, NeonCyanBright.copy(alpha = 0.55f), RoundedCornerShape(12.dp)),
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.secondaryAccent,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
             contentAlignment = Alignment.Center
           ) {
             Icon(
               imageVector = Icons.Default.CloudSync,
               contentDescription = "GitHub APK Updater",
-              tint = NeonCyanText,
+              tint = neu.secondaryAccent,
               modifier = Modifier.size(20.dp)
             )
           }
@@ -2339,13 +2481,13 @@ private fun GitHubOtaAppUpdateCard(
             Text(
               text = "GITHUB RELEASE & APK AUTO-UPDATER",
               style = MaterialTheme.typography.labelSmall,
-              color = NeonAquaAccent,
+              color = neu.secondaryAccent,
               fontWeight = FontWeight.ExtraBold
             )
             Text(
               text = "Sync & Update App from GitHub",
               style = MaterialTheme.typography.titleSmall,
-              color = Color.White,
+              color = neu.textPrimary,
               fontWeight = FontWeight.ExtraBold
             )
           }
@@ -2360,15 +2502,22 @@ private fun GitHubOtaAppUpdateCard(
         }
         val statusColor = when {
           isCheckingGitHub -> BadgePlGold
-          badgeResult != null && badgeResult.updateAvailable -> NeonAquaAccent
-          badgeResult != null && badgeResult.isSuccess -> EmeraldOptimal
-          else -> NeonCyanText
+          badgeResult != null && badgeResult.updateAvailable -> neu.primaryAccent
+          badgeResult != null && badgeResult.isSuccess -> neu.primaryAccent
+          else -> neu.secondaryAccent
         }
 
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = statusColor.copy(alpha = 0.16f),
-          border = BorderStroke(1.dp, statusColor.copy(alpha = 0.55f))
+        Box(
+          modifier = Modifier
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = statusColor,
+              accentTintAlpha = 0.12f,
+              borderColor = statusColor.copy(alpha = 0.45f),
+              neu = neu
+            )
         ) {
           Text(
             text = statusText,
@@ -2381,11 +2530,18 @@ private fun GitHubOtaAppUpdateCard(
       }
 
       // Version & Repository Telemetry Bar
-      Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = IosSquircleGlassFill,
-        border = BorderStroke(1.dp, NeonCyanBright.copy(alpha = 0.24f)),
-        modifier = Modifier.fillMaxWidth()
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            accentTint = neu.secondaryAccent,
+            accentTintAlpha = 0.04f,
+            borderColor = neu.hairlineDivider,
+            neu = neu
+          )
       ) {
         Column(
           modifier = Modifier.padding(12.dp),
@@ -2399,7 +2555,7 @@ private fun GitHubOtaAppUpdateCard(
             Text(
               text = "Installed Build: v${BuildConfig.VERSION_NAME} (Code ${BuildConfig.VERSION_CODE})",
               style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
-              color = NeonCyanText,
+              color = neu.secondaryAccent,
               fontWeight = FontWeight.Bold,
               maxLines = 1,
               softWrap = false,
@@ -2410,7 +2566,7 @@ private fun GitHubOtaAppUpdateCard(
             Text(
               text = if (ghRepo.isNotBlank()) "$ghOwner/$ghRepo ($ghBranch)" else "$ghOwner (Auto-Detect Repo)",
               style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
-              color = NeonAquaAccent,
+              color = neu.primaryAccent,
               fontWeight = FontWeight.Bold,
               maxLines = 1,
               softWrap = false,
@@ -2423,20 +2579,20 @@ private fun GitHubOtaAppUpdateCard(
             Text(
               text = check.statusMessage,
               style = MaterialTheme.typography.bodySmall,
-              color = if (check.isSuccess) Color(0xFFE2E8F0) else StatusAlertRed,
+              color = if (check.isSuccess) neu.textPrimary else StatusAlertRed,
               fontWeight = FontWeight.SemiBold
             )
             if (check.isSuccess) {
               Text(
                 text = "Latest Release: ${check.remoteVersionLabel} • Commit #${check.latestCommitShaShort} (${check.publishedAtFormatted})",
                 style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
-                color = NeonCyanText
+                color = neu.secondaryAccent
               )
               if (check.latestCommitMessage.isNotBlank()) {
                 Text(
                   text = "Changelog: ${check.latestCommitMessage}",
                   style = MaterialTheme.typography.labelSmall,
-                  color = Color(0xFF94A3B8),
+                  color = neu.textSecondary,
                   maxLines = 2,
                   overflow = TextOverflow.Ellipsis
                 )
@@ -2447,7 +2603,7 @@ private fun GitHubOtaAppUpdateCard(
               text = lastSyncedSummary +
                 if (lastSyncedSha.isNotBlank()) " • Commit #$lastSyncedSha" else "",
               style = MaterialTheme.typography.bodySmall,
-              color = Color(0xFFCBD5E1)
+              color = neu.textSecondary
             )
           }
         }
@@ -2456,139 +2612,158 @@ private fun GitHubOtaAppUpdateCard(
       // Primary Action Row: 1-Tap Check & Sync + Direct APK Download & Install
       Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
       ) {
-        // Button 1: Check & Sync with GitHub
-        Button(
-          onClick = {
-            if (!isCheckingGitHub) {
-              isCheckingGitHub = true
-              GitHubAppUpdaterService.saveGitHubCoordinates(context, ghOwner, ghRepo, ghBranch)
-              coroutineScope.launch {
-                val result = GitHubAppUpdaterService.checkForUpdatesFromGitHub(
-                  context = context,
-                  ownerInput = ghOwner,
-                  repoInput = ghRepo,
-                  branchInput = ghBranch
-                )
-                isCheckingGitHub = false
-                latestCheckResult = result
-                val savedRepo = GitHubAppUpdaterService.getRepo(context)
-                if (savedRepo.isNotBlank() && ghRepo.isBlank()) {
-                  ghRepo = savedRepo
-                }
-                lastSyncedSummary = GitHubAppUpdaterService.getLastCheckSummary(context)
-                lastSyncedSha = GitHubAppUpdaterService.getLastSyncedSha(context)
-                onTriggerHolidaySync("Fetch and verify 2026 and 2027 Tamil Nadu Government Public Holidays (GH) and Restricted Holidays (RH/RL)")
-                onShowStatusBanner(result.statusMessage)
-              }
-            }
-          },
-          shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF0E3A47),
-            contentColor = NeonCyanText
-          ),
-          border = BorderStroke(1.2.dp, NeonCyanBright),
+        // Button 1: Check & Sync with GitHub (Tactile Extruded Soft-UI Pill)
+        Box(
           modifier = Modifier
             .weight(1f)
-            .testTag("check_github_apk_update_btn")
-        ) {
-          if (isCheckingGitHub) {
-            CircularProgressIndicator(
-              modifier = Modifier.size(15.dp),
-              strokeWidth = 2.dp,
-              color = NeonAquaAccent
+            .height(42.dp)
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 3.dp,
+              blurRadius = 6.dp,
+              accentTint = neu.secondaryAccent,
+              accentTintAlpha = 0.14f,
+              borderAlpha = 0.45f,
+              neu = neu
             )
-          } else {
-            Icon(
-              imageVector = Icons.Default.Refresh,
-              contentDescription = null,
-              tint = NeonAquaAccent,
-              modifier = Modifier.size(16.dp)
-            )
-          }
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = if (isCheckingGitHub) "Checking..." else "Sync GitHub",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = NeonCyanText,
-            maxLines = 1,
-            softWrap = false
-          )
-        }
-
-        // Button 2: Download & Update APK Now
-        Button(
-          onClick = {
-            GitHubAppUpdaterService.saveGitHubCoordinates(context, ghOwner, ghRepo, ghBranch)
-            val currentCheck = latestCheckResult
-            if (currentCheck != null && currentCheck.isSuccess && currentCheck.directApkDownloadUrl.isNotBlank()) {
-              GitHubAppUpdaterService.markUpdateDownloadedAndOpenUrl(
-                context = context,
-                apkOrReleaseUrl = currentCheck.directApkDownloadUrl,
-                syncedVersionId = currentCheck.latestCommitShaShort
-              )
-              lastSyncedSummary = GitHubAppUpdaterService.getLastCheckSummary(context)
-              lastSyncedSha = GitHubAppUpdaterService.getLastSyncedSha(context)
-              onShowStatusBanner("Downloading latest APK (${currentCheck.remoteVersionLabel}) from GitHub...")
-            } else {
-              // Auto-check GitHub first and immediately launch APK download once resolved
-              isCheckingGitHub = true
-              coroutineScope.launch {
-                val result = GitHubAppUpdaterService.checkForUpdatesFromGitHub(
-                  context = context,
-                  ownerInput = ghOwner,
-                  repoInput = ghRepo,
-                  branchInput = ghBranch
-                )
-                isCheckingGitHub = false
-                latestCheckResult = result
-                val savedRepo = GitHubAppUpdaterService.getRepo(context)
-                if (savedRepo.isNotBlank() && ghRepo.isBlank()) {
-                  ghRepo = savedRepo
-                }
-                if (result.directApkDownloadUrl.isNotBlank()) {
-                  GitHubAppUpdaterService.markUpdateDownloadedAndOpenUrl(
+            .clickable {
+              if (!isCheckingGitHub) {
+                isCheckingGitHub = true
+                GitHubAppUpdaterService.saveGitHubCoordinates(context, ghOwner, ghRepo, ghBranch)
+                coroutineScope.launch {
+                  val result = GitHubAppUpdaterService.checkForUpdatesFromGitHub(
                     context = context,
-                    apkOrReleaseUrl = result.directApkDownloadUrl,
-                    syncedVersionId = result.latestCommitShaShort
+                    ownerInput = ghOwner,
+                    repoInput = ghRepo,
+                    branchInput = ghBranch
                   )
+                  isCheckingGitHub = false
+                  latestCheckResult = result
+                  val savedRepo = GitHubAppUpdaterService.getRepo(context)
+                  if (savedRepo.isNotBlank() && ghRepo.isBlank()) {
+                    ghRepo = savedRepo
+                  }
                   lastSyncedSummary = GitHubAppUpdaterService.getLastCheckSummary(context)
                   lastSyncedSha = GitHubAppUpdaterService.getLastSyncedSha(context)
-                  onShowStatusBanner("Downloading latest APK (${result.remoteVersionLabel}) from GitHub...")
-                } else {
+                  onTriggerHolidaySync("Fetch and verify 2026 and 2027 Tamil Nadu Government Public Holidays (GH) and Restricted Holidays (RH/RL)")
                   onShowStatusBanner(result.statusMessage)
                 }
               }
             }
-          },
-          shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF064E3B),
-            contentColor = NeonAquaAccent
-          ),
-          border = BorderStroke(1.2.dp, NeonAquaAccent),
+            .testTag("check_github_apk_update_btn"),
+          contentAlignment = Alignment.Center
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 10.dp)
+          ) {
+            if (isCheckingGitHub) {
+              CircularProgressIndicator(
+                modifier = Modifier.size(15.dp),
+                strokeWidth = 2.dp,
+                color = neu.secondaryAccent
+              )
+            } else {
+              Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                tint = neu.secondaryAccent,
+                modifier = Modifier.size(16.dp)
+              )
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = if (isCheckingGitHub) "Checking..." else "Sync GitHub",
+              fontSize = 12.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = neu.secondaryAccent,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
+        }
+
+        // Button 2: Download & Update APK Now (Filled Accent Extruded Pill)
+        Box(
           modifier = Modifier
             .weight(1.15f)
-            .testTag("download_github_apk_update_btn")
+            .height(42.dp)
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 3.dp,
+              blurRadius = 6.dp,
+              surfaceColor = neu.primaryAccent,
+              neu = neu
+            )
+            .clickable {
+              GitHubAppUpdaterService.saveGitHubCoordinates(context, ghOwner, ghRepo, ghBranch)
+              val currentCheck = latestCheckResult
+              if (currentCheck != null && currentCheck.isSuccess && currentCheck.directApkDownloadUrl.isNotBlank()) {
+                GitHubAppUpdaterService.markUpdateDownloadedAndOpenUrl(
+                  context = context,
+                  apkOrReleaseUrl = currentCheck.directApkDownloadUrl,
+                  syncedVersionId = currentCheck.latestCommitShaShort
+                )
+                lastSyncedSummary = GitHubAppUpdaterService.getLastCheckSummary(context)
+                lastSyncedSha = GitHubAppUpdaterService.getLastSyncedSha(context)
+                onShowStatusBanner("Downloading latest APK (${currentCheck.remoteVersionLabel}) from GitHub...")
+              } else {
+                isCheckingGitHub = true
+                coroutineScope.launch {
+                  val result = GitHubAppUpdaterService.checkForUpdatesFromGitHub(
+                    context = context,
+                    ownerInput = ghOwner,
+                    repoInput = ghRepo,
+                    branchInput = ghBranch
+                  )
+                  isCheckingGitHub = false
+                  latestCheckResult = result
+                  val savedRepo = GitHubAppUpdaterService.getRepo(context)
+                  if (savedRepo.isNotBlank() && ghRepo.isBlank()) {
+                    ghRepo = savedRepo
+                  }
+                  if (result.directApkDownloadUrl.isNotBlank()) {
+                    GitHubAppUpdaterService.markUpdateDownloadedAndOpenUrl(
+                      context = context,
+                      apkOrReleaseUrl = result.directApkDownloadUrl,
+                      syncedVersionId = result.latestCommitShaShort
+                    )
+                    lastSyncedSummary = GitHubAppUpdaterService.getLastCheckSummary(context)
+                    lastSyncedSha = GitHubAppUpdaterService.getLastSyncedSha(context)
+                    onShowStatusBanner("Downloading latest APK (${result.remoteVersionLabel}) from GitHub...")
+                  } else {
+                    onShowStatusBanner(result.statusMessage)
+                  }
+                }
+              }
+            }
+            .testTag("download_github_apk_update_btn"),
+          contentAlignment = Alignment.Center
         ) {
-          Icon(
-            imageVector = Icons.Default.CloudSync,
-            contentDescription = null,
-            tint = NeonAquaAccent,
-            modifier = Modifier.size(16.dp)
-          )
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = "Update APK Now",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = NeonCyanText,
-            maxLines = 1,
-            softWrap = false
-          )
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 10.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Default.CloudSync,
+              contentDescription = null,
+              tint = Color.White,
+              modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = "Update APK Now",
+              fontSize = 12.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = Color.White,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
         }
       }
 
@@ -2598,19 +2773,22 @@ private fun GitHubOtaAppUpdateCard(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = IosSquircleGlassFill,
-          border = BorderStroke(1.dp, NeonCyanBright.copy(alpha = 0.35f)),
+        Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              borderColor = neu.secondaryAccent.copy(alpha = 0.35f),
+              neu = neu
+            )
             .clickable { showRepoConfigFields = !showRepoConfigFields }
             .testTag("toggle_github_repo_config_btn")
         ) {
           Text(
             text = if (showRepoConfigFields) "Hide GitHub Repo Settings" else "Configure GitHub Repo ($ghOwner)",
             style = MaterialTheme.typography.labelSmall,
-            color = NeonCyanText,
+            color = neu.secondaryAccent,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
           )
@@ -2618,12 +2796,15 @@ private fun GitHubOtaAppUpdateCard(
 
         val checkForReleasePage = latestCheckResult
         if (checkForReleasePage != null && checkForReleasePage.releasePageUrl.isNotBlank()) {
-          Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = IosSquircleGlassFill,
-            border = BorderStroke(1.dp, NeonAquaAccent.copy(alpha = 0.35f)),
+          Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(10.dp))
+              .neumorphicInset(
+                shape = IosSharpBadgeShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                borderColor = neu.primaryAccent.copy(alpha = 0.35f),
+                neu = neu
+              )
               .clickable {
                 GitHubAppUpdaterService.markUpdateDownloadedAndOpenUrl(
                   context = context,
@@ -2635,7 +2816,7 @@ private fun GitHubOtaAppUpdateCard(
             Text(
               text = "Open GitHub Releases ↗",
               style = MaterialTheme.typography.labelSmall,
-              color = NeonAquaAccent,
+              color = neu.primaryAccent,
               fontWeight = FontWeight.Bold,
               modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
             )
@@ -2657,7 +2838,7 @@ private fun GitHubOtaAppUpdateCard(
               },
               label = { Text("GitHub Owner / Username") },
               singleLine = true,
-              shape = RoundedCornerShape(12.dp),
+              shape = IosSharpButtonShape,
               modifier = Modifier
                 .weight(1f)
                 .testTag("github_owner_input")
@@ -2670,7 +2851,7 @@ private fun GitHubOtaAppUpdateCard(
               },
               label = { Text("Branch") },
               singleLine = true,
-              shape = RoundedCornerShape(12.dp),
+              shape = IosSharpButtonShape,
               modifier = Modifier
                 .weight(0.7f)
                 .testTag("github_branch_input")
@@ -2684,7 +2865,7 @@ private fun GitHubOtaAppUpdateCard(
             },
             label = { Text("Repository Name (leave blank to auto-detect latest repo)") },
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = IosSharpButtonShape,
             modifier = Modifier
               .fillMaxWidth()
               .testTag("github_repo_input")
@@ -2701,17 +2882,17 @@ private fun GitHubOtaAppUpdateCard(
               Text(
                 text = "Auto-Check GitHub for New APK Releases on Launch",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White,
+                color = neu.textPrimary,
                 fontWeight = FontWeight.Bold
               )
               Text(
                 text = "Automatically checks github.com/$ghOwner for fresh APK builds when the app starts",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF94A3B8)
+                color = neu.textSecondary
               )
             }
             Spacer(modifier = Modifier.width(10.dp))
-            Switch(
+            NeumorphicSwitch(
               checked = autoCheckRelease,
               onCheckedChange = { enabled ->
                 autoCheckRelease = enabled
@@ -2721,10 +2902,7 @@ private fun GitHubOtaAppUpdateCard(
                   else "Disabled automatic GitHub APK release check"
                 )
               },
-              colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = NeonAquaAccent
-              ),
+              accentColor = neu.primaryAccent,
               modifier = Modifier.testTag("toggle_auto_check_github_apk")
             )
           }
@@ -2742,6 +2920,7 @@ private fun FirebaseRemoteConfigHolidayCard(
 ) {
   val context = LocalContext.current
   val coroutineScope = rememberCoroutineScope()
+  val neu = LocalNeumorphicColors.current
   val localRepo = remember(context) {
     LocalHolidayRepository(TnHolidayDatabase.getInstance(context).holidayDao())
   }
@@ -2765,22 +2944,18 @@ private fun FirebaseRemoteConfigHolidayCard(
     mutableStateOf("2026.11-GO-Ms-842-LivePatch")
   }
 
-  Surface(
-    shape = RoundedCornerShape(22.dp),
-    color = IosDarkDockSurface,
-    tonalElevation = 4.dp,
-    border = BorderStroke(
-      width = 1.25.dp,
-      brush = Brush.linearGradient(
-        listOf(
-          NeonAquaAccent.copy(alpha = 0.75f),
-          NeonCyanBright.copy(alpha = 0.55f),
-          EmeraldOptimal.copy(alpha = 0.45f)
-        )
-      )
-    ),
+  Box(
     modifier = Modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = neu.primaryAccent,
+        accentTintAlpha = 0.035f,
+        borderAlpha = 0.30f,
+        neu = neu
+      )
       .testTag("firebase_remote_config_holiday_card")
   ) {
     Column(
@@ -2801,22 +2976,20 @@ private fun FirebaseRemoteConfigHolidayCard(
           Box(
             modifier = Modifier
               .size(38.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .background(
-                Brush.linearGradient(
-                  listOf(
-                    NeonAquaAccent.copy(alpha = 0.25f),
-                    NeonCyanBright.copy(alpha = 0.15f)
-                  )
-                )
-              )
-              .border(1.dp, NeonAquaAccent.copy(alpha = 0.55f), RoundedCornerShape(12.dp)),
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
             contentAlignment = Alignment.Center
           ) {
             Icon(
               imageVector = Icons.Default.CloudSync,
               contentDescription = "Firebase Remote Config",
-              tint = NeonAquaAccent,
+              tint = neu.primaryAccent,
               modifier = Modifier.size(20.dp)
             )
           }
@@ -2824,30 +2997,35 @@ private fun FirebaseRemoteConfigHolidayCard(
             Text(
               text = "FIREBASE REMOTE CONFIG • DYNAMIC HOLIDAY DB",
               style = MaterialTheme.typography.labelSmall,
-              color = NeonAquaAccent,
+              color = neu.primaryAccent,
               fontWeight = FontWeight.ExtraBold
             )
             Text(
               text = "Zero-Store-Update TN Holiday Calendar Sync",
               style = MaterialTheme.typography.titleSmall,
-              color = Color.White,
+              color = neu.textPrimary,
               fontWeight = FontWeight.ExtraBold
             )
           }
         }
 
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = if (isFetchingRc) BadgePlGold.copy(alpha = 0.16f) else NeonAquaAccent.copy(alpha = 0.16f),
-          border = BorderStroke(
-            1.dp,
-            if (isFetchingRc) BadgePlGold.copy(alpha = 0.55f) else NeonAquaAccent.copy(alpha = 0.55f)
-          )
+        val rcBadgeAccent = if (isFetchingRc) BadgePlGold else neu.primaryAccent
+        Box(
+          modifier = Modifier
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = rcBadgeAccent,
+              accentTintAlpha = 0.12f,
+              borderColor = rcBadgeAccent.copy(alpha = 0.45f),
+              neu = neu
+            )
         ) {
           Text(
             text = if (isFetchingRc) "FETCHING RC..." else "LIVE RC ACTIVE",
             style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
-            color = if (isFetchingRc) BadgePlGold else NeonAquaAccent,
+            color = rcBadgeAccent,
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
           )
@@ -2864,7 +3042,7 @@ private fun FirebaseRemoteConfigHolidayCard(
         SettingsMetricPill(
           label = "RC Catalog Version",
           value = rcSnapshot.catalogVersion.take(18),
-          accent = NeonCyanText,
+          accent = neu.secondaryAccent,
           modifier = Modifier
             .weight(1.25f)
             .fillMaxHeight()
@@ -2872,7 +3050,7 @@ private fun FirebaseRemoteConfigHolidayCard(
         SettingsMetricPill(
           label = "RC Dynamic Items",
           value = "${rcSnapshot.upsertedHolidayCount} Holidays",
-          accent = NeonAquaAccent,
+          accent = neu.primaryAccent,
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
@@ -2888,11 +3066,18 @@ private fun FirebaseRemoteConfigHolidayCard(
       }
 
       // Active Remote Config Parameter Summary Box
-      Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = IosSquircleGlassFill,
-        border = BorderStroke(1.dp, NeonCyanBright.copy(alpha = 0.25f)),
-        modifier = Modifier.fillMaxWidth()
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            accentTint = neu.primaryAccent,
+            accentTintAlpha = 0.04f,
+            borderColor = neu.hairlineDivider,
+            neu = neu
+          )
       ) {
         Column(
           modifier = Modifier.padding(12.dp),
@@ -2901,18 +3086,18 @@ private fun FirebaseRemoteConfigHolidayCard(
           Text(
             text = rcSnapshot.announcementBanner.ifBlank { holidaySyncStatus.remoteConfigBanner },
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFFE2E8F0),
+            color = neu.textPrimary,
             fontWeight = FontWeight.SemiBold
           )
           Text(
             text = "Source: ${rcSnapshot.fetchSourceLabel} • Last Fetched: ${rcSnapshot.lastFetchedFormatted}",
             style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
-            color = NeonCyanText
+            color = neu.secondaryAccent
           )
           Text(
             text = "Parameter Key: ${TnHolidayRemoteConfigService.KEY_HOLIDAYS_REMOTE_JSON} → Room DB (tn_holidays)",
             style = MaterialTheme.typography.labelSmall.copy(fontFamily = JetBrainsMonoFontFamily),
-            color = Color(0xFF94A3B8)
+            color = neu.textSecondary
           )
         }
       }
@@ -2920,90 +3105,110 @@ private fun FirebaseRemoteConfigHolidayCard(
       // Primary Action Row: Fetch & Activate Now + Inspect / Test JSON Override
       Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
       ) {
-        Button(
-          onClick = {
-            if (!isFetchingRc) {
-              isFetchingRc = true
-              coroutineScope.launch {
-                val updated = TnHolidayRemoteConfigService.fetchAndApplyRemoteHolidays(
-                  context = context,
-                  localRepo = localRepo,
-                  forceZeroCacheInterval = true
-                )
-                rcSnapshot = updated
-                customJsonText = updated.rawHolidayJsonPreview
-                isFetchingRc = false
-                onTriggerHolidaySync("RemoteConfig Force Sync (${updated.catalogVersion})")
-                onShowStatusBanner(
-                  "Fetched & Activated Firebase Remote Config (${updated.catalogVersion} • ${updated.upsertedHolidayCount} holidays synced to Room DB)!"
-                )
-              }
-            }
-          },
-          shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF064E3B),
-            contentColor = NeonAquaAccent
-          ),
-          border = BorderStroke(1.2.dp, NeonAquaAccent),
+        Box(
           modifier = Modifier
             .weight(1.2f)
-            .testTag("fetch_remote_config_holidays_btn")
-        ) {
-          if (isFetchingRc) {
-            CircularProgressIndicator(
-              modifier = Modifier.size(15.dp),
-              strokeWidth = 2.dp,
-              color = NeonAquaAccent
+            .height(42.dp)
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 3.dp,
+              blurRadius = 6.dp,
+              surfaceColor = neu.primaryAccent,
+              neu = neu
             )
-          } else {
-            Icon(
-              imageVector = Icons.Default.Refresh,
-              contentDescription = null,
-              tint = NeonAquaAccent,
-              modifier = Modifier.size(16.dp)
+            .clickable {
+              if (!isFetchingRc) {
+                isFetchingRc = true
+                coroutineScope.launch {
+                  val updated = TnHolidayRemoteConfigService.fetchAndApplyRemoteHolidays(
+                    context = context,
+                    localRepo = localRepo,
+                    forceZeroCacheInterval = true
+                  )
+                  rcSnapshot = updated
+                  customJsonText = updated.rawHolidayJsonPreview
+                  isFetchingRc = false
+                  onTriggerHolidaySync("RemoteConfig Force Sync (${updated.catalogVersion})")
+                  onShowStatusBanner(
+                    "Fetched & Activated Firebase Remote Config (${updated.catalogVersion} • ${updated.upsertedHolidayCount} holidays synced to Room DB)!"
+                  )
+                }
+              }
+            }
+            .testTag("fetch_remote_config_holidays_btn"),
+          contentAlignment = Alignment.Center
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 10.dp)
+          ) {
+            if (isFetchingRc) {
+              CircularProgressIndicator(
+                modifier = Modifier.size(15.dp),
+                strokeWidth = 2.dp,
+                color = Color.White
+              )
+            } else {
+              Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp)
+              )
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = if (isFetchingRc) "Fetching RC..." else "Fetch & Activate RC",
+              fontSize = 12.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = Color.White,
+              maxLines = 1,
+              softWrap = false
             )
           }
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = if (isFetchingRc) "Fetching RC..." else "Fetch & Activate RC",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = NeonCyanText,
-            maxLines = 1,
-            softWrap = false
-          )
         }
 
-        Button(
-          onClick = { showJsonInspector = !showJsonInspector },
-          shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF0E3A47),
-            contentColor = NeonCyanText
-          ),
-          border = BorderStroke(1.2.dp, NeonCyanBright),
+        Box(
           modifier = Modifier
             .weight(1f)
-            .testTag("toggle_remote_config_json_inspector_btn")
+            .height(42.dp)
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 3.dp,
+              blurRadius = 6.dp,
+              accentTint = neu.secondaryAccent,
+              accentTintAlpha = 0.14f,
+              borderAlpha = 0.45f,
+              neu = neu
+            )
+            .clickable { showJsonInspector = !showJsonInspector }
+            .testTag("toggle_remote_config_json_inspector_btn"),
+          contentAlignment = Alignment.Center
         ) {
-          Icon(
-            imageVector = Icons.Default.Tune,
-            contentDescription = null,
-            tint = NeonCyanText,
-            modifier = Modifier.size(16.dp)
-          )
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = if (showJsonInspector) "Hide RC JSON" else "Inspect RC JSON",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = NeonCyanText,
-            maxLines = 1,
-            softWrap = false
-          )
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 10.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Default.Tune,
+              contentDescription = null,
+              tint = neu.secondaryAccent,
+              modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = if (showJsonInspector) "Hide RC JSON" else "Inspect RC JSON",
+              fontSize = 12.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = neu.secondaryAccent,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
         }
       }
 
@@ -3017,17 +3222,17 @@ private fun FirebaseRemoteConfigHolidayCard(
           Text(
             text = "Real-Time Firebase ConfigUpdateListener",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White,
+            color = neu.textPrimary,
             fontWeight = FontWeight.Bold
           )
           Text(
             text = "Automatically pushes new Tamil Nadu G.O. & Erode Collectorate holidays into Room DB the moment they are published in Firebase Console",
             style = MaterialTheme.typography.labelSmall,
-            color = Color(0xFF94A3B8)
+            color = neu.textSecondary
           )
         }
         Spacer(modifier = Modifier.width(10.dp))
-        Switch(
+        NeumorphicSwitch(
           checked = realtimeListenerEnabled,
           onCheckedChange = { enabled ->
             realtimeListenerEnabled = enabled
@@ -3037,10 +3242,7 @@ private fun FirebaseRemoteConfigHolidayCard(
               else "Paused real-time Firebase Remote Config listener"
             )
           },
-          colors = SwitchDefaults.colors(
-            checkedThumbColor = Color.White,
-            checkedTrackColor = NeonAquaAccent
-          ),
+          accentColor = neu.primaryAccent,
           modifier = Modifier.testTag("toggle_realtime_remote_config_listener")
         )
       }
@@ -3056,7 +3258,7 @@ private fun FirebaseRemoteConfigHolidayCard(
             onValueChange = { customVersionTag = it },
             label = { Text("Remote Config Version Tag (tn_holiday_catalog_version)") },
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = IosSharpButtonShape,
             modifier = Modifier
               .fillMaxWidth()
               .testTag("rc_version_tag_input")
@@ -3067,49 +3269,64 @@ private fun FirebaseRemoteConfigHolidayCard(
             label = { Text("tn_holidays_remote_json Payload (Dynamic GH / RL Array)") },
             minLines = 4,
             maxLines = 8,
-            shape = RoundedCornerShape(12.dp),
+            shape = IosSharpButtonShape,
             modifier = Modifier
               .fillMaxWidth()
               .testTag("rc_holidays_json_input")
           )
-          Button(
-            onClick = {
-              coroutineScope.launch {
-                val applied = TnHolidayRemoteConfigService.applyCustomRemoteConfigJsonPayload(
-                  context = context,
-                  localRepo = localRepo,
-                  customJsonArrayStr = customJsonText,
-                  customVersionTag = customVersionTag
-                )
-                rcSnapshot = applied
-                onTriggerHolidaySync("RemoteConfig Custom JSON Override (${applied.catalogVersion})")
-                onShowStatusBanner(
-                  "Applied ${applied.upsertedHolidayCount} dynamic holiday(s) from Remote Config JSON into Room DB!"
-                )
-              }
-            },
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-              containerColor = Color(0xFF0E3A47),
-              contentColor = NeonCyanText
-            ),
-            border = BorderStroke(1.dp, NeonCyanBright),
+          Box(
             modifier = Modifier
               .fillMaxWidth()
-              .testTag("apply_rc_custom_json_btn")
+              .height(42.dp)
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 3.dp,
+                blurRadius = 6.dp,
+                accentTint = neu.secondaryAccent,
+                accentTintAlpha = 0.16f,
+                borderAlpha = 0.45f,
+                neu = neu
+              )
+              .clickable {
+                coroutineScope.launch {
+                  val applied = TnHolidayRemoteConfigService.applyCustomRemoteConfigJsonPayload(
+                    context = context,
+                    localRepo = localRepo,
+                    customJsonArrayStr = customJsonText,
+                    customVersionTag = customVersionTag
+                  )
+                  rcSnapshot = applied
+                  onTriggerHolidaySync("RemoteConfig Custom JSON Override (${applied.catalogVersion})")
+                  onShowStatusBanner(
+                    "Applied ${applied.upsertedHolidayCount} dynamic holiday(s) from Remote Config JSON into Room DB!"
+                  )
+                }
+              }
+              .testTag("apply_rc_custom_json_btn"),
+            contentAlignment = Alignment.Center
           ) {
-            Icon(
-              imageVector = Icons.Default.Save,
-              contentDescription = null,
-              tint = NeonAquaAccent,
-              modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-              text = "Apply Dynamic Remote Config JSON to Holiday DB Now",
-              fontWeight = FontWeight.ExtraBold,
-              color = NeonCyanText
-            )
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.Center,
+              modifier = Modifier.padding(horizontal = 12.dp)
+            ) {
+              Icon(
+                imageVector = Icons.Default.Save,
+                contentDescription = null,
+                tint = neu.secondaryAccent,
+                modifier = Modifier.size(16.dp)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = "Apply Dynamic Remote Config JSON to Holiday DB Now",
+                fontWeight = FontWeight.ExtraBold,
+                color = neu.secondaryAccent,
+                fontSize = 12.sp,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
           }
         }
       }

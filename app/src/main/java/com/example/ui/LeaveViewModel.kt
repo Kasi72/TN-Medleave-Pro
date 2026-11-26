@@ -195,8 +195,8 @@ class LeaveViewModel(
         clText = "$clRemFmt / 12",
         rhText = "${summary2026.rhRemaining} / 3",
         colText = "${audit2026.availableUnusedGhCount} READY",
-        nextHolidayText = "★ Next Bridge: Nov 08 Deepavali • Dec 24–27 Christmas (4d Stretch)",
-        updatedLabel = "LIVE 2026"
+        nextHolidayText = "★ Next Bridge: Dec 24–27 Christmas (4d) • Jan 13–17 Pongal 2027 (5d)",
+        updatedLabel = "LIVE ${year}"
       )
     }
 
@@ -544,11 +544,13 @@ class LeaveViewModel(
     if (_aiRecommendationState.value is AiRecommendationUiState.Loading) return
     _aiRecommendationState.value = AiRecommendationUiState.Loading
     viewModelScope.launch {
+      val summary2027 = LeaveOptimizerEngine.computeYearSummary(state.allRecords, 2027L)
       val result = AiLeaveRecommendationEngine.generateOptimalRecommendations(
         focusGoal = focusGoal,
         summary2026 = state.summary2026,
         colGhAuditAllYears = state.colGhAuditAllYears,
-        records2026 = state.allRecords.filter { it.year == 2026L }
+        records = state.allRecords,
+        summary2027 = summary2027
       )
       result.onSuccess { successState ->
         _aiRecommendationState.value = successState
@@ -563,51 +565,114 @@ class LeaveViewModel(
 
   fun applySmartBridgeToLedger(bridge: SmartLeaveBridge) {
     viewModelScope.launch {
+      val isoRegex = Regex("""^\d{4}-\d{2}-\d{2}$""")
+      val currentSuccess = uiState.value as? LeaveUiState.Success
+      val unusedGhQueue = currentSuccess?.colGhAuditAllYears?.unusedGhRecords
+        ?.sortedBy { it.dateIso }
+        ?.toMutableList()
+        ?: mutableListOf()
+
       var added = 0
       var skippedDuplicates = 0
+      var lastAddedYear: Long? = null
+
       bridge.dayByDayBreakdown.forEach { step ->
+        if (!isoRegex.matches(step.dateIso.trim())) return@forEach
+        val cleanDate = step.dateIso.trim()
+        val year = cleanDate.take(4).toLongOrNull() ?: 2026L
+
         when (step.badgeType) {
           "RH" -> {
-            val year = step.dateIso.take(4).toLongOrNull() ?: 2026L
-            val res = repository.addLeaveRecord(
-              leaveType = "RH",
-              dateIso = step.dateIso,
-              year = year,
-              notes = "Smart Bridge (${bridge.title}): ${step.description}"
-            )
-            if (res.isSuccess) added++ else skippedDuplicates++
+            if (!step.description.contains("Already Logged", ignoreCase = true)) {
+              val res = repository.addLeaveRecord(
+                leaveType = "RH",
+                dateIso = cleanDate,
+                year = year,
+                notes = "Smart Bridge (${bridge.title}): ${step.description}"
+              )
+              if (res.isSuccess) {
+                added++
+                lastAddedYear = year
+              } else {
+                skippedDuplicates++
+              }
+            } else {
+              skippedDuplicates++
+            }
           }
           "COL" -> {
-            val year = step.dateIso.take(4).toLongOrNull() ?: 2026L
-            val res = repository.addLeaveRecord(
-              leaveType = "COL",
-              dateIso = step.dateIso,
-              year = year,
-              notes = "AI Smart Bridge (${bridge.title}): ${step.description}"
-            )
-            if (res.isSuccess) added++ else skippedDuplicates++
+            if (!step.description.contains("Already Logged", ignoreCase = true)) {
+              val fifoGh = unusedGhQueue.firstOrNull()
+              val res = repository.addLeaveRecord(
+                leaveType = "COL",
+                dateIso = cleanDate,
+                year = year,
+                pairedDateIso = fifoGh?.dateIso.orEmpty(),
+                notes = if (fifoGh != null) {
+                  "AI Smart Bridge (${bridge.title}) paired FIFO w/ GH ${fifoGh.dateIso}"
+                } else {
+                  "AI Smart Bridge (${bridge.title}): ${step.description}"
+                },
+                highlightStatus = if (fifoGh != null) "VERIFIED_GREEN" else "ALERT_RED"
+              )
+              if (res.isSuccess) {
+                added++
+                lastAddedYear = year
+                if (fifoGh != null) {
+                  unusedGhQueue.removeAt(0)
+                  repository.addLeaveRecord(
+                    leaveType = "IN_LIEU",
+                    dateIso = fifoGh.dateIso,
+                    year = year,
+                    pairedDateIso = cleanDate,
+                    notes = "In Lieu of GH Worked (${fifoGh.dateIso}) for AI Bridge COL $cleanDate",
+                    highlightStatus = "VERIFIED_GREEN"
+                  )
+                  repository.updateLeaveRecord(
+                    fifoGh.copy(
+                      pairedDateIso = cleanDate,
+                      notes = "GH Worked availed as AI Bridge COL on $cleanDate",
+                      highlightStatus = "VERIFIED_GREEN"
+                    )
+                  )
+                }
+              } else {
+                skippedDuplicates++
+              }
+            } else {
+              skippedDuplicates++
+            }
           }
           "LEAVE_CREDIT", "CL" -> {
             if (!step.description.contains("Already Logged", ignoreCase = true) &&
               !step.description.contains("COL Logged", ignoreCase = true)
             ) {
-              val year = step.dateIso.take(4).toLongOrNull() ?: 2026L
               val res = repository.addLeaveRecord(
                 leaveType = "CL",
-                dateIso = step.dateIso,
+                dateIso = cleanDate,
                 year = year,
                 notes = "Smart Bridge (${bridge.title}): ${step.description}"
               )
-              if (res.isSuccess) added++ else skippedDuplicates++
+              if (res.isSuccess) {
+                added++
+                lastAddedYear = year
+              } else {
+                skippedDuplicates++
+              }
+            } else {
+              skippedDuplicates++
             }
           }
         }
+      }
+      if (lastAddedYear != null) {
+        _selectedYear.value = lastAddedYear!!
       }
       _statusBanner.value = when {
         added > 0 && skippedDuplicates > 0 ->
           "⚡ Applied $added new leave day(s) for '${bridge.title}' (Auto-skipped $skippedDuplicates duplicate date(s))!"
         added > 0 ->
-          "Applied $added optimal leave days for '${bridge.title}' to your Ledger!"
+          "Applied $added optimal leave day(s) for '${bridge.title}' to your Ledger!"
         else ->
           "⛔ Duplicate Guard: All leave dates in '${bridge.title}' are already booked in your ledger."
       }

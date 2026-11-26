@@ -375,33 +375,25 @@ fun EnterpriseLeaveBalanceCircularCard(
     label = "gauge_primary_color"
   )
 
-  Surface(
-    shape = IosSharpCardShape,
-    color = Color.Transparent,
-    tonalElevation = 0.dp,
-    shadowElevation = 5.dp,
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
+
+  Box(
     modifier = modifier
       .fillMaxWidth()
       .testTag("leave_balance_circular_gauge_card")
-      .iosFrostedGlassCard(
-        accentColor = animatedPrimaryColor,
+      .neumorphicExtruded(
         shape = IosSharpCardShape,
-        borderWidth = 1.25.dp,
-        borderAlpha = 0.52f
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = animatedPrimaryColor,
+        accentTintAlpha = 0.035f,
+        borderAlpha = 0.30f,
+        neu = neu
       )
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .background(
-          Brush.radialGradient(
-            colors = listOf(
-              animatedPrimaryColor.copy(alpha = 0.09f),
-              Color.Transparent
-            ),
-            radius = 650f
-          )
-        )
         .padding(18.dp),
       verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -415,20 +407,25 @@ fun EnterpriseLeaveBalanceCircularCard(
           modifier = Modifier.weight(1f),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Surface(
-            shape = IosSharpButtonShape,
-            color = animatedPrimaryColor.copy(alpha = 0.14f),
-            border = BorderStroke(1.dp, animatedPrimaryColor.copy(alpha = 0.42f)),
-            modifier = Modifier.size(40.dp)
+          Box(
+            modifier = Modifier
+              .size(40.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = animatedPrimaryColor,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.DonutLarge,
-                contentDescription = "Circular Leave Balance Gauge",
-                tint = animatedPrimaryColor,
-                modifier = Modifier.size(22.dp)
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.DonutLarge,
+              contentDescription = "Circular Leave Balance Gauge",
+              tint = animatedPrimaryColor,
+              modifier = Modifier.size(22.dp)
+            )
           }
           Spacer(modifier = Modifier.width(12.dp))
           Column(modifier = Modifier.weight(1f)) {
@@ -436,7 +433,7 @@ fun EnterpriseLeaveBalanceCircularCard(
               text = "Remaining vs. Used Leave Credits",
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -457,23 +454,17 @@ fun EnterpriseLeaveBalanceCircularCard(
         Spacer(modifier = Modifier.width(8.dp))
 
         // Flip Mode Pill (Remaining vs Used)
-        Surface(
-          shape = RoundedCornerShape(12.dp),
-          color = if (showUsedInCenter) {
-            activeMetrics.usedColor.copy(alpha = 0.15f)
-          } else {
-            animatedPrimaryColor.copy(alpha = 0.14f)
-          },
-          border = BorderStroke(
-            1.dp,
-            if (showUsedInCenter) {
-              activeMetrics.usedColor.copy(alpha = 0.40f)
-            } else {
-              animatedPrimaryColor.copy(alpha = 0.40f)
-            }
-          ),
+        Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = if (showUsedInCenter) activeMetrics.usedColor else animatedPrimaryColor,
+              accentTintAlpha = 0.10f,
+              borderAlpha = 0.35f,
+              neu = neu
+            )
             .clickable { showUsedInCenter = !showUsedInCenter }
             .testTag("toggle_gauge_center_mode")
         ) {
@@ -502,38 +493,45 @@ fun EnterpriseLeaveBalanceCircularCard(
         }
       }
 
-      // 2. Category Lens Filter Pills (ALL | CL | RH | COL)
+      // 2. Category Lens Filter Pills (ALL | CL | RH | COL) - Inset when active, Extruded when unselected
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+          .horizontalScroll(rememberScrollState())
+          .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(9.dp)
       ) {
         LeaveGaugeFocusMode.entries.forEach { mode ->
           val isSelected = selectedFocus == mode
           val modeAccent = when (mode) {
             LeaveGaugeFocusMode.TOTAL_POOL -> EmeraldOptimal
             LeaveGaugeFocusMode.CASUAL_CL -> BadgeClGreen
-            LeaveGaugeFocusMode.RESTRICTED_RH -> Color(0xFF38BDF8)
+            LeaveGaugeFocusMode.RESTRICTED_RH -> Color(0xFF0284C7)
             LeaveGaugeFocusMode.COMP_OFF_COL -> BadgeColCyan
           }
-          Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = if (isSelected) {
-              modeAccent.copy(alpha = 0.18f)
-            } else {
-              MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-            },
-            border = BorderStroke(
-              width = if (isSelected) 1.2.dp else 1.dp,
-              color = if (isSelected) {
-                modeAccent.copy(alpha = 0.55f)
-              } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.30f)
-              }
-            ),
+          Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(14.dp))
+              .then(
+                if (isSelected) {
+                  Modifier.neumorphicInset(
+                    shape = IosSharpButtonShape,
+                    depth = 2.5.dp,
+                    blurRadius = 5.dp,
+                    accentTint = modeAccent,
+                    accentTintAlpha = 0.10f,
+                    borderColor = modeAccent.copy(alpha = 0.38f),
+                    neu = neu
+                  )
+                } else {
+                  Modifier.neumorphicExtruded(
+                    shape = IosSharpButtonShape,
+                    elevation = 2.5.dp,
+                    blurRadius = 5.dp,
+                    borderAlpha = 0.22f,
+                    neu = neu
+                  )
+                }
+              )
               .clickable { selectedFocus = mode }
               .testTag("gauge_focus_${mode.code}")
           ) {
@@ -547,7 +545,7 @@ fun EnterpriseLeaveBalanceCircularCard(
                   .size(7.dp)
                   .clip(CircleShape)
                   .background(
-                    if (isSelected) modeAccent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                    if (isSelected) modeAccent else neu.textSecondary.copy(alpha = 0.45f)
                   )
               )
               Text(
@@ -556,7 +554,7 @@ fun EnterpriseLeaveBalanceCircularCard(
                 fontSize = 11.sp,
                 lineHeight = 14.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) modeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (isSelected) modeAccent else neu.textSecondary,
                 maxLines = 1,
                 softWrap = false
               )
@@ -565,7 +563,7 @@ fun EnterpriseLeaveBalanceCircularCard(
         }
       }
 
-      // 3. Main Interactive Circular Progress Indicator + Side-by-Side Telemetry Breakdown
+      // 3. Main Interactive Neumorphic Circular Progress Dial + Side-by-Side Telemetry Breakdown
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -573,19 +571,26 @@ fun EnterpriseLeaveBalanceCircularCard(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        // Left: High-Precision Multi-Ring Circular Progress Gauge
+        // Left: Extruded Circular Dial Bezel + Inset Gauge Track (ui-neumorphism ProgressCircular)
         Box(
           modifier = Modifier
             .size(182.dp)
-            .clip(CircleShape)
+            .neumorphicExtruded(
+              shape = CircleShape,
+              elevation = 5.dp,
+              blurRadius = 10.dp,
+              showBorder = true,
+              borderAlpha = 0.28f,
+              neu = neu
+            )
             .clickable { showUsedInCenter = !showUsedInCenter }
             .testTag("circular_leave_gauge_canvas"),
           contentAlignment = Alignment.Center
         ) {
-          val trackBaseColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-          val tickActiveColor = animatedPrimaryColor.copy(alpha = 0.65f)
-          val tickUsedColor = activeMetrics.usedColor.copy(alpha = 0.45f)
-          val tickIdleColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+          val trackBaseColor = neu.surfaceInset
+          val tickActiveColor = animatedPrimaryColor.copy(alpha = 0.72f)
+          val tickUsedColor = activeMetrics.usedColor.copy(alpha = 0.48f)
+          val tickIdleColor = neu.darkShadow.copy(alpha = 0.35f)
 
           Canvas(modifier = Modifier.fillMaxSize()) {
             val canvasSize = size.minDimension
@@ -869,15 +874,16 @@ fun EnterpriseLeaveBalanceCircularCard(
             onClick = { showUsedInCenter = true }
           )
 
-          // Total Entitlement & Rule Compliance Chip
-          Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-            border = BorderStroke(
-              1.dp,
-              MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-            ),
-            modifier = Modifier.fillMaxWidth()
+          // Total Entitlement & Rule Compliance Chip (Inset Neumorphic Pill)
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                neu = neu
+              )
           ) {
             Row(
               modifier = Modifier
@@ -892,7 +898,7 @@ fun EnterpriseLeaveBalanceCircularCard(
                 fontSize = 9.sp,
                 lineHeight = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = neu.textSecondary,
                 maxLines = 1,
                 softWrap = false
               )
@@ -902,7 +908,7 @@ fun EnterpriseLeaveBalanceCircularCard(
                 fontSize = 11.sp,
                 lineHeight = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = neu.textPrimary,
                 maxLines = 1,
                 softWrap = false
               )
@@ -979,14 +985,19 @@ fun EnterpriseLeaveBalanceCircularCard(
         )
       }
 
-      // 5. Status & Statutory Compliance Footer Bar
-      Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = animatedPrimaryColor.copy(alpha = 0.09f),
-        border = BorderStroke(1.dp, animatedPrimaryColor.copy(alpha = 0.25f)),
+      // 5. Status & Statutory Compliance Footer Bar (Inset Neumorphic Well)
+      Box(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(14.dp))
+          .neumorphicInset(
+            shape = IosSharpButtonShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            accentTint = animatedPrimaryColor,
+            accentTintAlpha = 0.08f,
+            borderColor = animatedPrimaryColor.copy(alpha = 0.25f),
+            neu = neu
+          )
           .clickable {
             if (selectedFocus == LeaveGaugeFocusMode.COMP_OFF_COL) {
               onNavigateToAudit()
@@ -1034,7 +1045,7 @@ fun EnterpriseLeaveBalanceCircularCard(
                 style = MaterialTheme.typography.bodySmall,
                 fontSize = 11.sp,
                 lineHeight = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = neu.textSecondary,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis
@@ -1067,24 +1078,31 @@ private fun RadialLegendMetricTile(
   onClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(16.dp),
-    color = if (isHighlighted) {
-      accentColor.copy(alpha = 0.13f)
-    } else {
-      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-    },
-    border = BorderStroke(
-      width = if (isHighlighted) 1.3.dp else 1.dp,
-      color = if (isHighlighted) {
-        accentColor.copy(alpha = 0.55f)
-      } else {
-        accentColor.copy(alpha = 0.22f)
-      }
-    ),
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(16.dp))
+      .then(
+        if (isHighlighted) {
+          Modifier.neumorphicInset(
+            shape = IosSharpButtonShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            accentTint = accentColor,
+            accentTintAlpha = 0.08f,
+            borderColor = accentColor.copy(alpha = 0.42f),
+            neu = neu
+          )
+        } else {
+          Modifier.neumorphicExtruded(
+            shape = IosSharpButtonShape,
+            elevation = 2.5.dp,
+            blurRadius = 5.dp,
+            borderAlpha = 0.22f,
+            neu = neu
+          )
+        }
+      )
       .clickable { onClick() }
   ) {
     Column(
@@ -1115,16 +1133,17 @@ private fun RadialLegendMetricTile(
             fontSize = 9.sp,
             lineHeight = 11.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = neu.textSecondary,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis
           )
         }
 
-        Surface(
-          shape = RoundedCornerShape(6.dp),
-          color = accentColor.copy(alpha = 0.18f)
+        Box(
+          modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(accentColor.copy(alpha = 0.16f))
         ) {
           Text(
             text = percentageBadge,
@@ -1146,7 +1165,7 @@ private fun RadialLegendMetricTile(
         fontSize = 16.sp,
         lineHeight = 20.sp,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
+        color = neu.textPrimary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -1157,7 +1176,7 @@ private fun RadialLegendMetricTile(
         style = MaterialTheme.typography.bodySmall,
         fontSize = 10.sp,
         lineHeight = 12.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -1178,24 +1197,33 @@ private fun SubPoolCircularMiniCard(
   onClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
   val pctText = "${(remainingFraction * 100).roundToInt()}%"
-  Surface(
-    shape = RoundedCornerShape(18.dp),
-    color = if (isSelected) {
-      accentColor.copy(alpha = 0.14f)
-    } else {
-      MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
-    },
-    border = BorderStroke(
-      width = if (isSelected) 1.3.dp else 1.dp,
-      color = if (isSelected) {
-        accentColor.copy(alpha = 0.55f)
-      } else {
-        accentColor.copy(alpha = 0.22f)
-      }
-    ),
+  Box(
     modifier = modifier
-      .clip(RoundedCornerShape(18.dp))
+      .then(
+        if (isSelected) {
+          Modifier.neumorphicInset(
+            shape = IosSharpCardShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            accentTint = accentColor,
+            accentTintAlpha = 0.08f,
+            borderColor = accentColor.copy(alpha = 0.45f),
+            neu = neu
+          )
+        } else {
+          Modifier.neumorphicExtruded(
+            shape = IosSharpCardShape,
+            elevation = 3.dp,
+            blurRadius = 6.dp,
+            accentTint = accentColor,
+            accentTintAlpha = 0.03f,
+            borderAlpha = 0.22f,
+            neu = neu
+          )
+        }
+      )
       .clickable { onClick() }
       .testTag("subpool_ring_card_$code")
   ) {

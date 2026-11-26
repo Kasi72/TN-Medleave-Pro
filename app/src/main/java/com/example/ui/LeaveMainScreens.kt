@@ -170,10 +170,11 @@ fun OverviewTabScreen(
         HodProfileSettingsStore.getIfhrmsId(context)
       }
 
+      val neu = com.example.ui.theme.LocalNeumorphicColors.current
       EnterpriseMeshHeroContainer(
-        cornerRadius = 12.dp,
-        primaryGlowColor = Color(0xFF10B981),
-        secondaryGlowColor = Color(0xFF38BDF8)
+        cornerRadius = 20.dp,
+        primaryGlowColor = neu.primaryAccent,
+        secondaryGlowColor = neu.secondaryAccent
       ) {
         Column {
           Row(
@@ -185,28 +186,32 @@ fun OverviewTabScreen(
               modifier = Modifier.weight(1f),
               verticalAlignment = Alignment.CenterVertically
             ) {
-              Surface(
-                shape = IosSharpButtonShape,
-                color = Color(0xFF34D399).copy(alpha = 0.22f),
+              Box(
                 modifier = Modifier
                   .size(44.dp)
-                  .border(1.dp, Color(0xFF34D399).copy(alpha = 0.50f), IosSharpButtonShape)
+                  .neumorphicInset(
+                    shape = IosSharpButtonShape,
+                    depth = 2.5.dp,
+                    blurRadius = 5.dp,
+                    accentTint = neu.primaryAccent,
+                    accentTintAlpha = 0.14f,
+                    neu = neu
+                  ),
+                contentAlignment = Alignment.Center
               ) {
-                Box(contentAlignment = Alignment.Center) {
-                  Icon(
-                    imageVector = Icons.Default.LocalHospital,
-                    contentDescription = null,
-                    tint = Color(0xFF34D399),
-                    modifier = Modifier.size(22.dp)
-                  )
-                }
+                Icon(
+                  imageVector = Icons.Default.LocalHospital,
+                  contentDescription = null,
+                  tint = neu.primaryAccent,
+                  modifier = Modifier.size(22.dp)
+                )
               }
               Spacer(modifier = Modifier.width(12.dp))
               Column(modifier = Modifier.weight(1f)) {
                 Text(
                   text = officerName,
                   style = MaterialTheme.typography.titleMedium,
-                  color = Color.White,
+                  color = neu.textPrimary,
                   letterSpacing = (-0.25).sp,
                   fontWeight = FontWeight.ExtraBold,
                   maxLines = 1,
@@ -216,7 +221,7 @@ fun OverviewTabScreen(
                 Text(
                   text = "$officerRoleAndDept • $officerCollege",
                   style = MaterialTheme.typography.bodyMedium,
-                  color = Color(0xFFBAE6FD),
+                  color = neu.textSecondary,
                   fontSize = 11.sp,
                   lineHeight = 14.sp,
                   maxLines = 1,
@@ -228,15 +233,23 @@ fun OverviewTabScreen(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Surface(
-              shape = IosSharpBadgeShape,
-              color = Color(0xFF10B981).copy(alpha = 0.20f),
+            Box(
               modifier = Modifier
                 .height(28.dp)
-                .border(1.dp, Color(0xFF34D399).copy(alpha = 0.55f), IosSharpBadgeShape)
+                .neumorphicInset(
+                  shape = IosSharpBadgeShape,
+                  depth = 2.dp,
+                  blurRadius = 4.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.10f,
+                  borderColor = neu.primaryAccent.copy(alpha = 0.35f),
+                  neu = neu
+                )
             ) {
               Row(
-                modifier = Modifier.padding(horizontal = 9.dp),
+                modifier = Modifier
+                  .padding(horizontal = 9.dp)
+                  .align(Alignment.Center),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp)
               ) {
@@ -244,14 +257,14 @@ fun OverviewTabScreen(
                   modifier = Modifier
                     .size(5.dp)
                     .clip(IosSharpMicroShape)
-                    .background(Color(0xFF34D399))
+                    .background(neu.primaryAccent)
                 )
                 Text(
                   text = officerIfhrmsId.ifBlank { "TN MES" },
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 9.5.sp,
                   fontWeight = FontWeight.ExtraBold,
-                  color = Color(0xFF6EE7B7),
+                  color = neu.primaryAccent,
                   maxLines = 1,
                   softWrap = false
                 )
@@ -261,18 +274,18 @@ fun OverviewTabScreen(
 
           Spacer(modifier = Modifier.height(14.dp))
 
-          // Quick Remaining Quota Bar (Sharp iOS Squircle 3-Pill Row)
+          // Quick Remaining Quota Bar (Inset Neumorphic 3-Well Row)
           Row(
             modifier = Modifier
               .fillMaxWidth()
               .height(androidx.compose.foundation.layout.IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(9.dp)
           ) {
             HeroStatPill(
               label = "CL Left (${summary.year})",
               value = "${formatDoubleDays(summary.clRemaining)} / 12",
               sub = "${formatDoubleDays(summary.clTaken)} availed",
-              accent = Color(0xFF4ADE80),
+              accent = Color(0xFF15803D),
               progressFraction = (summary.clRemaining.toFloat() / 12f).coerceIn(0f, 1f),
               modifier = Modifier
                 .weight(1f)
@@ -282,7 +295,7 @@ fun OverviewTabScreen(
               label = "RH Left (${summary.year})",
               value = "${summary.rhRemaining} / 3",
               sub = "${summary.rhTaken} availed",
-              accent = Color(0xFF38BDF8),
+              accent = Color(0xFF0284C7),
               progressFraction = (summary.rhRemaining.toFloat() / 3f).coerceIn(0f, 1f),
               modifier = Modifier
                 .weight(1f)
@@ -292,7 +305,7 @@ fun OverviewTabScreen(
               label = "COL Paired",
               value = "${summary.colTaken} / ${summary.inLieuWorked}",
               sub = "In-Lieu Credits",
-              accent = Color(0xFFFBBF24),
+              accent = Color(0xFFD97706),
               progressFraction = if (summary.inLieuWorked > 0) {
                 (summary.colTaken.toFloat() / summary.inLieuWorked.toFloat()).coerceIn(0f, 1f)
               } else {
@@ -818,94 +831,80 @@ private fun HeroStatPill(
   modifier: Modifier = Modifier,
   progressFraction: Float = 0.75f
 ) {
-  Surface(
-    shape = IosSharpButtonShape,
-    color = Color.White.copy(alpha = 0.09f),
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
+  Box(
     modifier = modifier
-      .clip(IosSharpButtonShape)
-      .border(1.dp, accent.copy(alpha = 0.48f), IosSharpButtonShape)
-  ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-      // Sharp Top iOS Accent Laser Strip
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(2.dp)
-          .background(accent)
+      .neumorphicInset(
+        shape = IosSharpButtonShape,
+        depth = 2.5.dp,
+        blurRadius = 5.dp,
+        accentTint = accent,
+        accentTintAlpha = 0.06f,
+        borderColor = accent.copy(alpha = 0.25f),
+        neu = neu
       )
-      Column(
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(horizontal = 10.dp, vertical = 9.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = Alignment.Start
-      ) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Text(
-              text = label,
-              color = Color(0xFFCBD5E1),
-              fontSize = 9.5.sp,
-              lineHeight = 11.5.sp,
-              fontWeight = FontWeight.SemiBold,
-              maxLines = 1,
-              softWrap = false,
-              overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-              modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            MiniCircularQuotaRing(
-              remainingFraction = progressFraction,
-              accentColor = accent,
-              trackColor = Color.White.copy(alpha = 0.16f),
-              size = 19.dp,
-              strokeWidth = 2.4.dp
-            )
-          }
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxSize()
+        .padding(horizontal = 10.dp, vertical = 10.dp),
+      verticalArrangement = Arrangement.SpaceBetween,
+      horizontalAlignment = Alignment.Start
+    ) {
+      Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
           Text(
-            text = value,
-            color = accent,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 15.5.sp,
-            lineHeight = 19.sp,
-            fontFamily = JetBrainsMonoFontFamily,
-            maxLines = 1,
-            softWrap = false
-          )
-          Text(
-            text = sub,
-            color = Color.White.copy(alpha = 0.82f),
+            text = label,
+            color = neu.textSecondary,
             fontSize = 9.5.sp,
             lineHeight = 11.5.sp,
+            fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             softWrap = false,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+          )
+          Spacer(modifier = Modifier.width(4.dp))
+          MiniCircularQuotaRing(
+            remainingFraction = progressFraction,
+            accentColor = accent,
+            trackColor = neu.darkShadow.copy(alpha = 0.35f),
+            size = 19.dp,
+            strokeWidth = 2.4.dp
           )
         }
-
-        Spacer(modifier = Modifier.height(5.dp))
-
-        // Sharp iOS micro-telemetry bar
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(3.5.dp)
-            .clip(IosSharpMicroShape)
-            .background(Color.White.copy(alpha = 0.14f))
-        ) {
-          Box(
-            modifier = Modifier
-              .fillMaxWidth(progressFraction.coerceIn(0.08f, 1f))
-              .height(3.5.dp)
-              .clip(IosSharpMicroShape)
-              .background(accent)
-          )
-        }
+        Text(
+          text = value,
+          color = accent,
+          fontWeight = FontWeight.ExtraBold,
+          fontSize = 15.5.sp,
+          lineHeight = 19.sp,
+          fontFamily = JetBrainsMonoFontFamily,
+          maxLines = 1,
+          softWrap = false
+        )
+        Text(
+          text = sub,
+          color = neu.textSecondary,
+          fontSize = 9.5.sp,
+          lineHeight = 11.5.sp,
+          maxLines = 1,
+          softWrap = false,
+          overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
       }
+
+      Spacer(modifier = Modifier.height(6.dp))
+
+      NeumorphicLinearProgress(
+        progress = progressFraction,
+        accentColor = accent,
+        height = 5.dp
+      )
     }
   }
 }
@@ -1600,17 +1599,18 @@ fun OptimizerTabScreen(
         // Quick-Launch Squircle Banner to Open the Material 3 Visual DateRangePicker
         item {
           Surface(
-            shape = RoundedCornerShape(18.dp),
-            color = com.example.ui.theme.IosDarkDockSurface,
-            tonalElevation = 3.dp,
+            shape = com.example.ui.theme.IosSharpCardShape,
+            color = Color.Transparent,
+            tonalElevation = 0.dp,
             modifier = Modifier
               .fillMaxWidth()
-              .clip(RoundedCornerShape(18.dp))
-              .border(
-                1.dp,
-                com.example.ui.theme.NeonCyanText.copy(alpha = 0.42f),
-                RoundedCornerShape(18.dp)
+              .iosFrostedGlassCard(
+                accentColor = MaterialTheme.colorScheme.primary,
+                shape = com.example.ui.theme.IosSharpCardShape,
+                borderWidth = 1.15.dp,
+                borderAlpha = 0.45f
               )
+              .clip(com.example.ui.theme.IosSharpCardShape)
               .clickable { activeSubTab = 1 }
               .testTag("open_m3_calendar_banner_btn")
           ) {
@@ -1629,14 +1629,14 @@ fun OptimizerTabScreen(
                 Icon(
                   imageVector = Icons.Default.CalendarMonth,
                   contentDescription = null,
-                  tint = com.example.ui.theme.NeonAquaAccent,
+                  tint = MaterialTheme.colorScheme.primary,
                   modifier = Modifier.size(20.dp)
                 )
                 Column(modifier = Modifier.weight(1f)) {
                   Text(
                     text = "VISUAL MATERIAL 3 HOLIDAY & BRIDGE RANGE PICKER",
                     style = MaterialTheme.typography.labelSmall,
-                    color = com.example.ui.theme.NeonAquaAccent,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 1,
                     softWrap = false,
@@ -1645,7 +1645,7 @@ fun OptimizerTabScreen(
                   Text(
                     text = "Tap to highlight upcoming TN Govt Holidays & Long-Weekend Windows",
                     style = MaterialTheme.typography.bodySmall,
-                    color = com.example.ui.theme.NeonCyanBright,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis
@@ -1653,8 +1653,8 @@ fun OptimizerTabScreen(
                 }
               }
               Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = com.example.ui.theme.NeonAquaAccent.copy(alpha = 0.18f),
+                shape = com.example.ui.theme.IosSharpBadgeShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
                 modifier = Modifier.padding(start = 8.dp)
               ) {
                 Text(
@@ -1662,7 +1662,7 @@ fun OptimizerTabScreen(
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 10.sp,
                   fontWeight = FontWeight.ExtraBold,
-                  color = com.example.ui.theme.NeonAquaAccent,
+                  color = MaterialTheme.colorScheme.primary,
                   maxLines = 1,
                   softWrap = false,
                   modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
@@ -1755,17 +1755,17 @@ fun OptimizerTabScreen(
                   modifier = Modifier.weight(1f)
                 )
                 Surface(
-                  shape = RoundedCornerShape(10.dp),
-                  color = com.example.ui.theme.IosDarkDockSurface,
+                  shape = com.example.ui.theme.IosSharpBadgeShape,
+                  color = MaterialTheme.colorScheme.primaryContainer,
                   modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(com.example.ui.theme.IosSharpBadgeShape)
                     .clickable { activeSubTab = 1 }
                 ) {
                   Text(
                     text = "M3 Picker",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = com.example.ui.theme.NeonAquaAccent,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
                   )
                 }

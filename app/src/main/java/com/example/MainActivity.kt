@@ -89,22 +89,21 @@ import com.example.ui.LeaveViewModel
 import com.example.ui.LedgerTabScreen
 import com.example.ui.OptimizerTabScreen
 import com.example.ui.OverviewTabScreen
+import com.example.ui.neumorphicExtruded
+import com.example.ui.neumorphicInset
 import com.example.ui.signOutUser
 import com.example.ui.theme.AppThemeController
 import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.EmeraldOptimal
-import com.example.ui.theme.IosDarkDockSurface
+import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpSquircleShape
 import com.example.ui.theme.IosSharpTabShape
 import com.example.ui.theme.IosSharpWellShape
-import com.example.ui.theme.IosSquircleGlassFill
 import com.example.ui.theme.LocalAppThemeMode
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.MyApplicationTheme
-import com.example.ui.theme.NeonAquaAccent
-import com.example.ui.theme.NeonCyanBright
-import com.example.ui.theme.NeonCyanText
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -281,23 +280,29 @@ fun MainFeatureHost(
     },
     floatingActionButton = {
       if (currentTab !in listOf(3, 5) && !showEnterpriseSettingsDialog) {
-        FloatingActionButton(
-          onClick = { showAddDialog = true },
-          shape = IosSharpButtonShape,
-          containerColor = EmeraldOptimal,
-          contentColor = Color.White,
+        val neu = LocalNeumorphicColors.current
+        Box(
           modifier = Modifier
-            .border(1.2.dp, Color.White.copy(alpha = 0.42f), IosSharpButtonShape)
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 6.dp,
+              blurRadius = 12.dp,
+              surfaceColor = neu.primaryAccent,
+              showBorder = true,
+              borderAlpha = 0.45f,
+              neu = neu
+            )
+            .clickable { showAddDialog = true }
             .testTag("fab_add_leave")
         ) {
           Row(
-            modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(7.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
             Box(
               modifier = Modifier
-                .size(20.dp)
+                .size(22.dp)
                 .clip(IosSharpMicroShape)
                 .background(Color.White.copy(alpha = 0.22f)),
               contentAlignment = Alignment.Center
@@ -305,14 +310,16 @@ fun MainFeatureHost(
               Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = "Log Leave",
+                tint = Color.White,
                 modifier = Modifier.size(15.dp)
               )
             }
             Text(
               text = "Log Leave",
+              color = Color.White,
               fontWeight = FontWeight.ExtraBold,
               letterSpacing = (-0.2).sp,
-              fontSize = 13.sp,
+              fontSize = 13.5.sp,
               maxLines = 1,
               softWrap = false
             )
@@ -355,13 +362,20 @@ fun MainFeatureHost(
         is LeaveUiState.Success -> {
           AnimatedVisibility(visible = state.statusBannerMessage != null) {
             state.statusBannerMessage?.let { msg ->
-              Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = EmeraldOptimal.copy(alpha = 0.15f),
+              val neu = LocalNeumorphicColors.current
+              Box(
                 modifier = Modifier
                   .fillMaxWidth()
-                  .padding(horizontal = 16.dp, vertical = 6.dp)
-                  .border(1.dp, EmeraldOptimal.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                  .padding(horizontal = 16.dp, vertical = 8.dp)
+                  .neumorphicInset(
+                    shape = IosSharpWellShape,
+                    depth = 3.dp,
+                    blurRadius = 6.dp,
+                    accentTint = neu.primaryAccent,
+                    accentTintAlpha = 0.08f,
+                    borderColor = neu.primaryAccent.copy(alpha = 0.30f),
+                    neu = neu
+                  )
               ) {
                 Row(
                   modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -371,7 +385,7 @@ fun MainFeatureHost(
                   Text(
                     text = msg,
                     style = MaterialTheme.typography.labelLarge,
-                    color = EmeraldOptimal,
+                    color = neu.primaryAccent,
                     modifier = Modifier.weight(1f)
                   )
                   IconButton(
@@ -381,7 +395,7 @@ fun MainFeatureHost(
                     Icon(
                       imageVector = Icons.Default.Close,
                       contentDescription = "Dismiss notification",
-                      tint = EmeraldOptimal,
+                      tint = neu.primaryAccent,
                       modifier = Modifier.size(16.dp)
                     )
                   }
@@ -648,306 +662,332 @@ private fun IosExecutiveTopBar(
     else -> "Gemini Leave Advisor"
   }
 
-  Surface(
-    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-    tonalElevation = 4.dp,
-    shadowElevation = 4.dp,
+  val neu = LocalNeumorphicColors.current
+
+  Column(
     modifier = Modifier
       .fillMaxWidth()
+      .background(neu.baseBg)
       .statusBarsPadding()
   ) {
-    Column(
+    // Top Status & 1-Tap Neumorphic Theme Cycle Strip
+    Row(
       modifier = Modifier
         .fillMaxWidth()
-        .background(
-          Brush.linearGradient(
-            colors = listOf(
-              Color.White.copy(alpha = if (activeThemeMode == AppThemeMode.DARK_OBSIDIAN) 0.04f else 0.45f),
-              EmeraldOptimal.copy(alpha = 0.04f),
-              Color.Transparent
-            )
-          )
-        )
+        .padding(start = 14.dp, end = 14.dp, top = 7.dp, bottom = 3.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
     ) {
-      // iOS 18 Dynamic Island Live Activity & Theme Switcher Strip
-      Row(
+      // Left: Inset Neumorphic Live Sync Status Capsule
+      Box(
         modifier = Modifier
-          .fillMaxWidth()
-          .padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+          .height(24.dp)
+          .neumorphicInset(
+            shape = IosSharpBadgeShape,
+            depth = 2.dp,
+            blurRadius = 4.dp,
+            accentTint = neu.primaryAccent,
+            accentTintAlpha = 0.06f,
+            neu = neu
+          )
+          .clickable { onOpenNotifications() }
       ) {
-        // Left: iOS Dynamic Island Live Activity Capsule (Sharp Squircle)
-        Surface(
-          shape = IosSharpButtonShape,
-          color = Color(0xFF06111F),
+        Row(
           modifier = Modifier
-            .height(22.dp)
-            .border(0.8.dp, Color(0xFF34D399).copy(alpha = 0.45f), IosSharpButtonShape)
-            .clickable { onOpenNotifications() }
+            .fillMaxWidth(0.54f)
+            .padding(horizontal = 9.dp)
+            .align(Alignment.CenterStart),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-          Row(
-            modifier = Modifier.padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-          ) {
-            Box(
-              modifier = Modifier
-                .size(5.dp)
-                .clip(IosSharpMicroShape)
-                .background(Color(0xFF34D399))
-            )
-            Text(
-              text = "iOS 18 PRO • IFHRMS LIVE SYNC",
-              color = Color(0xFFA7F3D0),
-              fontSize = 8.5.sp,
-              lineHeight = 10.sp,
-              fontWeight = FontWeight.ExtraBold,
-              letterSpacing = 0.35.sp,
-              maxLines = 1,
-              softWrap = false
-            )
-          }
-        }
-
-        // Right: Instant 1-Tap iOS Theme Mode Cycle Pill (Green / White / Dark)
-        Surface(
-          shape = IosSharpButtonShape,
-          color = EmeraldOptimal.copy(alpha = 0.13f),
-          modifier = Modifier
-            .height(22.dp)
-            .clip(IosSharpButtonShape)
-            .border(0.8.dp, EmeraldOptimal.copy(alpha = 0.42f), IosSharpButtonShape)
-            .clickable {
-              val nextMode = when (activeThemeMode) {
-                AppThemeMode.GREEN_EMERALD -> AppThemeMode.WHITE_CLINICAL
-                AppThemeMode.WHITE_CLINICAL -> AppThemeMode.DARK_OBSIDIAN
-                AppThemeMode.DARK_OBSIDIAN -> AppThemeMode.GREEN_EMERALD
-              }
-              AppThemeController.setThemeMode(context, nextMode)
-            }
-            .testTag("top_bar_quick_theme_pill")
-        ) {
-          Row(
-            modifier = Modifier.padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-          ) {
-            Box(
-              modifier = Modifier
-                .size(6.dp)
-                .clip(IosSharpMicroShape)
-                .background(EmeraldOptimal)
-            )
-            Text(
-              text = "${activeThemeMode.shortBadge} ⟳",
-              color = EmeraldOptimal,
-              fontSize = 8.5.sp,
-              lineHeight = 10.sp,
-              fontWeight = FontWeight.ExtraBold,
-              letterSpacing = 0.3.sp,
-              maxLines = 1,
-              softWrap = false
-            )
-          }
+          Box(
+            modifier = Modifier
+              .size(6.dp)
+              .clip(IosSharpMicroShape)
+              .background(neu.primaryAccent)
+          )
+          Text(
+            text = "NEU SOFT-UI • IFHRMS LIVE",
+            color = neu.textSecondary,
+            fontSize = 8.5.sp,
+            lineHeight = 10.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 0.35.sp,
+            maxLines = 1,
+            softWrap = false
+          )
         }
       }
 
-      // Main iOS Large Title + Sharp Squircle Segmented Control Bar
-      Row(
+      // Right: Extruded 1-Tap Neumorphic Theme Mode Cycle Pill (Mint / Soft Clay / Dark #292E35)
+      Box(
         modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 12.dp, vertical = 7.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Column(modifier = Modifier.weight(1f)) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-          ) {
-            Box(
-              modifier = Modifier
-                .size(5.dp)
-                .clip(IosSharpMicroShape)
-                .background(EmeraldOptimal)
-            )
-            Text(
-              text = officerHeaderSubtitle,
-              style = MaterialTheme.typography.labelMedium,
-              color = EmeraldOptimal,
-              fontSize = 9.sp,
-              lineHeight = 11.sp,
-              letterSpacing = 0.25.sp,
-              maxLines = 1,
-              softWrap = false,
-              overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
+          .height(24.dp)
+          .neumorphicExtruded(
+            shape = IosSharpBadgeShape,
+            elevation = 2.5.dp,
+            blurRadius = 5.dp,
+            accentTint = neu.primaryAccent,
+            accentTintAlpha = 0.08f,
+            borderAlpha = 0.32f,
+            neu = neu
+          )
+          .clickable {
+            val nextMode = when (activeThemeMode) {
+              AppThemeMode.GREEN_EMERALD -> AppThemeMode.WHITE_CLINICAL
+              AppThemeMode.WHITE_CLINICAL -> AppThemeMode.DARK_OBSIDIAN
+              AppThemeMode.DARK_OBSIDIAN -> AppThemeMode.GREEN_EMERALD
+            }
+            AppThemeController.setThemeMode(context, nextMode)
           }
-          Spacer(modifier = Modifier.height(1.dp))
+          .testTag("top_bar_quick_theme_pill")
+      ) {
+        Row(
+          modifier = Modifier
+            .padding(horizontal = 9.dp)
+            .align(Alignment.Center),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .size(6.dp)
+              .clip(IosSharpMicroShape)
+              .background(neu.primaryAccent)
+          )
           Text(
-            text = title,
-            style = MaterialTheme.typography.headlineMedium,
-            fontSize = 17.5.sp,
-            lineHeight = 21.sp,
-            letterSpacing = (-0.4).sp,
+            text = "${activeThemeMode.shortBadge} ⟳",
+            color = neu.primaryAccent,
+            fontSize = 8.5.sp,
+            lineHeight = 10.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onSurface,
+            letterSpacing = 0.3.sp,
+            maxLines = 1,
+            softWrap = false
+          )
+        }
+      }
+    }
+
+    // Main Title + Inset Trough with Extruded Tactile Action Buttons
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 14.dp, vertical = 7.dp),
+      horizontalArrangement = Arrangement.SpaceBetween,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Column(modifier = Modifier.weight(1f)) {
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .size(5.dp)
+              .clip(IosSharpMicroShape)
+              .background(neu.primaryAccent)
+          )
+          Text(
+            text = officerHeaderSubtitle,
+            style = MaterialTheme.typography.labelMedium,
+            color = neu.primaryAccent,
+            fontSize = 9.sp,
+            lineHeight = 11.sp,
+            letterSpacing = 0.25.sp,
             maxLines = 1,
             softWrap = false,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
           )
         }
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(
+          text = title,
+          style = MaterialTheme.typography.headlineMedium,
+          fontSize = 17.sp,
+          lineHeight = 21.sp,
+          letterSpacing = (-0.4).sp,
+          fontWeight = FontWeight.ExtraBold,
+          color = neu.textPrimary,
+          maxLines = 1,
+          softWrap = false,
+          overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
+      }
 
-        Spacer(modifier = Modifier.width(6.dp))
+      Spacer(modifier = Modifier.width(8.dp))
 
-        // Unified iOS Sharp-Edged Squircle Control Cluster
-        Surface(
-          shape = IosSharpWellShape,
-          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-          modifier = Modifier.border(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
-            shape = IosSharpWellShape
+      // Unified Inset Neumorphic Control Dock containing Extruded Action Buttons
+      Box(
+        modifier = Modifier
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            neu = neu
           )
+      ) {
+        Row(
+          modifier = Modifier.padding(horizontal = 5.dp, vertical = 4.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-          Row(
-            modifier = Modifier.padding(2.5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(3.dp)
+          Box(
+            modifier = Modifier
+              .size(31.dp)
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.05f,
+                neu = neu
+              )
+              .clickable { onOpenBiometricLock() }
+              .testTag("top_bar_biometric_lock_button"),
+            contentAlignment = Alignment.Center
           ) {
-            Surface(
-              shape = IosSharpButtonShape,
-              color = EmeraldOptimal.copy(alpha = 0.14f),
-              modifier = Modifier
-                .size(31.dp)
-                .clip(IosSharpButtonShape)
-                .border(0.9.dp, EmeraldOptimal.copy(alpha = 0.38f), IosSharpButtonShape)
-                .clickable { onOpenBiometricLock() }
-                .testTag("top_bar_biometric_lock_button")
-            ) {
-              Box(contentAlignment = Alignment.Center) {
-                Icon(
-                  imageVector = Icons.Default.Fingerprint,
-                  contentDescription = "Biometric Lock & Security",
-                  tint = EmeraldOptimal,
-                  modifier = Modifier.size(15.dp)
-                )
-              }
-            }
+            Icon(
+              imageVector = Icons.Default.Fingerprint,
+              contentDescription = "Biometric Lock & Security",
+              tint = neu.primaryAccent,
+              modifier = Modifier.size(15.dp)
+            )
+          }
 
-            Surface(
-              shape = IosSharpButtonShape,
-              color = EmeraldOptimal.copy(alpha = 0.14f),
-              modifier = Modifier
-                .size(31.dp)
-                .clip(IosSharpButtonShape)
-                .border(0.9.dp, EmeraldOptimal.copy(alpha = 0.38f), IosSharpButtonShape)
-                .clickable { onOpenNotifications() }
-                .testTag("top_bar_notifications_button")
-            ) {
-              Box(contentAlignment = Alignment.Center) {
-                Icon(
-                  imageVector = Icons.Default.NotificationsActive,
-                  contentDescription = "Holiday & Leave Push Alerts",
-                  tint = EmeraldOptimal,
-                  modifier = Modifier.size(15.dp)
-                )
-              }
-            }
+          Box(
+            modifier = Modifier
+              .size(31.dp)
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.secondaryAccent,
+                accentTintAlpha = 0.05f,
+                neu = neu
+              )
+              .clickable { onOpenNotifications() }
+              .testTag("top_bar_notifications_button"),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.NotificationsActive,
+              contentDescription = "Holiday & Leave Push Alerts",
+              tint = neu.secondaryAccent,
+              modifier = Modifier.size(15.dp)
+            )
+          }
 
-            Surface(
-              shape = IosSharpButtonShape,
-              color = EmeraldOptimal.copy(alpha = 0.18f),
-              modifier = Modifier
-                .height(31.dp)
-                .clip(IosSharpButtonShape)
-                .border(0.9.dp, EmeraldOptimal.copy(alpha = 0.48f), IosSharpButtonShape)
-                .clickable { onOpenPdfExport() }
-                .testTag("top_bar_pdf_export_button")
+          Box(
+            modifier = Modifier
+              .height(31.dp)
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.08f,
+                neu = neu
+              )
+              .clickable { onOpenPdfExport() }
+              .testTag("top_bar_pdf_export_button"),
+            contentAlignment = Alignment.Center
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 8.dp),
+              verticalAlignment = Alignment.CenterVertically
             ) {
-              Row(
-                modifier = Modifier.padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Icon(
-                  imageVector = Icons.Default.PictureAsPdf,
-                  contentDescription = "Export Official PDF Report",
-                  tint = EmeraldOptimal,
-                  modifier = Modifier.size(13.dp)
-                )
-                Spacer(modifier = Modifier.width(3.dp))
-                Text(
-                  text = "PDF",
-                  color = EmeraldOptimal,
-                  fontWeight = FontWeight.ExtraBold,
-                  fontSize = 10.sp,
-                  lineHeight = 12.sp,
-                  maxLines = 1,
-                  softWrap = false
-                )
-              }
+              Icon(
+                imageVector = Icons.Default.PictureAsPdf,
+                contentDescription = "Export Official PDF Report",
+                tint = neu.primaryAccent,
+                modifier = Modifier.size(13.dp)
+              )
+              Spacer(modifier = Modifier.width(3.dp))
+              Text(
+                text = "PDF",
+                color = neu.primaryAccent,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
+                maxLines = 1,
+                softWrap = false
+              )
             }
+          }
 
-            Surface(
-              shape = IosSharpButtonShape,
-              color = if (isSettingsOpen) EmeraldOptimal else EmeraldOptimal.copy(alpha = 0.14f),
-              modifier = Modifier
-                .size(31.dp)
-                .clip(IosSharpButtonShape)
-                .border(
-                  0.9.dp,
-                  if (isSettingsOpen) EmeraldOptimal else EmeraldOptimal.copy(alpha = 0.42f),
-                  IosSharpButtonShape
-                )
-                .clickable { onOpenSettings() }
-                .testTag("top_bar_settings_button")
-            ) {
-              Box(contentAlignment = Alignment.Center) {
-                Icon(
-                  imageVector = Icons.Default.Settings,
-                  contentDescription = "Enterprise Settings & 2027 Holiday Sync",
-                  tint = if (isSettingsOpen) Color.White else EmeraldOptimal,
-                  modifier = Modifier.size(15.dp)
-                )
-              }
-            }
+          Box(
+            modifier = Modifier
+              .size(31.dp)
+              .then(
+                if (isSettingsOpen) {
+                  Modifier.neumorphicInset(
+                    shape = IosSharpButtonShape,
+                    depth = 2.dp,
+                    blurRadius = 4.dp,
+                    surfaceColor = neu.primaryAccent,
+                    neu = neu
+                  )
+                } else {
+                  Modifier.neumorphicExtruded(
+                    shape = IosSharpButtonShape,
+                    elevation = 2.5.dp,
+                    blurRadius = 5.dp,
+                    accentTint = neu.primaryAccent,
+                    accentTintAlpha = 0.05f,
+                    neu = neu
+                  )
+                }
+              )
+              .clickable { onOpenSettings() }
+              .testTag("top_bar_settings_button"),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.Settings,
+              contentDescription = "Enterprise Settings & 2027 Holiday Sync",
+              tint = if (isSettingsOpen) Color.White else neu.primaryAccent,
+              modifier = Modifier.size(15.dp)
+            )
+          }
 
-            Surface(
-              shape = IosSharpButtonShape,
-              color = MaterialTheme.colorScheme.surface,
-              modifier = Modifier
-                .size(31.dp)
-                .clip(IosSharpButtonShape)
-                .border(
-                  0.9.dp,
-                  MaterialTheme.colorScheme.outline.copy(alpha = 0.40f),
-                  IosSharpButtonShape
-                )
-                .clickable { onSignOut() }
-                .testTag("sign_out_button")
-            ) {
-              Box(contentAlignment = Alignment.Center) {
-                Icon(
-                  imageVector = Icons.AutoMirrored.Filled.Logout,
-                  contentDescription = "Sign Out",
-                  tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                  modifier = Modifier.size(14.dp)
-                )
-              }
-            }
+          Box(
+            modifier = Modifier
+              .size(31.dp)
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 2.5.dp,
+                blurRadius = 5.dp,
+                neu = neu
+              )
+              .clickable { onSignOut() }
+              .testTag("sign_out_button"),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.AutoMirrored.Filled.Logout,
+              contentDescription = "Sign Out",
+              tint = neu.textSecondary,
+              modifier = Modifier.size(14.dp)
+            )
           }
         }
       }
-
-      // Crisp iOS Hairline Separator (0.75.dp)
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(0.75.dp)
-          .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
-      )
     }
+
+    // Subtle Neumorphic Grooved Divider (dark shadow line + light bevel line)
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(1.dp)
+        .background(neu.darkShadow.copy(alpha = 0.45f))
+    )
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(0.75.dp)
+        .background(neu.lightShadow.copy(alpha = 0.65f))
+    )
   }
 }
 
@@ -956,26 +996,13 @@ private fun IosSquircleBottomTabBar(
   selectedTab: Int,
   onSelectTab: (Int) -> Unit
 ) {
-  val themeMode = LocalAppThemeMode.current
-  val isWhiteTheme = themeMode == AppThemeMode.WHITE_CLINICAL
-  val isGreenTheme = themeMode == AppThemeMode.GREEN_EMERALD
-
-  val dockBackground = when (themeMode) {
-    AppThemeMode.WHITE_CLINICAL -> Color(0xFFFFFFFF).copy(alpha = 0.90f)
-    AppThemeMode.GREEN_EMERALD -> Color(0xFF042F2E).copy(alpha = 0.92f)
-    AppThemeMode.DARK_OBSIDIAN -> IosDarkDockSurface.copy(alpha = 0.91f)
-  }
-  val dockBorderColor = when (themeMode) {
-    AppThemeMode.WHITE_CLINICAL -> Color(0xFFCBD5E1)
-    AppThemeMode.GREEN_EMERALD -> Color(0xFF34D399).copy(alpha = 0.55f)
-    AppThemeMode.DARK_OBSIDIAN -> NeonCyanText.copy(alpha = 0.45f)
-  }
+  val neu = LocalNeumorphicColors.current
   val dockTopShape = IosSharpSquircleShape(
-    topStart = 12.dp,
-    topEnd = 12.dp,
+    topStart = 20.dp,
+    topEnd = 20.dp,
     bottomEnd = 0.dp,
     bottomStart = 0.dp,
-    sharpnessBias = 0.85f
+    sharpnessBias = 0.74f
   )
 
   val tabs = listOf(
@@ -987,136 +1014,86 @@ private fun IosSquircleBottomTabBar(
     Triple(5, "Advisor", Icons.Default.Psychology)
   )
 
-  Surface(
-    color = dockBackground,
-    tonalElevation = 14.dp,
-    shadowElevation = 20.dp,
-    shape = dockTopShape,
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .border(
-        width = 1.1.dp,
-        color = dockBorderColor,
-        shape = dockTopShape
+      .neumorphicExtruded(
+        shape = dockTopShape,
+        elevation = 6.dp,
+        blurRadius = 12.dp,
+        showBorder = true,
+        borderAlpha = 0.30f,
+        neu = neu
       )
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .background(
-          Brush.linearGradient(
-            colors = listOf(
-              Color.White.copy(alpha = if (isWhiteTheme) 0.65f else 0.06f),
-              Color.Transparent,
-              EmeraldOptimal.copy(alpha = 0.05f)
-            )
-          )
-        )
         .navigationBarsPadding(),
       horizontalAlignment = Alignment.CenterHorizontally
     ) {
-      // Top Specular Chamfer Line along the dock edge
+      // Top Soft Highlight Edge
       Box(
         modifier = Modifier
           .fillMaxWidth()
           .height(1.dp)
-          .background(
-            Brush.horizontalGradient(
-              colors = listOf(
-                Color.Transparent,
-                if (isWhiteTheme) EmeraldOptimal.copy(alpha = 0.45f) else NeonAquaAccent.copy(alpha = 0.65f),
-                Color.Transparent
-              )
-            )
-          )
+          .background(neu.lightShadow.copy(alpha = if (neu.isDark) 0.45f else 0.90f))
       )
 
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 6.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
+          .padding(horizontal = 8.dp, vertical = 7.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        tabs.forEachIndexed { idx, (index, label, icon) ->
+        tabs.forEach { (index, label, icon) ->
           val isSelected = selectedTab == index
-          val iconColor = when {
-            isSelected && isWhiteTheme -> Color.White
-            isSelected -> Color(0xFF041322)
-            isWhiteTheme -> Color(0xFF475569)
-            isGreenTheme -> Color(0xFFA7F3D0).copy(alpha = 0.88f)
-            else -> NeonCyanBright.copy(alpha = 0.80f)
-          }
-          val labelColor = when {
-            isSelected && isWhiteTheme -> EmeraldOptimal
-            isSelected -> NeonAquaAccent
-            isWhiteTheme -> Color(0xFF334155)
-            isGreenTheme -> Color(0xFFD1FAE5).copy(alpha = 0.85f)
-            else -> NeonCyanBright.copy(alpha = 0.76f)
-          }
-          val activePillBrush = if (isWhiteTheme) {
-            Brush.linearGradient(listOf(EmeraldOptimal, Color(0xFF047857)))
-          } else {
-            Brush.linearGradient(listOf(NeonAquaAccent, NeonCyanText))
-          }
+          val iconColor = if (isSelected) Color.White else neu.textSecondary
+          val labelColor = if (isSelected) neu.primaryAccent else neu.textSecondary
 
           Column(
             modifier = Modifier
               .weight(1f)
-              .clip(IosSharpTabShape)
-              .background(
-                if (isSelected) {
-                  if (isWhiteTheme) EmeraldOptimal.copy(alpha = 0.08f)
-                  else Color.White.copy(alpha = 0.06f)
-                } else {
-                  Color.Transparent
-                }
-              )
               .then(
                 if (isSelected) {
-                  Modifier.border(
-                    width = 1.dp,
-                    color = if (isWhiteTheme) EmeraldOptimal.copy(alpha = 0.45f) else NeonAquaAccent.copy(alpha = 0.55f),
-                    shape = IosSharpTabShape
+                  Modifier.neumorphicInset(
+                    shape = IosSharpTabShape,
+                    depth = 2.5.dp,
+                    blurRadius = 5.dp,
+                    accentTint = neu.primaryAccent,
+                    accentTintAlpha = 0.08f,
+                    borderColor = neu.primaryAccent.copy(alpha = 0.32f),
+                    neu = neu
                   )
                 } else {
-                  Modifier
+                  Modifier.clip(IosSharpTabShape)
                 }
               )
               .clickable { onSelectTab(index) }
-              .padding(vertical = 4.dp, horizontal = 2.dp)
+              .padding(vertical = 5.dp, horizontal = 3.dp)
               .testTag("bottom_tab_$index"),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.5.dp)
+            verticalArrangement = Arrangement.spacedBy(3.dp)
           ) {
-            // Top Sharp Laser Accent Bar
-            Box(
-              modifier = Modifier
-                .size(width = if (isSelected) 20.dp else 0.dp, height = 2.dp)
-                .clip(IosSharpMicroShape)
-                .background(
-                  if (isSelected) (if (isWhiteTheme) EmeraldOptimal else NeonAquaAccent) else Color.Transparent
-                )
-            )
-
-            // Sharp-Edged iOS Squircle Icon Button Well (6.dp sharp squircle)
             Box(
               modifier = Modifier
                 .height(27.dp)
-                .padding(horizontal = 5.dp)
+                .padding(horizontal = 4.dp)
                 .fillMaxWidth()
-                .clip(IosSharpButtonShape)
                 .then(
                   if (isSelected) {
-                    Modifier
-                      .background(activePillBrush)
-                      .border(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.55f),
-                        shape = IosSharpButtonShape
-                      )
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 2.5.dp,
+                      blurRadius = 5.dp,
+                      surfaceColor = neu.primaryAccent,
+                      showBorder = true,
+                      borderAlpha = 0.45f,
+                      neu = neu
+                    )
                   } else {
-                    Modifier.background(Color.Transparent)
+                    Modifier
                   }
                 ),
               contentAlignment = Alignment.Center
@@ -1125,7 +1102,7 @@ private fun IosSquircleBottomTabBar(
                 imageVector = icon,
                 contentDescription = label,
                 tint = iconColor,
-                modifier = Modifier.size(if (isSelected) 17.dp else 16.dp)
+                modifier = Modifier.size(if (isSelected) 16.dp else 16.dp)
               )
             }
 
@@ -1142,32 +1119,20 @@ private fun IosSquircleBottomTabBar(
               overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
           }
-
-          // Subtle iOS Vertical Hairline Divider between tabs
-          if (idx < tabs.lastIndex) {
-            Box(
-              modifier = Modifier
-                .width(0.6.dp)
-                .height(26.dp)
-                .background(
-                  if (isWhiteTheme) Color(0xFFE2E8F0)
-                  else Color.White.copy(alpha = 0.08f)
-                )
-            )
-          }
         }
       }
 
-      // Authentic iOS Home Indicator Bar at the bottom edge
+      // Recessed Home Indicator Groove
       Box(
         modifier = Modifier
-          .padding(bottom = 3.dp)
-          .width(116.dp)
-          .height(3.5.dp)
-          .clip(IosSharpMicroShape)
-          .background(
-            if (isWhiteTheme) Color(0xFFCBD5E1)
-            else Color.White.copy(alpha = 0.24f)
+          .padding(bottom = 4.dp)
+          .width(108.dp)
+          .height(4.dp)
+          .neumorphicInset(
+            shape = IosSharpMicroShape,
+            depth = 1.5.dp,
+            blurRadius = 3.dp,
+            neu = neu
           )
       )
     }

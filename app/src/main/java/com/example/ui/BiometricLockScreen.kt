@@ -73,7 +73,12 @@ import androidx.compose.ui.window.Dialog
 import com.example.domain.BiometricLockManager
 import com.example.domain.HardwareBiometricStatus
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -176,259 +181,287 @@ fun BiometricVaultLockScreen(
     }
   }
 
-  Box(
-    modifier = Modifier
-      .fillMaxSize()
-      .background(
-        Brush.verticalGradient(
-          colors = listOf(
-            Color(0xFF061325),
-            Color(0xFF0A2540),
-            Color(0xFF063E31)
-          )
-        )
-      )
-      .safeDrawingPadding()
-      .testTag("biometric_vault_lock_screen"),
-    contentAlignment = Alignment.Center
-  ) {
-    Column(
+  val neu = LocalNeumorphicColors.current
+
+  IosAmbientGlassBackdrop {
+    Box(
       modifier = Modifier
-        .fillMaxWidth()
-        .widthIn(max = 420.dp)
-        .padding(horizontal = 24.dp, vertical = 16.dp),
-      horizontalAlignment = Alignment.CenterHorizontally,
-      verticalArrangement = Arrangement.spacedBy(14.dp)
+        .fillMaxSize()
+        .safeDrawingPadding()
+        .testTag("biometric_vault_lock_screen"),
+      contentAlignment = Alignment.Center
     ) {
-      // Top Security Badge
-      Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFF34D399).copy(alpha = 0.15f),
-        border = BorderStroke(1.dp, Color(0xFF34D399).copy(alpha = 0.4f))
-      ) {
-        Row(
-          modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Icon(
-            imageVector = Icons.Default.VerifiedUser,
-            contentDescription = null,
-            tint = Color(0xFF34D399),
-            modifier = Modifier.size(15.dp)
-          )
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = "BIOMETRIC SECURITY VAULT • ${department.uppercase()}",
-            color = Color(0xFF6EE7B7),
-            fontSize = 10.sp,
-            lineHeight = 13.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = JetBrainsMonoFontFamily,
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis
-          )
-        }
-      }
-
-      Text(
-        text = "TN MedLeave Pro Locked",
-        style = MaterialTheme.typography.headlineMedium,
-        color = Color.White,
-        fontWeight = FontWeight.Bold,
-        textAlign = TextAlign.Center
-      )
-
-      Text(
-        text = "Protected for $officerName ($userEmail) • $designation, $college",
-        style = MaterialTheme.typography.bodyMedium,
-        color = Color(0xFFBAE6FD),
-        fontSize = 12.sp,
-        textAlign = TextAlign.Center,
-        maxLines = 1,
-        softWrap = false,
-        overflow = TextOverflow.Ellipsis
-      )
-
-      // Interactive Pulsing Biometric Fingerprint Scanner Button
-      Box(
-        modifier = Modifier
-          .padding(vertical = 4.dp)
-          .size(88.dp)
-          .scale(if (isScanningTouch) 1.12f else pulseScale)
-          .clip(CircleShape)
-          .background(
-            Brush.radialGradient(
-              colors = listOf(
-                Color(0xFF10B981).copy(alpha = 0.35f),
-                Color(0xFF059669).copy(alpha = 0.12f)
-              )
-            )
-          )
-          .border(
-            width = 2.dp,
-            color = if (isScanningTouch) Color(0xFF6EE7B7) else Color(0xFF34D399),
-            shape = CircleShape
-          )
-          .clickable { triggerBiometricUnlock() }
-          .testTag("biometric_touch_sensor_button"),
-        contentAlignment = Alignment.Center
-      ) {
-        Icon(
-          imageVector = Icons.Default.Fingerprint,
-          contentDescription = "Unlock with Biometrics",
-          tint = Color(0xFF34D399),
-          modifier = Modifier.size(48.dp)
-        )
-      }
-
-      Text(
-        text = statusMessage,
-        color = if (isError) Color(0xFFFCA5A5) else Color(0xFFE0F2FE),
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.padding(horizontal = 8.dp)
-      )
-
-      // 4-Dot PIN Indicator Row
-      Row(
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        for (i in 0 until 4) {
-          val filled = i < enteredPin.length
-          Box(
-            modifier = Modifier
-              .size(14.dp)
-              .clip(CircleShape)
-              .background(
-                if (filled) Color(0xFF34D399) else Color.White.copy(alpha = 0.2f)
-              )
-              .border(
-                1.dp,
-                if (filled) Color(0xFF6EE7B7) else Color.White.copy(alpha = 0.4f),
-                CircleShape
-              )
-          )
-        }
-      }
-
-      // 4x3 Tactile Executive PIN Keypad
-      val rows = listOf(
-        listOf("1", "2", "3"),
-        listOf("4", "5", "6"),
-        listOf("7", "8", "9")
-      )
-
       Column(
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+          .fillMaxWidth()
+          .widthIn(max = 420.dp)
+          .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp)
       ) {
-        rows.forEach { rowDigits ->
+        // Top Security Badge (Inset Capsule)
+        Box(
+          modifier = Modifier
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = neu.primaryAccent,
+              accentTintAlpha = 0.08f,
+              borderColor = neu.primaryAccent.copy(alpha = 0.35f),
+              neu = neu
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
           Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            verticalAlignment = Alignment.CenterVertically
           ) {
-            rowDigits.forEach { digit ->
-              PinKeyButton(
-                label = digit,
-                onClick = { onDigitTap(digit) },
-                modifier = Modifier
-                  .weight(1f)
-                  .testTag("pin_key_$digit")
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.VerifiedUser,
+              contentDescription = null,
+              tint = neu.primaryAccent,
+              modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = "BIOMETRIC SECURITY VAULT • ${department.uppercase()}",
+              color = neu.primaryAccent,
+              fontSize = 10.sp,
+              lineHeight = 13.sp,
+              fontWeight = FontWeight.Bold,
+              fontFamily = JetBrainsMonoFontFamily,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
           }
         }
 
-        // Bottom Row: [Biometric] [0] [Backspace]
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.spacedBy(12.dp)
+        Text(
+          text = "TN MedLeave Pro Locked",
+          style = MaterialTheme.typography.headlineMedium,
+          color = neu.textPrimary,
+          fontWeight = FontWeight.Bold,
+          textAlign = TextAlign.Center
+        )
+
+        Text(
+          text = "Protected for $officerName ($userEmail) • $designation, $college",
+          style = MaterialTheme.typography.bodyMedium,
+          color = neu.textSecondary,
+          fontSize = 12.sp,
+          textAlign = TextAlign.Center,
+          maxLines = 1,
+          softWrap = false,
+          overflow = TextOverflow.Ellipsis
+        )
+
+        // Interactive Pulsing Extruded Biometric Fingerprint Dome
+        Box(
+          modifier = Modifier
+            .padding(vertical = 4.dp)
+            .size(92.dp)
+            .scale(if (isScanningTouch) 1.10f else pulseScale)
+            .neumorphicExtruded(
+              shape = CircleShape,
+              elevation = 6.dp,
+              blurRadius = 12.dp,
+              accentTint = neu.primaryAccent,
+              accentTintAlpha = 0.08f,
+              borderAlpha = 0.45f,
+              neu = neu
+            )
+            .clickable { triggerBiometricUnlock() }
+            .testTag("biometric_touch_sensor_button"),
+          contentAlignment = Alignment.Center
         ) {
-          Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF10B981).copy(alpha = 0.2f),
-            border = BorderStroke(1.dp, Color(0xFF34D399).copy(alpha = 0.4f)),
+          Box(
             modifier = Modifier
-              .weight(1f)
-              .height(52.dp)
-              .clip(RoundedCornerShape(16.dp))
-              .clickable { triggerBiometricUnlock() }
-              .testTag("pin_pad_biometric_button")
+              .size(68.dp)
+              .neumorphicInset(
+                shape = CircleShape,
+                depth = 3.dp,
+                blurRadius = 6.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.12f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Box(contentAlignment = Alignment.Center) {
+            Icon(
+              imageVector = Icons.Default.Fingerprint,
+              contentDescription = "Unlock with Biometrics",
+              tint = neu.primaryAccent,
+              modifier = Modifier.size(42.dp)
+            )
+          }
+        }
+
+        Text(
+          text = statusMessage,
+          color = if (isError) Color(0xFFEF4444) else neu.textSecondary,
+          fontSize = 12.sp,
+          lineHeight = 16.sp,
+          fontWeight = if (isError) FontWeight.Bold else FontWeight.Medium,
+          textAlign = TextAlign.Center,
+          modifier = Modifier.padding(horizontal = 8.dp)
+        )
+
+        // 4-Dot PIN Indicator Row (Inset Empty Wells -> Glowing Extruded Filled LEDs)
+        Row(
+          horizontalArrangement = Arrangement.spacedBy(14.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          for (i in 0 until 4) {
+            val filled = i < enteredPin.length
+            Box(
+              modifier = Modifier
+                .size(16.dp)
+                .then(
+                  if (filled) {
+                    Modifier.neumorphicExtruded(
+                      shape = CircleShape,
+                      elevation = 2.dp,
+                      blurRadius = 4.dp,
+                      surfaceColor = neu.primaryAccent,
+                      borderAlpha = 0.55f,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicInset(
+                      shape = CircleShape,
+                      depth = 2.dp,
+                      blurRadius = 4.dp,
+                      neu = neu
+                    )
+                  }
+                )
+            )
+          }
+        }
+
+        // 4x3 Tactile Neumorphic PIN Keypad
+        val rows = listOf(
+          listOf("1", "2", "3"),
+          listOf("4", "5", "6"),
+          listOf("7", "8", "9")
+        )
+
+        Column(
+          verticalArrangement = Arrangement.spacedBy(12.dp),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          rows.forEach { rowDigits ->
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+              rowDigits.forEach { digit ->
+                PinKeyButton(
+                  label = digit,
+                  onClick = { onDigitTap(digit) },
+                  modifier = Modifier
+                    .weight(1f)
+                    .testTag("pin_key_$digit")
+                )
+              }
+            }
+          }
+
+          // Bottom Row: [Biometric] [0] [Backspace]
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+          ) {
+            Box(
+              modifier = Modifier
+                .weight(1f)
+                .height(54.dp)
+                .neumorphicExtruded(
+                  shape = IosSharpButtonShape,
+                  elevation = 4.dp,
+                  blurRadius = 8.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.08f,
+                  borderAlpha = 0.35f,
+                  neu = neu
+                )
+                .clickable { triggerBiometricUnlock() }
+                .testTag("pin_pad_biometric_button"),
+              contentAlignment = Alignment.Center
+            ) {
               Icon(
                 imageVector = Icons.Default.Fingerprint,
                 contentDescription = "Scan Biometrics",
-                tint = Color(0xFF34D399),
+                tint = neu.primaryAccent,
                 modifier = Modifier.size(24.dp)
               )
             }
-          }
 
-          PinKeyButton(
-            label = "0",
-            onClick = { onDigitTap("0") },
-            modifier = Modifier
-              .weight(1f)
-              .testTag("pin_key_0")
-          )
+            PinKeyButton(
+              label = "0",
+              onClick = { onDigitTap("0") },
+              modifier = Modifier
+                .weight(1f)
+                .testTag("pin_key_0")
+            )
 
-          Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = Color.White.copy(alpha = 0.08f),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f)),
-            modifier = Modifier
-              .weight(1f)
-              .height(52.dp)
-              .clip(RoundedCornerShape(16.dp))
-              .clickable {
-                if (enteredPin.isNotEmpty()) {
-                  enteredPin = enteredPin.dropLast(1)
+            Box(
+              modifier = Modifier
+                .weight(1f)
+                .height(54.dp)
+                .neumorphicExtruded(
+                  shape = IosSharpButtonShape,
+                  elevation = 4.dp,
+                  blurRadius = 8.dp,
+                  borderAlpha = 0.28f,
+                  neu = neu
+                )
+                .clickable {
+                  if (enteredPin.isNotEmpty()) {
+                    enteredPin = enteredPin.dropLast(1)
+                  }
                 }
-              }
-              .testTag("pin_key_backspace")
-          ) {
-            Box(contentAlignment = Alignment.Center) {
+                .testTag("pin_key_backspace"),
+              contentAlignment = Alignment.Center
+            ) {
               Icon(
                 imageVector = Icons.AutoMirrored.Filled.Backspace,
                 contentDescription = "Backspace",
-                tint = Color.White,
+                tint = neu.textPrimary,
                 modifier = Modifier.size(20.dp)
               )
             }
           }
         }
-      }
 
-      // Direct Biometric Unlock CTA Button
-      Button(
-        onClick = { triggerBiometricUnlock() },
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(
-          containerColor = Color(0xFF10B981),
-          contentColor = Color(0xFF052E16)
-        ),
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(48.dp)
-          .testTag("unlock_with_biometrics_button")
-      ) {
-        Icon(
-          imageVector = Icons.Default.Fingerprint,
-          contentDescription = null,
-          modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-          text = "Unlock with Biometrics / Touch ID",
-          fontWeight = FontWeight.Bold,
-          maxLines = 1,
-          softWrap = false,
-          overflow = TextOverflow.Ellipsis
-        )
+        // Direct Biometric Unlock CTA Button
+        Button(
+          onClick = { triggerBiometricUnlock() },
+          shape = IosSharpButtonShape,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+          ),
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .testTag("unlock_with_biometrics_button")
+        ) {
+          Icon(
+            imageVector = Icons.Default.Fingerprint,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            text = "Unlock with Biometrics / Touch ID",
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+          )
+        }
       }
     }
   }
@@ -440,24 +473,27 @@ private fun PinKeyButton(
   onClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(16.dp),
-    color = Color.White.copy(alpha = 0.1f),
-    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = modifier
-      .height(52.dp)
-      .clip(RoundedCornerShape(16.dp))
-      .clickable { onClick() }
-  ) {
-    Box(contentAlignment = Alignment.Center) {
-      Text(
-        text = label,
-        color = Color.White,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Bold,
-        fontFamily = JetBrainsMonoFontFamily
+      .height(54.dp)
+      .neumorphicExtruded(
+        shape = IosSharpButtonShape,
+        elevation = 4.dp,
+        blurRadius = 8.dp,
+        borderAlpha = 0.28f,
+        neu = neu
       )
-    }
+      .clickable { onClick() },
+    contentAlignment = Alignment.Center
+  ) {
+    Text(
+      text = label,
+      color = neu.textPrimary,
+      fontSize = 20.sp,
+      fontWeight = FontWeight.Bold,
+      fontFamily = JetBrainsMonoFontFamily
+    )
   }
 }
 
@@ -468,6 +504,7 @@ fun BiometricSecuritySettingsDialog(
   onShowStatusBanner: (String) -> Unit
 ) {
   val context = LocalContext.current
+  val neu = LocalNeumorphicColors.current
   var lockEnabled by remember {
     mutableStateOf(BiometricLockManager.isBiometricLockEnabled(context))
   }
@@ -483,12 +520,17 @@ fun BiometricSecuritySettingsDialog(
   }
 
   Dialog(onDismissRequest = onDismiss) {
-    Surface(
-      shape = RoundedCornerShape(26.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 6.dp,
+    Box(
       modifier = Modifier
         .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 6.dp,
+          blurRadius = 12.dp,
+          accentTint = neu.primaryAccent,
+          borderAlpha = 0.35f,
+          neu = neu
+        )
         .testTag("biometric_security_settings_dialog")
     ) {
       Column(
@@ -502,7 +544,7 @@ fun BiometricSecuritySettingsDialog(
         ) {
           ExecutiveDialogHeader(
             icon = Icons.Default.Fingerprint,
-            accent = EmeraldOptimal,
+            accent = neu.primaryAccent,
             title = "Biometric & App Lock",
             subtitle = "HOD SECURITY & PRIVACY",
             modifier = Modifier.weight(1f)
@@ -510,25 +552,31 @@ fun BiometricSecuritySettingsDialog(
           IconButton(onClick = onDismiss) {
             Icon(
               imageVector = Icons.Default.Close,
-              contentDescription = "Close Biometric Settings"
+              contentDescription = "Close Biometric Settings",
+              tint = neu.textPrimary
             )
           }
         }
 
-        // Hardware Status Banner
-        Surface(
-          shape = RoundedCornerShape(14.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-          modifier = Modifier.fillMaxWidth()
+        // Hardware Status Banner (Inset Soft-UI Well)
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              neu = neu
+            )
+            .padding(12.dp)
         ) {
           Row(
-            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
             Icon(
               imageVector = Icons.Default.Security,
               contentDescription = null,
-              tint = EmeraldOptimal,
+              tint = neu.primaryAccent,
               modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -537,7 +585,7 @@ fun BiometricSecuritySettingsDialog(
               style = MaterialTheme.typography.bodyMedium,
               fontSize = 11.sp,
               lineHeight = 15.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = neu.textSecondary
             )
           }
         }
@@ -553,17 +601,19 @@ fun BiometricSecuritySettingsDialog(
               text = "Require Biometric Lock on Launch",
               style = MaterialTheme.typography.titleMedium,
               fontSize = 14.sp,
-              fontWeight = FontWeight.Bold
+              fontWeight = FontWeight.Bold,
+              color = neu.textPrimary
             )
             Text(
               text = "Prompts for Fingerprint / Face ID or 4-digit PIN when opening TN MedLeave Pro",
               style = MaterialTheme.typography.bodyMedium,
               fontSize = 11.sp,
               lineHeight = 15.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = neu.textSecondary
             )
           }
-          Switch(
+          Spacer(modifier = Modifier.width(8.dp))
+          NeumorphicSwitch(
             checked = lockEnabled,
             onCheckedChange = { enabled ->
               lockEnabled = enabled
@@ -572,7 +622,7 @@ fun BiometricSecuritySettingsDialog(
                 if (enabled) "Biometric App Lock enabled." else "Biometric App Lock disabled."
               )
             },
-            colors = SwitchDefaults.colors(checkedTrackColor = EmeraldOptimal)
+            accentColor = neu.primaryAccent
           )
         }
 
@@ -587,34 +637,37 @@ fun BiometricSecuritySettingsDialog(
               text = "Auto-Lock When Minimized",
               style = MaterialTheme.typography.titleMedium,
               fontSize = 14.sp,
-              fontWeight = FontWeight.Bold
+              fontWeight = FontWeight.Bold,
+              color = neu.textPrimary
             )
             Text(
               text = "Automatically re-locks the ledger whenever the app goes to the background",
               style = MaterialTheme.typography.bodyMedium,
               fontSize = 11.sp,
               lineHeight = 15.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = neu.textSecondary
             )
           }
-          Switch(
+          Spacer(modifier = Modifier.width(8.dp))
+          NeumorphicSwitch(
             checked = autoLockBackground,
             onCheckedChange = { enabled ->
               autoLockBackground = enabled
               BiometricLockManager.setAutoLockOnBackgroundEnabled(context, enabled)
             },
-            colors = SwitchDefaults.colors(checkedTrackColor = EmeraldOptimal)
+            accentColor = neu.primaryAccent
           )
         }
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+        HorizontalDivider(color = neu.hairlineDivider)
 
         // Customize 4-Digit Executive PIN
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
           Text(
             text = "Executive 4-Digit Fallback PIN",
             style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = neu.textPrimary
           )
           Row(
             modifier = Modifier
@@ -631,7 +684,7 @@ fun BiometricSecuritySettingsDialog(
               },
               label = { Text("4-Digit PIN") },
               singleLine = true,
-              shape = RoundedCornerShape(12.dp),
+              shape = IosSharpButtonShape,
               modifier = Modifier.weight(1f)
             )
             Button(
@@ -644,8 +697,11 @@ fun BiometricSecuritySettingsDialog(
                   pinSaveFeedback = "Enter exactly 4 digits."
                 }
               },
-              shape = RoundedCornerShape(12.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+              shape = IosSharpButtonShape,
+              colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+              ),
               modifier = Modifier.height(52.dp)
             ) {
               Text("Save PIN", fontWeight = FontWeight.Bold)
@@ -655,20 +711,23 @@ fun BiometricSecuritySettingsDialog(
             Text(
               text = msg,
               fontSize = 11.sp,
-              color = EmeraldOptimal,
+              color = neu.primaryAccent,
               fontWeight = FontWeight.Bold
             )
           }
         }
 
-        // Lock App Immediately Button
+        // Lock App Immediately Button (Extruded Dark/Accent Pill)
         Button(
           onClick = {
             onDismiss()
             onLockAppNow()
           },
-          shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A2540)),
+          shape = IosSharpButtonShape,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+          ),
           modifier = Modifier
             .fillMaxWidth()
             .height(48.dp)
@@ -677,13 +736,11 @@ fun BiometricSecuritySettingsDialog(
           Icon(
             imageVector = Icons.Default.Lock,
             contentDescription = null,
-            tint = Color(0xFF34D399),
             modifier = Modifier.size(18.dp)
           )
           Spacer(modifier = Modifier.width(8.dp))
           Text(
             text = "Lock App Now (Require Biometric Unlock)",
-            color = Color.White,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             softWrap = false,

@@ -59,9 +59,13 @@ import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
-import com.example.ui.theme.IosDarkDockSurface
-import com.example.ui.theme.IosSquircleGlassFill
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.NeonAquaAccent
 import com.example.ui.theme.NeonCyanBright
 import com.example.ui.theme.NeonCyanText
@@ -273,6 +277,8 @@ fun OptimizerMaterial3CalendarSection(
     "—"
   }
 
+  val neu = LocalNeumorphicColors.current
+
   Column(
     verticalArrangement = Arrangement.spacedBy(14.dp),
     modifier = Modifier
@@ -280,16 +286,20 @@ fun OptimizerMaterial3CalendarSection(
       .testTag("optimizer_m3_date_range_picker_section")
   ) {
     // 1. Header & Quick-Jump Long Weekend Opportunity Strip
-    Surface(
-      shape = RoundedCornerShape(24.dp),
-      color = IosDarkDockSurface,
-      tonalElevation = 4.dp,
-      shadowElevation = 6.dp,
-      border = BorderStroke(1.2.dp, NeonCyanText.copy(alpha = 0.40f)),
-      modifier = Modifier.fillMaxWidth()
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          accentTint = neu.primaryAccent,
+          borderAlpha = 0.32f,
+          neu = neu
+        )
+        .padding(16.dp)
     ) {
       Column(
-        modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
       ) {
         Row(
@@ -305,68 +315,88 @@ fun OptimizerMaterial3CalendarSection(
             Box(
               modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(13.dp))
-                .background(
-                  Brush.linearGradient(listOf(NeonAquaAccent, NeonCyanText))
+                .neumorphicInset(
+                  shape = IosSharpButtonShape,
+                  depth = 2.5.dp,
+                  blurRadius = 5.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.14f,
+                  borderColor = neu.primaryAccent.copy(alpha = 0.35f),
+                  neu = neu
                 ),
               contentAlignment = Alignment.Center
             ) {
               Icon(
                 imageVector = Icons.Default.DateRange,
                 contentDescription = "Material 3 DateRangePicker",
-                tint = Color(0xFF041322),
-                modifier = Modifier.size(22.dp)
+                tint = neu.primaryAccent,
+                modifier = Modifier.size(21.dp)
               )
             }
             Column {
               Text(
                 text = "MATERIAL 3 HOLIDAY & BRIDGE RANGE PICKER",
                 style = MaterialTheme.typography.labelSmall,
-                color = NeonAquaAccent,
+                color = neu.primaryAccent,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 0.4.sp
               )
               Text(
                 text = "Tap a Long-Weekend Opportunity or Select Dates",
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
+                color = neu.textPrimary,
                 fontWeight = FontWeight.ExtraBold
               )
             }
           }
         }
 
-        // Horizontal Long-Weekend Opportunity Presets that drive DateRangePickerState
+        // Horizontal Long-Weekend Opportunity Presets (Inset when active, Extruded when idle)
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 4.dp, horizontal = 2.dp),
+          horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
           longWeekendPresets.forEach { preset ->
             val presetStart = LocalDate.parse(preset.startIso)
             val presetEnd = LocalDate.parse(preset.endIso)
             val isSelected = selectedStartDate == presetStart && selectedEndDate == presetEnd
 
-            Surface(
-              shape = RoundedCornerShape(14.dp),
-              color = if (isSelected) IosSquircleGlassFill else Color(0xFF0D223A),
-              border = BorderStroke(
-                width = if (isSelected) 1.5.dp else 1.dp,
-                color = if (isSelected) NeonAquaAccent else NeonCyanText.copy(alpha = 0.28f)
-              ),
+            Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(14.dp))
+                .then(
+                  if (isSelected) {
+                    Modifier.neumorphicInset(
+                      shape = IosSharpWellShape,
+                      depth = 3.dp,
+                      blurRadius = 6.dp,
+                      accentTint = neu.primaryAccent,
+                      accentTintAlpha = 0.14f,
+                      borderColor = neu.primaryAccent.copy(alpha = 0.55f),
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpWellShape,
+                      elevation = 3.dp,
+                      blurRadius = 6.dp,
+                      borderAlpha = 0.25f,
+                      neu = neu
+                    )
+                  }
+                )
                 .clickable {
                   dateRangePickerState.setSelection(
                     startDateMillis = presetStart.toUtcEpochMillis(),
                     endDateMillis = presetEnd.toUtcEpochMillis()
                   )
                 }
+                .padding(horizontal = 12.dp, vertical = 9.dp)
                 .testTag("m3_preset_chip_${preset.id}")
             ) {
               Column(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
                 verticalArrangement = Arrangement.spacedBy(3.dp)
               ) {
                 Row(
@@ -376,13 +406,13 @@ fun OptimizerMaterial3CalendarSection(
                   Icon(
                     imageVector = Icons.Default.AutoAwesome,
                     contentDescription = null,
-                    tint = if (isSelected) NeonAquaAccent else NeonCyanBright,
+                    tint = if (isSelected) neu.primaryAccent else neu.secondaryAccent,
                     modifier = Modifier.size(13.dp)
                   )
                   Text(
                     text = preset.label,
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (isSelected) NeonAquaAccent else NeonCyanBright,
+                    color = if (isSelected) neu.primaryAccent else neu.textPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
                     letterSpacing = 0.25.sp
@@ -392,7 +422,7 @@ fun OptimizerMaterial3CalendarSection(
                   text = "${ClinicalDateFormatter.formatRangeFriendly(preset.startIso, preset.endIso)} • ${preset.yieldBadge}",
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 10.sp,
-                  color = Color.White.copy(alpha = 0.85f)
+                  color = neu.textSecondary
                 )
               }
             }
@@ -402,30 +432,39 @@ fun OptimizerMaterial3CalendarSection(
     }
 
     // 2. Interactive Material 3 DateRangePicker Visual Calendar Card
-    Surface(
-      shape = RoundedCornerShape(24.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 3.dp,
-      shadowElevation = 4.dp,
-      border = BorderStroke(1.dp, NeonCyanText.copy(alpha = 0.32f)),
+    Box(
       modifier = Modifier
         .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          accentTint = neu.secondaryAccent,
+          borderAlpha = 0.30f,
+          neu = neu
+        )
         .testTag("m3_date_range_picker_card")
     ) {
       Column(modifier = Modifier.fillMaxWidth()) {
-        // Legend Bar for Holiday & Bridge Highlights
+        // Inset Legend Trough for Holiday & Bridge Highlights
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .background(IosDarkDockSurface)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .neumorphicInset(
+              shape = IosSharpButtonShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              neu = neu
+            )
+            .padding(horizontal = 12.dp, vertical = 9.dp),
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically
         ) {
           LegendDotItem(color = BadgePlGold, label = "TN Public GH")
           LegendDotItem(color = BadgeColCyan, label = "Restricted RL")
           LegendDotItem(color = EmeraldOptimal, label = "Sat/Sun Free")
-          LegendDotItem(color = NeonAquaAccent, label = "Bridge Range")
+          LegendDotItem(color = neu.primaryAccent, label = "Bridge Range")
         }
 
         Box(
@@ -448,7 +487,7 @@ fun OptimizerMaterial3CalendarSection(
                 Text(
                   text = "SELECT LEAVE BRIDGE WINDOW (2026–2027)",
                   style = MaterialTheme.typography.labelSmall,
-                  color = EmeraldOptimal,
+                  color = neu.primaryAccent,
                   fontWeight = FontWeight.ExtraBold,
                   letterSpacing = 0.35.sp
                 )
@@ -457,7 +496,7 @@ fun OptimizerMaterial3CalendarSection(
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 11.sp,
                   fontWeight = FontWeight.Bold,
-                  color = NeonCyanText
+                  color = neu.secondaryAccent
                 )
               }
             },
@@ -501,16 +540,17 @@ fun OptimizerMaterial3CalendarSection(
 
     // 3. Live Selected Range Holiday & Long-Weekend Breakdown + 1-Tap Apply
     if (dayInspections.isNotEmpty()) {
-      Surface(
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        border = BorderStroke(
-          1.2.dp,
-          if (exceedsTenDayCap) StatusAlertRed.copy(alpha = 0.5f) else EmeraldOptimal.copy(alpha = 0.4f)
-        ),
+      Box(
         modifier = Modifier
           .fillMaxWidth()
+          .neumorphicExtruded(
+            shape = IosSharpCardShape,
+            elevation = 5.dp,
+            blurRadius = 10.dp,
+            accentTint = if (exceedsTenDayCap) StatusAlertRed else neu.primaryAccent,
+            borderAlpha = 0.35f,
+            neu = neu
+          )
           .testTag("m3_selected_range_breakdown_card")
       ) {
         Column(
@@ -696,13 +736,19 @@ fun OptimizerMaterial3CalendarSection(
     }
 
     // 4. Upcoming Tamil Nadu Government Holidays & Long-Weekend Opportunities Radar
-    Surface(
-      shape = RoundedCornerShape(22.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 2.dp,
-      border = BorderStroke(1.dp, BadgePlGold.copy(alpha = 0.35f)),
+    val neu = LocalNeumorphicColors.current
+    Box(
       modifier = Modifier
         .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          accentTint = BadgePlGold,
+          accentTintAlpha = 0.03f,
+          borderAlpha = 0.30f,
+          neu = neu
+        )
         .testTag("m3_upcoming_holidays_radar_card")
     ) {
       Column(
@@ -711,14 +757,28 @@ fun OptimizerMaterial3CalendarSection(
       ) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(8.dp)
+          horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-          Icon(
-            imageVector = Icons.Default.CalendarMonth,
-            contentDescription = null,
-            tint = BadgePlGold,
-            modifier = Modifier.size(20.dp)
-          )
+          Box(
+            modifier = Modifier
+              .size(34.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = BadgePlGold,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.CalendarMonth,
+              contentDescription = null,
+              tint = BadgePlGold,
+              modifier = Modifier.size(18.dp)
+            )
+          }
           Column {
             Text(
               text = "UPCOMING TN GOVT HOLIDAYS & LONG-WEEKEND RADAR",
@@ -729,19 +789,22 @@ fun OptimizerMaterial3CalendarSection(
             Text(
               text = "Tap any holiday opportunity below to highlight its optimal window on the Material 3 DateRangePicker",
               style = MaterialTheme.typography.labelSmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = neu.textSecondary
             )
           }
         }
 
         longWeekendPresets.forEach { preset ->
-          Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+          Box(
             modifier = Modifier
               .fillMaxWidth()
-              .clip(RoundedCornerShape(16.dp))
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                borderColor = neu.hairlineDivider,
+                neu = neu
+              )
               .clickable {
                 val s = LocalDate.parse(preset.startIso)
                 val e = LocalDate.parse(preset.endIso)
@@ -767,33 +830,40 @@ fun OptimizerMaterial3CalendarSection(
                   text = preset.label,
                   style = MaterialTheme.typography.titleSmall,
                   fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onSurface
+                  color = neu.textPrimary
                 )
                 Text(
                   text = preset.holidayHighlight,
                   style = MaterialTheme.typography.bodySmall,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                  color = neu.textSecondary
                 )
                 Text(
                   text = "Window: ${ClinicalDateFormatter.formatRangeFriendly(preset.startIso, preset.endIso)}",
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 11.sp,
-                  color = EmeraldOptimal,
+                  color = neu.primaryAccent,
                   fontWeight = FontWeight.SemiBold
                 )
               }
               Spacer(modifier = Modifier.width(8.dp))
-              Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = IosDarkDockSurface,
-                border = BorderStroke(1.dp, NeonAquaAccent.copy(alpha = 0.5f))
+              Box(
+                modifier = Modifier
+                  .neumorphicExtruded(
+                    shape = IosSharpBadgeShape,
+                    elevation = 2.dp,
+                    blurRadius = 4.dp,
+                    accentTint = neu.primaryAccent,
+                    accentTintAlpha = 0.12f,
+                    borderAlpha = 0.35f,
+                    neu = neu
+                  )
               ) {
                 Text(
                   text = preset.yieldBadge,
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 10.sp,
                   fontWeight = FontWeight.Bold,
-                  color = NeonAquaAccent,
+                  color = neu.primaryAccent,
                   modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
                 )
               }
@@ -810,6 +880,7 @@ private fun LegendDotItem(
   color: Color,
   label: String
 ) {
+  val neu = LocalNeumorphicColors.current
   Row(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -823,7 +894,7 @@ private fun LegendDotItem(
     Text(
       text = label,
       style = MaterialTheme.typography.labelSmall,
-      color = NeonCyanBright,
+      color = neu.textSecondary,
       fontSize = 10.sp,
       fontWeight = FontWeight.Bold,
       maxLines = 1,
@@ -839,11 +910,18 @@ private fun RangeSummaryMetricPill(
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    modifier = modifier,
-    shape = RoundedCornerShape(12.dp),
-    color = accent.copy(alpha = 0.12f),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.35f))
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier
+      .neumorphicInset(
+        shape = IosSharpButtonShape,
+        depth = 2.dp,
+        blurRadius = 4.dp,
+        accentTint = accent,
+        accentTintAlpha = 0.08f,
+        borderColor = accent.copy(alpha = 0.28f),
+        neu = neu
+      )
   ) {
     Column(
       modifier = Modifier
@@ -855,7 +933,7 @@ private fun RangeSummaryMetricPill(
       Text(
         text = label,
         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis

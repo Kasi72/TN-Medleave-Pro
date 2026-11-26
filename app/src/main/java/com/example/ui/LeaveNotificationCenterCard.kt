@@ -44,8 +44,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,7 +75,12 @@ import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusVerifiedGreen
 
@@ -150,13 +153,19 @@ fun SmartHolidayNotificationCard(
     }
   }
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.3f)),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = Modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = neu.primaryAccent,
+        accentTintAlpha = 0.03f,
+        borderAlpha = 0.30f,
+        neu = neu
+      )
       .testTag("smart_holiday_notification_card")
   ) {
     Column(
@@ -176,14 +185,20 @@ fun SmartHolidayNotificationCard(
           Box(
             modifier = Modifier
               .size(38.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .background(EmeraldOptimal.copy(alpha = 0.15f)),
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
             contentAlignment = Alignment.Center
           ) {
             Icon(
               imageVector = Icons.Default.NotificationsActive,
               contentDescription = null,
-              tint = EmeraldOptimal,
+              tint = neu.primaryAccent,
               modifier = Modifier.size(20.dp)
             )
           }
@@ -192,7 +207,7 @@ fun SmartHolidayNotificationCard(
             Text(
               text = "PROACTIVE LEAVE & HOLIDAY ALERTS",
               style = MaterialTheme.typography.labelMedium,
-              color = EmeraldOptimal,
+              color = neu.primaryAccent,
               fontSize = 10.sp,
               lineHeight = 13.sp,
               maxLines = 1,
@@ -203,7 +218,7 @@ fun SmartHolidayNotificationCard(
               text = "Smart Push Notification System",
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -213,9 +228,18 @@ fun SmartHolidayNotificationCard(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = if (hasPermission) EmeraldOptimal.copy(alpha = 0.14f) else BadgePlGold.copy(alpha = 0.16f)
+        val statusAccent = if (hasPermission) neu.primaryAccent else BadgePlGold
+        Box(
+          modifier = Modifier
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = statusAccent,
+              accentTintAlpha = 0.12f,
+              borderColor = statusAccent.copy(alpha = 0.40f),
+              neu = neu
+            )
         ) {
           Text(
             text = if (hasPermission) "${alerts.size} Active" else "Enable Push",
@@ -224,7 +248,7 @@ fun SmartHolidayNotificationCard(
             lineHeight = 14.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = JetBrainsMonoFontFamily,
-            color = if (hasPermission) EmeraldOptimal else BadgePlGold,
+            color = statusAccent,
             maxLines = 1,
             softWrap = false
           )
@@ -234,41 +258,62 @@ fun SmartHolidayNotificationCard(
       Text(
         text = "Alerts you ahead of upcoming Tamil Nadu Government Holidays (GH), Restricted Holidays (RH), unused GH Worked COL credits, and optimal 4x–4.5x leave bridges.",
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         fontSize = 12.sp,
         lineHeight = 16.sp
       )
 
-      // Lead-Time Selector & Auto-AI Push Toggle Row
-      Row(
+      // Lead-Time Selector Inset Trough
+      Box(
         modifier = Modifier
           .fillMaxWidth()
-          .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            neu = neu
+          )
       ) {
-        listOf(1 to "1d Ahead", 3 to "3d Ahead", 7 to "7d Ahead").forEach { (days, label) ->
-          val isSelected = leadDays == days
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = if (isSelected) EmeraldOptimal else MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier
-              .weight(1f)
-              .height(34.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .clickable {
-                leadDays = days
-                LeaveNotificationHelper.setLeadDaysPreference(context, days)
-                onShowStatusBanner("Holiday & Optimal Leave reminder lead-time set to $days day(s) before.")
-              }
-          ) {
-            Box(contentAlignment = Alignment.Center) {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .padding(4.dp),
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          listOf(1 to "1d Ahead", 3 to "3d Ahead", 7 to "7d Ahead").forEach { (days, label) ->
+            val isSelected = leadDays == days
+            Box(
+              modifier = Modifier
+                .weight(1f)
+                .height(34.dp)
+                .then(
+                  if (isSelected) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 2.5.dp,
+                      blurRadius = 5.dp,
+                      surfaceColor = neu.primaryAccent,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.clip(IosSharpButtonShape)
+                  }
+                )
+                .clickable {
+                  leadDays = days
+                  LeaveNotificationHelper.setLeadDaysPreference(context, days)
+                  onShowStatusBanner("Holiday & Optimal Leave reminder lead-time set to $days day(s) before.")
+                },
+              contentAlignment = Alignment.Center
+            ) {
               Text(
                 text = label,
                 fontSize = 11.sp,
                 lineHeight = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (isSelected) Color.White else neu.textSecondary,
                 maxLines = 1,
                 softWrap = false
               )
@@ -392,11 +437,19 @@ private fun CompactAlertPreviewRow(
     LeaveAlertType.COL_CREDIT_EXPIRY -> StatusAlertRed
   }
 
-  Surface(
-    shape = RoundedCornerShape(16.dp),
-    color = accentColor.copy(alpha = 0.08f),
-    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.28f)),
-    modifier = Modifier.fillMaxWidth()
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = Modifier
+      .fillMaxWidth()
+      .neumorphicInset(
+        shape = IosSharpWellShape,
+        depth = 2.5.dp,
+        blurRadius = 5.dp,
+        accentTint = accentColor,
+        accentTintAlpha = 0.05f,
+        borderColor = accentColor.copy(alpha = 0.25f),
+        neu = neu
+      )
   ) {
     Column(
       modifier = Modifier.padding(12.dp),
@@ -577,161 +630,204 @@ fun SmartNotificationCenterDialog(
     }
   }
 
+  val neu = LocalNeumorphicColors.current
   Dialog(
     onDismissRequest = onDismiss,
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Surface(
-      shape = RoundedCornerShape(26.dp),
-      color = MaterialTheme.colorScheme.background,
+    Box(
       modifier = Modifier
         .fillMaxSize()
         .padding(horizontal = 12.dp, vertical = 20.dp)
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 8.dp,
+          blurRadius = 16.dp,
+          borderAlpha = 0.35f,
+          neu = neu
+        )
         .testTag("smart_notification_center_dialog")
     ) {
-      Column(modifier = Modifier.fillMaxSize()) {
-        // Header Banner
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .background(
-              Brush.linearGradient(
-                colors = listOf(
-                  Color(0xFF0A2540),
-                  Color(0xFF0F3443),
-                  Color(0xFF065F46)
-                )
+      IosAmbientGlassBackdrop(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+          // Neumorphic Executive Header Banner
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(start = 14.dp, top = 14.dp, end = 14.dp, bottom = 6.dp)
+              .neumorphicExtruded(
+                shape = IosSharpCardShape,
+                elevation = 4.dp,
+                blurRadius = 8.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.04f,
+                borderAlpha = 0.30f,
+                neu = neu
               )
-            )
-            .padding(horizontal = 18.dp, vertical = 16.dp)
-        ) {
-          Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
+              .padding(horizontal = 16.dp, vertical = 14.dp)
+          ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
               Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
               ) {
-                Icon(
-                  imageVector = Icons.Default.NotificationsActive,
-                  contentDescription = null,
-                  tint = Color(0xFF34D399),
-                  modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(
-                    text = "${designation.uppercase()} • SMART PUSH ALERTS",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF34D399),
-                    fontSize = 10.sp,
-                    lineHeight = 13.sp,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis
-                  )
-                  Text(
-                    text = "Holiday & Optimal Leave Notifications",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  modifier = Modifier.weight(1f)
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .size(38.dp)
+                      .neumorphicInset(
+                        shape = IosSharpButtonShape,
+                        depth = 2.5.dp,
+                        blurRadius = 5.dp,
+                        accentTint = neu.primaryAccent,
+                        accentTintAlpha = 0.14f,
+                        neu = neu
+                      ),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = Icons.Default.NotificationsActive,
+                      contentDescription = null,
+                      tint = neu.primaryAccent,
+                      modifier = Modifier.size(20.dp)
+                    )
+                  }
+                  Spacer(modifier = Modifier.width(10.dp))
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                      text = "${designation.uppercase()} • SMART PUSH ALERTS",
+                      style = MaterialTheme.typography.labelMedium,
+                      color = neu.primaryAccent,
+                      fontSize = 10.sp,
+                      lineHeight = 13.sp,
+                      maxLines = 1,
+                      softWrap = false,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                      text = "Holiday & Optimal Leave Notifications",
+                      style = MaterialTheme.typography.titleMedium,
+                      color = neu.textPrimary,
+                      fontWeight = FontWeight.Bold,
+                      maxLines = 1,
+                      softWrap = false,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                  }
+                }
+
+                Box(
+                  modifier = Modifier
+                    .size(34.dp)
+                    .neumorphicExtruded(
+                      shape = CircleShape,
+                      elevation = 2.5.dp,
+                      blurRadius = 5.dp,
+                      neu = neu
+                    )
+                    .clickable { onDismiss() }
+                    .testTag("close_notification_center_button"),
+                  contentAlignment = Alignment.Center
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close Notification Center",
+                    tint = neu.textPrimary,
+                    modifier = Modifier.size(17.dp)
                   )
                 }
               }
 
-              IconButton(
-                onClick = onDismiss,
-                modifier = Modifier.testTag("close_notification_center_button")
+              // Auto-Notify AI Switch Row
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
               ) {
-                Icon(
-                  imageVector = Icons.Default.Close,
-                  contentDescription = "Close Notification Center",
-                  tint = Color.White
+                Column(modifier = Modifier.weight(1f)) {
+                  Text(
+                    text = "Auto-Push on AI Leave Analysis",
+                    color = neu.textPrimary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                  )
+                  Text(
+                    text = "Automatically post a push alert when Gemini identifies a new 4x+ bridge",
+                    color = neu.textSecondary,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp
+                  )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                NeumorphicSwitch(
+                  checked = autoNotifyAi,
+                  onCheckedChange = { enabled ->
+                    autoNotifyAi = enabled
+                    LeaveNotificationHelper.setAutoNotifyAiEnabled(context, enabled)
+                  },
+                  accentColor = neu.primaryAccent
                 )
               }
-            }
 
-            // Auto-Notify AI Switch Row
-            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Column(modifier = Modifier.weight(1f)) {
-                Text(
-                  text = "Auto-Push on AI Leave Analysis",
-                  color = Color.White,
-                  fontSize = 12.sp,
-                  fontWeight = FontWeight.Bold
+              // Filter Chips
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .horizontalScroll(rememberScrollState())
+                  .padding(vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+              ) {
+                val filters = listOf(
+                  null to "All (${allAlerts.size})",
+                  LeaveAlertType.HIGH_YIELD_BRIDGE to "Optimal Bridges",
+                  LeaveAlertType.AI_RECOMMENDED_BRIDGE to "AI Windows",
+                  LeaveAlertType.UPCOMING_HOLIDAY to "Upcoming GH / RH",
+                  LeaveAlertType.COL_CREDIT_EXPIRY to "Unused GH / COL"
                 )
-                Text(
-                  text = "Automatically post a push alert when Gemini identifies a new 4x+ bridge",
-                  color = Color(0xFFBAE6FD),
-                  fontSize = 11.sp,
-                  lineHeight = 14.sp
-                )
-              }
-              Switch(
-                checked = autoNotifyAi,
-                onCheckedChange = { enabled ->
-                  autoNotifyAi = enabled
-                  LeaveNotificationHelper.setAutoNotifyAiEnabled(context, enabled)
-                },
-                colors = SwitchDefaults.colors(
-                  checkedThumbColor = Color.White,
-                  checkedTrackColor = Color(0xFF10B981)
-                )
-              )
-            }
-
-            // Filter Chips
-            Row(
-              modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-              horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-              val filters = listOf(
-                null to "All (${allAlerts.size})",
-                LeaveAlertType.HIGH_YIELD_BRIDGE to "Optimal Bridges",
-                LeaveAlertType.AI_RECOMMENDED_BRIDGE to "AI Windows",
-                LeaveAlertType.UPCOMING_HOLIDAY to "Upcoming GH / RH",
-                LeaveAlertType.COL_CREDIT_EXPIRY to "Unused GH / COL"
-              )
-              filters.forEach { (type, label) ->
-                val isSelected = selectedFilter == type
-                Surface(
-                  shape = RoundedCornerShape(10.dp),
-                  color = if (isSelected) Color(0xFF10B981) else Color.White.copy(alpha = 0.12f),
-                  modifier = Modifier
-                    .height(32.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .clickable { selectedFilter = type }
-                ) {
+                filters.forEach { (type, label) ->
+                  val isSelected = selectedFilter == type
                   Box(
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = Modifier
+                      .height(32.dp)
+                      .then(
+                        if (isSelected) {
+                          Modifier.neumorphicExtruded(
+                            shape = IosSharpBadgeShape,
+                            elevation = 2.5.dp,
+                            blurRadius = 5.dp,
+                            surfaceColor = neu.primaryAccent,
+                            neu = neu
+                          )
+                        } else {
+                          Modifier.neumorphicInset(
+                            shape = IosSharpBadgeShape,
+                            depth = 2.dp,
+                            blurRadius = 4.dp,
+                            neu = neu
+                          )
+                        }
+                      )
+                      .clickable { selectedFilter = type },
                     contentAlignment = Alignment.Center
                   ) {
                     Text(
                       text = label,
-                      color = if (isSelected) Color(0xFF052E16) else Color.White,
+                      color = if (isSelected) Color.White else neu.textSecondary,
                       fontSize = 11.sp,
                       fontWeight = FontWeight.Bold,
                       maxLines = 1,
-                      softWrap = false
+                      softWrap = false,
+                      modifier = Modifier.padding(horizontal = 12.dp)
                     )
                   }
                 }
               }
             }
           }
-        }
 
         // Local confirmation banner inside modal
         localBanner?.let { msg ->
@@ -811,52 +907,55 @@ fun SmartNotificationCenterDialog(
         }
 
         // Bottom Bar: Push Executive Digest Notification
-        Surface(
-          color = MaterialTheme.colorScheme.surface,
-          tonalElevation = 4.dp,
-          modifier = Modifier.fillMaxWidth()
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 4.dp,
+              blurRadius = 8.dp,
+              surfaceColor = neu.primaryAccent,
+              neu = neu
+            )
+            .clickable {
+              runWithPermission {
+                val sent = LeaveNotificationHelper.postExecutiveDigestNotification(
+                  context = context,
+                  alerts = allAlerts
+                )
+                val msg = "Sent $sent optimal leave & holiday push alerts to your Android notification shade!"
+                localBanner = msg
+                onShowStatusBanner(msg)
+              }
+            }
+            .height(48.dp)
+            .testTag("modal_send_digest_notification_button"),
+          contentAlignment = Alignment.Center
         ) {
           Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 14.dp)
           ) {
-            Button(
-              onClick = {
-                runWithPermission {
-                  val sent = LeaveNotificationHelper.postExecutiveDigestNotification(
-                    context = context,
-                    alerts = allAlerts
-                  )
-                  val msg = "Sent $sent optimal leave & holiday push alerts to your Android notification shade!"
-                  localBanner = msg
-                  onShowStatusBanner(msg)
-                }
-              },
-              shape = RoundedCornerShape(14.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
-              modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .testTag("modal_send_digest_notification_button")
-            ) {
-              Icon(
-                imageVector = Icons.Default.NotificationsActive,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-              )
-              Spacer(modifier = Modifier.width(8.dp))
-              Text(
-                text = "Send All Optimal Leave & Holiday Push Alerts Now",
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.NotificationsActive,
+              contentDescription = null,
+              tint = Color.White,
+              modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+              text = "Send All Optimal Leave & Holiday Push Alerts Now",
+              fontWeight = FontWeight.Bold,
+              color = Color.White,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
           }
         }
+      }
       }
     }
   }
@@ -871,6 +970,7 @@ private fun FullNotificationAlertCard(
   onToggleReminder: () -> Unit,
   onApplyBridge: (SmartLeaveBridge) -> Unit
 ) {
+  val neu = LocalNeumorphicColors.current
   val accentColor = when (alert.alertType) {
     LeaveAlertType.AI_RECOMMENDED_BRIDGE -> EmeraldOptimal
     LeaveAlertType.HIGH_YIELD_BRIDGE -> BadgeColCyan
@@ -878,12 +978,18 @@ private fun FullNotificationAlertCard(
     LeaveAlertType.COL_CREDIT_EXPIRY -> StatusAlertRed
   }
 
-  Surface(
-    shape = RoundedCornerShape(20.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.35f)),
-    modifier = Modifier.fillMaxWidth()
+  Box(
+    modifier = Modifier
+      .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 4.5.dp,
+        blurRadius = 9.dp,
+        accentTint = accentColor,
+        accentTintAlpha = 0.03f,
+        borderAlpha = 0.28f,
+        neu = neu
+      )
   ) {
     Column(
       modifier = Modifier.padding(16.dp),

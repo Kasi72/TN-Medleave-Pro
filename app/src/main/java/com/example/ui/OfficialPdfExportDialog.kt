@@ -68,7 +68,11 @@ import com.example.domain.GeneratedPdfBundle
 import com.example.domain.OfficialPdfReportExporter
 import com.example.domain.PdfReportConfig
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import kotlinx.coroutines.launch
 
@@ -80,129 +84,137 @@ fun OfficialPdfExportBannerCard(
 ) {
   val context = LocalContext.current
   val college = remember { HodProfileSettingsStore.getCollege(context) }
-  Surface(
-    shape = RoundedCornerShape(24.dp),
-    color = Color.Transparent,
+  val neu = LocalNeumorphicColors.current
+
+  Box(
     modifier = modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = neu.primaryAccent,
+        borderAlpha = 0.34f,
+        neu = neu
+      )
+      .padding(18.dp)
       .testTag("official_pdf_export_card")
   ) {
-    Box(
-      modifier = Modifier
-        .background(
-          brush = Brush.linearGradient(
-            colors = listOf(
-              Color(0xFF0A2540),
-              Color(0xFF1E3A5F),
-              Color(0xFF065F46)
-            )
-          ),
-          shape = RoundedCornerShape(24.dp)
-        )
-        .padding(18.dp)
-    ) {
-      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
         Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
+          verticalAlignment = Alignment.CenterVertically,
+          modifier = Modifier.weight(1f)
         ) {
-          Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
+          Box(
+            modifier = Modifier
+              .size(38.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.12f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Box(
-              modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF34D399).copy(alpha = 0.2f)),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                imageVector = Icons.Default.PictureAsPdf,
-                contentDescription = null,
-                tint = Color(0xFF34D399),
-                modifier = Modifier.size(20.dp)
-              )
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-              Text(
-                text = "DEAN'S OFFICE SUBMISSION • ${college.uppercase()}",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFF34D399),
-                fontSize = 10.sp,
-                lineHeight = 13.sp,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-              )
-              Text(
-                text = "Official Leave Audit & Holiday PDF",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.PictureAsPdf,
+              contentDescription = null,
+              tint = neu.primaryAccent,
+              modifier = Modifier.size(20.dp)
+            )
           }
-
-          Spacer(modifier = Modifier.width(8.dp))
-
-          Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = Color.White.copy(alpha = 0.14f)
-          ) {
+          Spacer(modifier = Modifier.width(10.dp))
+          Column(modifier = Modifier.weight(1f)) {
             Text(
-              text = "A4 PDF",
-              modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-              fontSize = 11.sp,
-              lineHeight = 14.sp,
-              fontWeight = FontWeight.Bold,
-              fontFamily = JetBrainsMonoFontFamily,
-              color = Color(0xFF6EE7B7),
+              text = "DEAN'S OFFICE SUBMISSION • ${college.uppercase()}",
+              style = MaterialTheme.typography.labelMedium,
+              color = neu.primaryAccent,
+              fontSize = 10.sp,
+              lineHeight = 13.sp,
               maxLines = 1,
-              softWrap = false
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
+            Text(
+              text = "Official Leave Audit & Holiday PDF",
+              style = MaterialTheme.typography.titleMedium,
+              color = neu.textPrimary,
+              fontWeight = FontWeight.Bold,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
             )
           }
         }
 
-        Text(
-          text = "Generates a formatted A4 multi-page PDF with the $college header, $selectedYear Leave Credit Summary, 1:1 COL ↔ GH Worked Reconciliation Table, 2026 Holiday Summary, and Dean/HOD signature blocks.",
-          style = MaterialTheme.typography.bodyMedium,
-          color = Color(0xFFE0F2FE),
-          fontSize = 12.sp,
-          lineHeight = 17.sp
-        )
+        Spacer(modifier = Modifier.width(8.dp))
 
-        Button(
-          onClick = onOpenPdfExportModal,
-          shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF10B981),
-            contentColor = Color(0xFF052E16)
-          ),
+        Box(
           modifier = Modifier
-            .fillMaxWidth()
-            .height(46.dp)
-            .testTag("open_pdf_export_modal_button")
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = neu.primaryAccent,
+              accentTintAlpha = 0.10f,
+              borderColor = neu.primaryAccent.copy(alpha = 0.35f),
+              neu = neu
+            )
         ) {
-          Icon(
-            imageVector = Icons.Default.PictureAsPdf,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp)
-          )
-          Spacer(modifier = Modifier.width(8.dp))
           Text(
-            text = "Preview & Export Official Audit PDF ($selectedYear)",
+            text = "A4 PDF",
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
             fontWeight = FontWeight.Bold,
+            fontFamily = JetBrainsMonoFontFamily,
+            color = neu.primaryAccent,
             maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis
+            softWrap = false
           )
         }
+      }
+
+      Text(
+        text = "Generates a formatted A4 multi-page PDF with the $college header, $selectedYear Leave Credit Summary, 1:1 COL ↔ GH Worked Reconciliation Table, 2026 Holiday Summary, and Dean/HOD signature blocks.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = neu.textSecondary,
+        fontSize = 12.sp,
+        lineHeight = 17.sp
+      )
+
+      Button(
+        onClick = onOpenPdfExportModal,
+        shape = IosSharpButtonShape,
+        colors = ButtonDefaults.buttonColors(
+          containerColor = MaterialTheme.colorScheme.primary,
+          contentColor = MaterialTheme.colorScheme.onPrimary
+        ),
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(46.dp)
+          .testTag("open_pdf_export_modal_button")
+      ) {
+        Icon(
+          imageVector = Icons.Default.PictureAsPdf,
+          contentDescription = null,
+          modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+          text = "Preview & Export Official Audit PDF ($selectedYear)",
+          fontWeight = FontWeight.Bold,
+          maxLines = 1,
+          softWrap = false,
+          overflow = TextOverflow.Ellipsis
+        )
       }
     }
   }
@@ -304,9 +316,11 @@ fun OfficialPdfExportDialog(
     ) {
       Column(modifier = Modifier.fillMaxSize()) {
         // Top Header Bar
-        Surface(
-          color = Color(0xFF0A2540),
-          modifier = Modifier.fillMaxWidth()
+        val neuDialog = LocalNeumorphicColors.current
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .background(neuDialog.surfaceRaised)
         ) {
           Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
             Row(
@@ -321,7 +335,7 @@ fun OfficialPdfExportDialog(
                 Icon(
                   imageVector = Icons.Default.Description,
                   contentDescription = null,
-                  tint = Color(0xFF34D399),
+                  tint = neuDialog.primaryAccent,
                   modifier = Modifier.size(22.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
@@ -329,7 +343,7 @@ fun OfficialPdfExportDialog(
                   Text(
                     text = "${college.uppercase()} • OFFICIAL A4 PDF",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF34D399),
+                    color = neuDialog.primaryAccent,
                     fontSize = 10.sp,
                     lineHeight = 13.sp,
                     maxLines = 1,
@@ -339,7 +353,7 @@ fun OfficialPdfExportDialog(
                   Text(
                     text = "Leave Audit & Holiday Report Preview",
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
+                    color = neuDialog.textPrimary,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     softWrap = false,
@@ -355,7 +369,7 @@ fun OfficialPdfExportDialog(
                 Icon(
                   imageVector = Icons.Default.Close,
                   contentDescription = "Close PDF Preview",
-                  tint = Color.White
+                  tint = neuDialog.textPrimary
                 )
               }
             }
@@ -615,32 +629,44 @@ private fun PdfToggleChip(
   onClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(10.dp),
-    color = if (selected) Color(0xFF10B981) else Color.White.copy(alpha = 0.1f),
-    border = BorderStroke(
-      1.dp,
-      if (selected) Color(0xFF34D399) else Color.White.copy(alpha = 0.25f)
-    ),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = modifier
-      .height(32.dp)
-      .clip(RoundedCornerShape(10.dp))
-      .clickable { onClick() }
-  ) {
-    Box(
-      modifier = Modifier.padding(horizontal = 8.dp),
-      contentAlignment = Alignment.Center
-    ) {
-      Text(
-        text = label,
-        color = if (selected) Color(0xFF052E16) else Color.White,
-        fontSize = 11.sp,
-        lineHeight = 14.sp,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        softWrap = false,
-        overflow = TextOverflow.Ellipsis
+      .height(34.dp)
+      .then(
+        if (selected) {
+          Modifier.neumorphicInset(
+            shape = IosSharpBadgeShape,
+            depth = 2.dp,
+            blurRadius = 4.dp,
+            accentTint = neu.primaryAccent,
+            accentTintAlpha = 0.14f,
+            borderColor = neu.primaryAccent.copy(alpha = 0.6f),
+            neu = neu
+          )
+        } else {
+          Modifier.neumorphicExtruded(
+            shape = IosSharpBadgeShape,
+            elevation = 2.dp,
+            blurRadius = 4.dp,
+            borderAlpha = 0.25f,
+            neu = neu
+          )
+        }
       )
-    }
+      .clickable { onClick() }
+      .padding(horizontal = 8.dp),
+    contentAlignment = Alignment.Center
+  ) {
+    Text(
+      text = label,
+      color = if (selected) neu.primaryAccent else neu.textPrimary,
+      fontSize = 11.sp,
+      lineHeight = 14.sp,
+      fontWeight = FontWeight.Bold,
+      maxLines = 1,
+      softWrap = false,
+      overflow = TextOverflow.Ellipsis
+    )
   }
 }
