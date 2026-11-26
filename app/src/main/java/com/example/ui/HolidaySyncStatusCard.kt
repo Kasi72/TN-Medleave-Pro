@@ -56,7 +56,13 @@ import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpWellShape
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusVerifiedGreen
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -68,15 +74,21 @@ fun HolidaySyncStatusCard(
   onAddLocalHolidayToRoom: (TnHolidayItem) -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val neu = LocalNeumorphicColors.current
   var showAddOrScrapeDialog by remember { mutableStateOf(false) }
 
-  Surface(
-    shape = RoundedCornerShape(24.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.35f)),
+  Box(
     modifier = modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = BadgeColCyan,
+        accentTintAlpha = 0.04f,
+        borderAlpha = 0.34f,
+        neu = neu
+      )
       .testTag("holiday_sync_status_card")
   ) {
     Column(
@@ -96,8 +108,14 @@ fun HolidaySyncStatusCard(
           Box(
             modifier = Modifier
               .size(38.dp)
-              .clip(RoundedCornerShape(12.dp))
-              .background(BadgeColCyan.copy(alpha = 0.14f)),
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = BadgeColCyan,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
             contentAlignment = Alignment.Center
           ) {
             Icon(
@@ -123,7 +141,7 @@ fun HolidaySyncStatusCard(
               text = "TN Govt Holiday Web Scraper & Cache",
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -133,13 +151,18 @@ fun HolidaySyncStatusCard(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = if (syncStatus.isSyncing) {
-            BadgePlGold.copy(alpha = 0.16f)
-          } else {
-            EmeraldOptimal.copy(alpha = 0.14f)
-          }
+        val statusAccent = if (syncStatus.isSyncing) BadgePlGold else EmeraldOptimal
+        Box(
+          modifier = Modifier
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = statusAccent,
+              accentTintAlpha = 0.12f,
+              borderColor = statusAccent.copy(alpha = 0.35f),
+              neu = neu
+            )
         ) {
           Text(
             text = if (syncStatus.isSyncing) "SYNCING..." else "ROOM DB LIVE",
@@ -148,7 +171,7 @@ fun HolidaySyncStatusCard(
             lineHeight = 14.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
-            color = if (syncStatus.isSyncing) BadgePlGold else EmeraldOptimal,
+            color = statusAccent,
             maxLines = 1,
             softWrap = false
           )
@@ -205,15 +228,22 @@ fun HolidaySyncStatusCard(
         style = MaterialTheme.typography.bodyMedium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
+        color = neu.textSecondary
       )
 
       if (syncStatus.newlySyncedItems.isNotEmpty()) {
-        Surface(
-          shape = RoundedCornerShape(14.dp),
-          color = EmeraldOptimal.copy(alpha = 0.08f),
-          border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.28f)),
-          modifier = Modifier.fillMaxWidth()
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = EmeraldOptimal,
+              accentTintAlpha = 0.08f,
+              borderColor = EmeraldOptimal.copy(alpha = 0.30f),
+              neu = neu
+            )
         ) {
           Column(
             modifier = Modifier.padding(10.dp),
@@ -240,7 +270,7 @@ fun HolidaySyncStatusCard(
                 fontSize = 11.sp,
                 lineHeight = 14.sp,
                 fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurface
+                color = neu.textPrimary
               )
             }
           }
@@ -256,7 +286,7 @@ fun HolidaySyncStatusCard(
       ) {
         OutlinedButton(
           onClick = { showAddOrScrapeDialog = true },
-          shape = RoundedCornerShape(14.dp),
+          shape = IosSharpButtonShape,
           border = BorderStroke(1.2.dp, BadgeColCyan),
           modifier = Modifier
             .weight(1f)
@@ -283,7 +313,7 @@ fun HolidaySyncStatusCard(
         Button(
           onClick = { onTriggerSyncNow("") },
           enabled = !syncStatus.isSyncing,
-          shape = RoundedCornerShape(14.dp),
+          shape = IosSharpButtonShape,
           colors = ButtonDefaults.buttonColors(containerColor = BadgeColCyan),
           modifier = Modifier
             .weight(1.25f)
@@ -347,11 +377,17 @@ private fun SyncTelemetryPill(
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(14.dp),
-    color = accent.copy(alpha = 0.1f),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.3f)),
-    modifier = modifier
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier.neumorphicInset(
+      shape = IosSharpButtonShape,
+      depth = 2.5.dp,
+      blurRadius = 5.dp,
+      accentTint = accent,
+      accentTintAlpha = 0.06f,
+      borderColor = accent.copy(alpha = 0.25f),
+      neu = neu
+    )
   ) {
     Column(
       modifier = Modifier
@@ -363,7 +399,7 @@ private fun SyncTelemetryPill(
         text = label,
         fontSize = 9.sp,
         lineHeight = 11.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -383,7 +419,7 @@ private fun SyncTelemetryPill(
         text = sub,
         fontSize = 9.sp,
         lineHeight = 11.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -398,6 +434,7 @@ private fun AddOrScrapeHolidayDialog(
   onScrapeUrlOrNote: (String) -> Unit,
   onAddDirectHoliday: (TnHolidayItem) -> Unit
 ) {
+  val neu = LocalNeumorphicColors.current
   var dateIso by remember { mutableStateOf("2026-03-30") }
   var nameEnglish by remember {
     mutableStateOf("Bannari Amman Festival (Erode District Local Holiday)")
@@ -412,7 +449,8 @@ private fun AddOrScrapeHolidayDialog(
 
   AlertDialog(
     onDismissRequest = onDismiss,
-    shape = RoundedCornerShape(26.dp),
+    shape = IosSharpCardShape,
+    containerColor = neu.baseBg,
     title = {
       ExecutiveDialogHeader(
         icon = Icons.Default.Storage,
@@ -426,19 +464,37 @@ private fun AddOrScrapeHolidayDialog(
         Text(
           text = "Option 1: Scrape a TN Govt Portal URL or paste a G.O. Notification text for Gemini to extract:",
           style = MaterialTheme.typography.bodyMedium,
-          fontSize = 12.sp
+          fontSize = 12.sp,
+          color = neu.textSecondary
         )
-        OutlinedTextField(
-          value = customUrlOrGoNote,
-          onValueChange = { customUrlOrGoNote = it },
-          label = { Text("TN Portal URL or G.O. Text") },
-          singleLine = true,
-          shape = RoundedCornerShape(12.dp),
-          modifier = Modifier.fillMaxWidth()
-        )
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 3.dp,
+              blurRadius = 6.dp,
+              neu = neu
+            )
+        ) {
+          OutlinedTextField(
+            value = customUrlOrGoNote,
+            onValueChange = { customUrlOrGoNote = it },
+            label = { Text("TN Portal URL or G.O. Text") },
+            singleLine = true,
+            shape = IosSharpWellShape,
+            colors = OutlinedTextFieldDefaults.colors(
+              focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+              unfocusedBorderColor = Color.Transparent,
+              focusedContainerColor = Color.Transparent,
+              unfocusedContainerColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
         Button(
           onClick = { onScrapeUrlOrNote(customUrlOrGoNote) },
-          shape = RoundedCornerShape(12.dp),
+          shape = IosSharpButtonShape,
           colors = ButtonDefaults.buttonColors(containerColor = BadgeColCyan),
           modifier = Modifier.fillMaxWidth()
         ) {
@@ -448,7 +504,8 @@ private fun AddOrScrapeHolidayDialog(
         Text(
           text = "Option 2: Add a Notified Erode Collectorate / DME Holiday Directly to Room DB:",
           style = MaterialTheme.typography.bodyMedium,
-          fontSize = 12.sp
+          fontSize = 12.sp,
+          color = neu.textSecondary
         )
         DatePickerOutlinedField(
           value = dateIso,
@@ -456,25 +513,81 @@ private fun AddOrScrapeHolidayDialog(
           label = "Holiday Date (YYYY-MM-DD)",
           modifier = Modifier.fillMaxWidth()
         )
-        OutlinedTextField(
-          value = nameEnglish,
-          onValueChange = { nameEnglish = it },
-          label = { Text("Holiday Name (English)") },
-          singleLine = true,
-          shape = RoundedCornerShape(12.dp),
-          modifier = Modifier.fillMaxWidth()
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          FilterChip(
-            selected = !isRestricted,
-            onClick = { isRestricted = false },
-            label = { Text("Public Holiday (GH)") }
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 3.dp,
+              blurRadius = 6.dp,
+              neu = neu
+            )
+        ) {
+          OutlinedTextField(
+            value = nameEnglish,
+            onValueChange = { nameEnglish = it },
+            label = { Text("Holiday Name (English)") },
+            singleLine = true,
+            shape = IosSharpWellShape,
+            colors = OutlinedTextFieldDefaults.colors(
+              focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+              unfocusedBorderColor = Color.Transparent,
+              focusedContainerColor = Color.Transparent,
+              unfocusedContainerColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
           )
-          FilterChip(
-            selected = isRestricted,
-            onClick = { isRestricted = true },
-            label = { Text("Restricted (RH / RL)") }
-          )
+        }
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          listOf(
+            false to "Public Holiday (GH)",
+            true to "Restricted (RH / RL)"
+          ).forEach { (restrictedFlag, labelText) ->
+            val selected = isRestricted == restrictedFlag
+            val chipAccent = if (restrictedFlag) BadgePlGold else EmeraldOptimal
+            Box(
+              modifier = Modifier
+                .weight(1f)
+                .then(
+                  if (selected) {
+                    Modifier.neumorphicInset(
+                      shape = IosSharpBadgeShape,
+                      depth = 2.dp,
+                      blurRadius = 4.dp,
+                      accentTint = chipAccent,
+                      accentTintAlpha = 0.14f,
+                      borderColor = chipAccent.copy(alpha = 0.55f),
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpBadgeShape,
+                      elevation = 2.dp,
+                      blurRadius = 4.dp,
+                      borderAlpha = 0.20f,
+                      neu = neu
+                    )
+                  }
+                )
+                .clickable { isRestricted = restrictedFlag },
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = labelText,
+                fontSize = 11.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = if (selected) chipAccent else neu.textSecondary,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp)
+              )
+            }
+          }
         }
       }
     },
@@ -494,7 +607,8 @@ private fun AddOrScrapeHolidayDialog(
               monthNameTamil = ""
             )
           )
-        }
+        },
+        shape = IosSharpButtonShape
       ) {
         Text("Save to Local Room DB")
       }

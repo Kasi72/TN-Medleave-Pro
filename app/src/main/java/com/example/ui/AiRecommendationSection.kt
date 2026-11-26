@@ -9,7 +9,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -32,28 +31,32 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +64,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -75,6 +77,8 @@ import com.example.domain.AiLeaveRecommendation
 import com.example.domain.AiLeaveRecommendationEngine
 import com.example.domain.AiRecommendationUiState
 import com.example.domain.LeaveOptimizerEngine
+import com.example.domain.OptimizerConstraints
+import com.example.domain.TentativeHoldRecord
 import com.example.domain.TnHolidays2027Catalog
 import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
@@ -83,17 +87,32 @@ import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
+import com.example.ui.theme.StatusAlertRed
+import com.example.ui.theme.StatusPendingOrange
 import java.util.Locale
+
+private val ElVioletBadge = Color(0xFF7C3AED)
+private val HoldIndigoBadge = Color(0xFF6366F1)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AiLeaveRecommendationSection(
   state: LeaveUiState.Success,
   aiState: AiRecommendationUiState,
+  constraints: OptimizerConstraints = OptimizerConstraints(),
+  onUpdateConstraints: (OptimizerConstraints) -> Unit = {},
+  tentativeHolds: Map<String, TentativeHoldRecord> = emptyMap(),
+  deepLinkGoalHint: String? = null,
+  onConsumeDeepLink: () -> Unit = {},
   onGenerateRecommendations: (String) -> Unit,
-  onApplyBridge: (SmartLeaveBridge) -> Unit
+  onApplyBridge: (SmartLeaveBridge) -> Unit,
+  onApplyPortfolio: (List<AiLeaveRecommendation>) -> Unit = {},
+  onToggleTentativeHold: (AiLeaveRecommendation) -> Unit = {},
+  onSimulateInBuilder: (AiLeaveRecommendation) -> Unit = {}
 ) {
   val context = LocalContext.current
   val summary2026 = state.summary2026
@@ -113,39 +132,118 @@ fun AiLeaveRecommendationSection(
       "Maximize Long Weekends (Highest ROI)" to "Prioritize 3 to 9 day upcoming long weekends using minimal CL/RH/COL credits",
       "Consume Expiring GH Worked (FIFO COL)" to "Prioritize using uncompensated GH worked credits before 6-month expiry",
       "Zero-CL Combos (RH + COL Only)" to "Preserve Casual Leave (CL) for emergencies; use only RH & COL credits",
-      "Festival Megabridges (Pongal / Puja / Christmas)" to "Target major Tamil Nadu festival clusters for extended family breaks"
+      "Festival Megabridges (Pongal / Puja / Christmas)" to "Target major Tamil Nadu festival clusters for extended family breaks",
+      "Earned Leave (EL) + LTC 7–9d Break" to "Optimize Rule-8 EL strictly prefixed/suffixed by weekends & GH so 0 EL is wasted on holidays"
     )
   }
   var selectedStrategyIndex by remember { mutableIntStateOf(0) }
-  val activeStrategyString = remember(selectedStrategyIndex) {
-    focusStrategies[selectedStrategyIndex].first + " — " + focusStrategies[selectedStrategyIndex].second
+  var selectedPortfolioIds by remember { mutableStateOf(setOf<String>()) }
+  var sanctionLetterRec by remember { mutableStateOf<AiLeaveRecommendation?>(null) }
+
+  // Handle Notification Center -> AI Optimizer deep links seamlessly
+  LaunchedEffect(deepLinkGoalHint) {
+    if (!deepLinkGoalHint.isNullOrBlank()) {
+      val hint = deepLinkGoalHint.lowercase(Locale.US)
+      val matchedIdx = when {
+        hint.contains("col") || hint.contains("expir") || hint.contains("gh") -> 1
+        hint.contains("zero") || hint.contains("preserve cl") -> 2
+        hint.contains("festival") || hint.contains("pongal") || hint.contains("christmas") -> 3
+        hint.contains("el") || hint.contains("ltc") || hint.contains("earned") -> 4
+        else -> 0
+      }
+      selectedStrategyIndex = matchedIdx
+      val updated = when (matchedIdx) {
+        1 -> constraints.copy(prioritizeExpiringCol = true)
+        2 -> constraints.copy(strictZeroCl = true)
+        4 -> constraints.copy(allowElBridges = true)
+        else -> constraints
+      }
+      if (updated != constraints) onUpdateConstraints(updated)
+      onConsumeDeepLink()
+    }
   }
 
-  // Strategy-aware dynamic Holiday DB scanner across upcoming 2026 & 2027 TN GH/RH calendars
-  val instantHolidayDbScan = remember(summary2026, summary2027, colGhAudit, state.allRecords, activeStrategyString, totalSyncedHolidays) {
+  // Merge selected strategy chip with explicit constraint toggles
+  val effectiveUiConstraints = remember(constraints, selectedStrategyIndex) {
+    when (selectedStrategyIndex) {
+      1 -> constraints.copy(prioritizeExpiringCol = true)
+      2 -> constraints.copy(strictZeroCl = true)
+      4 -> constraints.copy(allowElBridges = true)
+      else -> constraints
+    }
+  }
+
+  val activeStrategyString = remember(selectedStrategyIndex, effectiveUiConstraints) {
+    val base = focusStrategies[selectedStrategyIndex].first + " — " + focusStrategies[selectedStrategyIndex].second
+    effectiveUiConstraints.buildStrategySummary(base)
+  }
+
+  // Live Constraint-Aware Holiday DB Scanner (adjacency-aware, OPD-aware, 0.5 CL, Rule-8 EL, FIFO COL)
+  val instantHolidayDbScan = remember(
+    summary2026,
+    summary2027,
+    colGhAudit,
+    state.allRecords,
+    activeStrategyString,
+    effectiveUiConstraints,
+    totalSyncedHolidays
+  ) {
     AiLeaveRecommendationEngine.scanHolidayDatabaseForLongWeekends(
       summary2026 = summary2026,
       colGhAuditAllYears = colGhAudit,
       records = state.allRecords,
       focusGoal = activeStrategyString,
-      summary2027 = summary2027
+      summary2027 = summary2027,
+      constraints = effectiveUiConstraints
     )
   }
 
-  Surface(
+  val displayedRecommendations = remember(aiState, instantHolidayDbScan) {
+    when (aiState) {
+      is AiRecommendationUiState.Success -> aiState.recommendations
+      else -> instantHolidayDbScan
+    }
+  }
+
+  val selectedPortfolioRecs = remember(selectedPortfolioIds, displayedRecommendations) {
+    displayedRecommendations.filter { it.id in selectedPortfolioIds }
+  }
+
+  val portfolioImpact = remember(
+    selectedPortfolioRecs,
+    summary2026,
+    summary2027,
+    colGhAudit,
+    effectiveUiConstraints
+  ) {
+    if (selectedPortfolioRecs.isEmpty()) {
+      null
+    } else {
+      AiLeaveRecommendationEngine.computePortfolioImpact(
+        selectedRecs = selectedPortfolioRecs,
+        summary2026 = summary2026,
+        summary2027 = summary2027,
+        colGhAuditAllYears = colGhAudit,
+        constraints = effectiveUiConstraints
+      )
+    }
+  }
+
+  val neu = LocalNeumorphicColors.current
+
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .iosFrostedGlassCard(
-        accentColor = MaterialTheme.colorScheme.primary,
+      .neumorphicExtruded(
         shape = IosSharpCardShape,
-        borderWidth = 1.35.dp,
-        borderAlpha = 0.55f
+        elevation = 6.dp,
+        blurRadius = 12.dp,
+        accentTint = neu.primaryAccent,
+        accentTintAlpha = 0.04f,
+        borderAlpha = 0.36f,
+        neu = neu
       )
-      .testTag("ai_leave_optimizer_card"),
-    shape = IosSharpCardShape,
-    color = Color.Transparent,
-    tonalElevation = 0.dp,
-    shadowElevation = 4.dp
+      .testTag("ai_leave_optimizer_card")
   ) {
     Column(
       modifier = Modifier
@@ -167,14 +265,21 @@ fun AiLeaveRecommendationSection(
           Box(
             modifier = Modifier
               .size(42.dp)
-              .clip(IosSharpButtonShape)
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 3.dp,
+                blurRadius = 6.dp,
+                surfaceColor = neu.primaryAccent,
+                neu = neu
+              )
               .background(
                 Brush.linearGradient(
                   colors = listOf(
-                    MaterialTheme.colorScheme.primary,
+                    neu.primaryAccent,
                     MaterialTheme.colorScheme.tertiary
                   )
-                )
+                ),
+                shape = IosSharpButtonShape
               ),
             contentAlignment = Alignment.Center
           ) {
@@ -195,21 +300,28 @@ fun AiLeaveRecommendationSection(
                 text = "AI Leave Optimizer Engine",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = neu.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false)
               )
-              Surface(
-                shape = IosSharpBadgeShape,
-                color = MaterialTheme.colorScheme.primaryContainer
+              Box(
+                modifier = Modifier.neumorphicInset(
+                  shape = IosSharpBadgeShape,
+                  depth = 1.5.dp,
+                  blurRadius = 3.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.12f,
+                  borderColor = neu.primaryAccent.copy(alpha = 0.28f),
+                  neu = neu
+                )
               ) {
                 Text(
-                  text = "GEMINI AI + DB",
+                  text = "GEMINI + SOLVER",
                   modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.ExtraBold,
-                  color = MaterialTheme.colorScheme.onPrimaryContainer,
+                  color = neu.primaryAccent,
                   maxLines = 1,
                   softWrap = false
                 )
@@ -217,9 +329,9 @@ fun AiLeaveRecommendationSection(
             }
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-              text = "Scans upcoming TN Holiday DB ($totalSyncedHolidays dates) & live CL/RH/COL balances",
+              text = "Constraint-aware solver • $totalSyncedHolidays TN dates • Adjacency, FIFO COL, Rule-8 EL & OPD safe",
               style = MaterialTheme.typography.labelSmall,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = neu.textSecondary
             )
           }
         }
@@ -278,46 +390,102 @@ fun AiLeaveRecommendationSection(
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 4.dp),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
           focusStrategies.forEachIndexed { index, (title, _) ->
-            FilterChip(
-              selected = selectedStrategyIndex == index,
-              onClick = { selectedStrategyIndex = index },
-              shape = IosSharpButtonShape,
-              label = {
-                Text(
-                  text = title,
-                  style = MaterialTheme.typography.labelSmall,
-                  fontWeight = if (selectedStrategyIndex == index) FontWeight.Bold else FontWeight.Medium,
-                  maxLines = 1,
-                  softWrap = false
+            val isSelected = selectedStrategyIndex == index
+            Box(
+              modifier = Modifier
+                .then(
+                  if (isSelected) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 3.dp,
+                      blurRadius = 6.dp,
+                      surfaceColor = if (index == 4) ElVioletBadge else neu.primaryAccent,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 2.dp,
+                      blurRadius = 4.dp,
+                      borderAlpha = 0.24f,
+                      neu = neu
+                    )
+                  }
                 )
-              },
-              leadingIcon = if (selectedStrategyIndex == index) {
-                {
+                .clickable {
+                  selectedStrategyIndex = index
+                  if (index == 4 && !constraints.allowElBridges) {
+                    onUpdateConstraints(constraints.copy(allowElBridges = true))
+                  }
+                }
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .testTag("ai_strategy_chip_$index")
+            ) {
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                if (isSelected) {
                   Icon(
                     imageVector = Icons.Default.AutoAwesome,
                     contentDescription = null,
+                    tint = Color.White,
                     modifier = Modifier.size(14.dp)
                   )
                 }
-              } else null,
-              colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-              ),
-              modifier = Modifier.testTag("ai_strategy_chip_$index")
-            )
+                Text(
+                  text = title,
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                  color = if (isSelected) Color.White else neu.textPrimary,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
+            }
           }
         }
       }
 
-      // Primary Gemini AI CTA (Always available when not actively loading, and switches tag cleanly)
+      // Interactive Natural-Language Ask + Constraint Tuning Panel
+      OptimizerConstraintControlPanel(
+        constraints = effectiveUiConstraints,
+        onUpdateConstraints = { updated -> onUpdateConstraints(updated) },
+        onRunWithPrompt = {
+          onUpdateConstraints(effectiveUiConstraints)
+          onGenerateRecommendations(activeStrategyString)
+        }
+      )
+
+      // Multi-Plan Portfolio Impact Dock (appears when ≥1 card is selected)
+      if (portfolioImpact != null) {
+        PortfolioImpactSummaryDock(
+          impact = portfolioImpact,
+          onApplyPortfolio = {
+            onApplyPortfolio(selectedPortfolioRecs)
+            selectedPortfolioIds = emptySet()
+            Toast.makeText(
+              context,
+              "Committing ${selectedPortfolioRecs.size} portfolio plan(s) to Firestore Ledger...",
+              Toast.LENGTH_SHORT
+            ).show()
+          },
+          onClearSelection = { selectedPortfolioIds = emptySet() }
+        )
+      }
+
+      // Primary Gemini AI CTA
       if (aiState !is AiRecommendationUiState.Success) {
         Button(
-          onClick = { onGenerateRecommendations(activeStrategyString) },
+          onClick = {
+            onUpdateConstraints(effectiveUiConstraints)
+            onGenerateRecommendations(activeStrategyString)
+          },
           enabled = aiState !is AiRecommendationUiState.Loading,
           modifier = Modifier
             .fillMaxWidth()
@@ -365,10 +533,18 @@ fun AiLeaveRecommendationSection(
         is AiRecommendationUiState.Loading,
         is AiRecommendationUiState.Error -> {
           if (aiState is AiRecommendationUiState.Loading) {
-            Surface(
-              shape = IosSharpWellShape,
-              color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
-              border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f))
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .neumorphicInset(
+                  shape = IosSharpWellShape,
+                  depth = 2.5.dp,
+                  blurRadius = 5.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.08f,
+                  borderColor = neu.primaryAccent.copy(alpha = 0.30f),
+                  neu = neu
+                )
             ) {
               Row(
                 modifier = Modifier
@@ -380,19 +556,19 @@ fun AiLeaveRecommendationSection(
                 CircularProgressIndicator(
                   modifier = Modifier.size(24.dp),
                   strokeWidth = 2.8.dp,
-                  color = MaterialTheme.colorScheme.primary
+                  color = neu.primaryAccent
                 )
                 Column(modifier = Modifier.weight(1f)) {
                   Text(
-                    text = "Synthesizing Optimal Upcoming Bridges...",
+                    text = "Synthesizing Constraint-Verified Bridges...",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = neu.textPrimary
                   )
                   Text(
-                    text = "Evaluating $totalSyncedHolidays TN Govt Holidays (2026–2027), FIFO GH-Worked pool & FR Annexure VII rules via Gemini AI...",
+                    text = "Running adjacency check, FIFO COL decay, OPD safety, Rule-8 EL & Gemini AI synthesis...",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = neu.textSecondary
                   )
                 }
               }
@@ -400,10 +576,18 @@ fun AiLeaveRecommendationSection(
           }
 
           if (aiState is AiRecommendationUiState.Error) {
-            Surface(
-              shape = IosSharpWellShape,
-              color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f),
-              border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.45f))
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .neumorphicInset(
+                  shape = IosSharpWellShape,
+                  depth = 2.5.dp,
+                  blurRadius = 5.dp,
+                  accentTint = MaterialTheme.colorScheme.error,
+                  accentTintAlpha = 0.12f,
+                  borderColor = MaterialTheme.colorScheme.error.copy(alpha = 0.45f),
+                  neu = neu
+                )
             ) {
               Column(
                 modifier = Modifier
@@ -424,7 +608,7 @@ fun AiLeaveRecommendationSection(
                   Text(
                     text = aiState.message,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.weight(1f)
                   )
                 }
@@ -434,9 +618,9 @@ fun AiLeaveRecommendationSection(
                   verticalAlignment = Alignment.CenterVertically
                 ) {
                   Text(
-                    text = "Local Holiday DB recommendations remain active below.",
+                    text = "Local Constraint Solver recommendations remain active below.",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
+                    color = neu.textSecondary,
                     modifier = Modifier.weight(1f)
                   )
                   OutlinedButton(
@@ -456,12 +640,19 @@ fun AiLeaveRecommendationSection(
             }
           }
 
-          // Instant Algorithmic Holiday DB Long-Weekend Scanner Header
-          Surface(
-            shape = IosSharpWellShape,
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.30f)),
-            modifier = Modifier.fillMaxWidth()
+          // Instant Algorithmic Constraint Solver Header
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.08f,
+                borderColor = neu.primaryAccent.copy(alpha = 0.28f),
+                neu = neu
+              )
           ) {
             Column(
               modifier = Modifier
@@ -484,26 +675,32 @@ fun AiLeaveRecommendationSection(
                   Icon(
                     imageVector = Icons.Default.Verified,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = neu.primaryAccent,
                     modifier = Modifier.size(16.dp)
                   )
                   Text(
-                    text = "LIVE HOLIDAY DB LONG-WEEKEND SCANNER",
+                    text = "LIVE CONSTRAINT SOLVER (${effectiveUiConstraints.horizonMode.shortChip.uppercase()})",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = neu.primaryAccent,
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis
                   )
                 }
-                Surface(
-                  shape = IosSharpBadgeShape,
-                  color = EmeraldOptimal.copy(alpha = 0.16f),
-                  border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.45f))
+                Box(
+                  modifier = Modifier.neumorphicInset(
+                    shape = IosSharpBadgeShape,
+                    depth = 1.5.dp,
+                    blurRadius = 3.dp,
+                    accentTint = EmeraldOptimal,
+                    accentTintAlpha = 0.14f,
+                    borderColor = EmeraldOptimal.copy(alpha = 0.45f),
+                    neu = neu
+                  )
                 ) {
                   Text(
-                    text = "${instantHolidayDbScan.size} Upcoming",
+                    text = "${instantHolidayDbScan.size} Verified",
                     modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.ExtraBold,
@@ -514,45 +711,83 @@ fun AiLeaveRecommendationSection(
                 }
               }
               Text(
-                text = "Strategy: ${focusStrategies[selectedStrategyIndex].first}. Tap any card to inspect day-by-day schedule or book directly to your Ledger.",
+                text = "Tap '+ Portfolio' on multiple cards to model cumulative balances, 'Hold' to mark tentatively on Calendar, or 'Simulate' to edit in Leave Builder.",
                 style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = neu.textSecondary
               )
             }
           }
 
-          // Render Dynamic Upcoming Holiday DB Long-Weekend Cards
-          Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            instantHolidayDbScan.forEachIndexed { index, rec ->
-              AiRecommendationItemCard(
-                rank = index + 1,
-                rec = rec,
-                onApplyRecommendation = {
-                  onApplyBridge(rec.toSmartLeaveBridge())
-                  Toast.makeText(
-                    context,
-                    "Applying ${rec.title} to your Leave Ledger...",
-                    Toast.LENGTH_SHORT
-                  ).show()
-                },
-                onCopyMemo = {
-                  copyRecommendationToClipboard(context, rec)
-                }
+          // Render Dynamic Upcoming Constraint-Verified Cards
+          if (instantHolidayDbScan.isEmpty()) {
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .neumorphicInset(
+                  shape = IosSharpWellShape,
+                  depth = 2.dp,
+                  blurRadius = 4.dp,
+                  neu = neu
+                )
+                .padding(14.dp)
+            ) {
+              Text(
+                text = "No upcoming windows match your current strict filters (e.g., Horizon + CL reserve + Zero-CL). Relax a constraint chip above or widen the horizon to All '26–27.",
+                style = MaterialTheme.typography.bodySmall,
+                color = neu.textSecondary
               )
+            }
+          } else {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+              instantHolidayDbScan.forEachIndexed { index, rec ->
+                val isHeld = rec.dailyPlan.any {
+                  it.creditType.uppercase(Locale.US) in setOf("CL", "HALF_CL", "RH", "COL", "EL") &&
+                    tentativeHolds[it.dateIso]?.bridgeId == rec.id
+                }
+                AiRecommendationItemCard(
+                  rank = index + 1,
+                  rec = rec,
+                  isSelectedForPortfolio = rec.id in selectedPortfolioIds,
+                  isHeldOnCalendar = isHeld,
+                  onTogglePortfolioSelection = {
+                    selectedPortfolioIds = if (rec.id in selectedPortfolioIds) {
+                      selectedPortfolioIds - rec.id
+                    } else {
+                      selectedPortfolioIds + rec.id
+                    }
+                  },
+                  onApplyRecommendation = {
+                    onApplyBridge(rec.toSmartLeaveBridge())
+                    Toast.makeText(
+                      context,
+                      "Applying ${rec.title} to your Leave Ledger...",
+                      Toast.LENGTH_SHORT
+                    ).show()
+                  },
+                  onToggleTentativeHold = { onToggleTentativeHold(rec) },
+                  onSimulateInBuilder = { onSimulateInBuilder(rec) },
+                  onOpenSanctionLetter = { sanctionLetterRec = rec },
+                  onCopyMemo = { copyRecommendationToClipboard(context, rec) }
+                )
+              }
             }
           }
         }
 
         is AiRecommendationUiState.Success -> {
           // Executive Strategy Summary Banner
-          Surface(
-            shape = IosSharpWellShape,
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.36f),
-            border = BorderStroke(
-              1.dp,
-              MaterialTheme.colorScheme.primary.copy(alpha = 0.34f)
-            ),
-            modifier = Modifier.fillMaxWidth()
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.09f,
+                borderColor = neu.primaryAccent.copy(alpha = 0.34f),
+                neu = neu
+              )
           ) {
             Column(
               modifier = Modifier
@@ -575,28 +810,33 @@ fun AiLeaveRecommendationSection(
                   Icon(
                     imageVector = Icons.Default.AutoAwesome,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = neu.primaryAccent,
                     modifier = Modifier.size(16.dp)
                   )
                   Text(
                     text = "GEMINI AI BRIEFING (${aiState.analyzedHolidayCount} DATES)",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = neu.primaryAccent,
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis
                   )
                 }
-                Surface(
-                  shape = IosSharpBadgeShape,
-                  color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                Box(
+                  modifier = Modifier.neumorphicExtruded(
+                    shape = IosSharpBadgeShape,
+                    elevation = 1.5.dp,
+                    blurRadius = 3.dp,
+                    borderAlpha = 0.22f,
+                    neu = neu
+                  )
                 ) {
                   Text(
                     text = aiState.focusGoal.substringBefore(" —").take(22),
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = neu.textSecondary,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     softWrap = false,
@@ -608,25 +848,36 @@ fun AiLeaveRecommendationSection(
                 text = aiState.executiveSummary,
                 style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = neu.textPrimary
               )
+              if (aiState.appliedConstraintsSummary.isNotBlank()) {
+                Text(
+                  text = "Active Rules: ${aiState.appliedConstraintsSummary}",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = neu.primaryAccent,
+                  fontWeight = FontWeight.SemiBold
+                )
+              }
             }
           }
 
-          // Top Re-run Toolbar so switching strategies doesn't require scrolling past all cards
+          // Top Re-run Toolbar
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
             Text(
-              text = "${aiState.recommendations.size} Gemini AI Plans",
+              text = "${aiState.recommendations.size} Verified Gemini AI Plans",
               style = MaterialTheme.typography.labelMedium,
               fontWeight = FontWeight.ExtraBold,
               color = MaterialTheme.colorScheme.onSurface
             )
             OutlinedButton(
-              onClick = { onGenerateRecommendations(activeStrategyString) },
+              onClick = {
+                onUpdateConstraints(effectiveUiConstraints)
+                onGenerateRecommendations(activeStrategyString)
+              },
               modifier = Modifier.testTag("regenerate_ai_recommendations_btn"),
               shape = IosSharpButtonShape,
               contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
@@ -648,9 +899,22 @@ fun AiLeaveRecommendationSection(
           // Recommendations List
           Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             aiState.recommendations.forEachIndexed { index, rec ->
+              val isHeld = rec.dailyPlan.any {
+                it.creditType.uppercase(Locale.US) in setOf("CL", "HALF_CL", "RH", "COL", "EL") &&
+                  tentativeHolds[it.dateIso]?.bridgeId == rec.id
+              }
               AiRecommendationItemCard(
                 rank = index + 1,
                 rec = rec,
+                isSelectedForPortfolio = rec.id in selectedPortfolioIds,
+                isHeldOnCalendar = isHeld,
+                onTogglePortfolioSelection = {
+                  selectedPortfolioIds = if (rec.id in selectedPortfolioIds) {
+                    selectedPortfolioIds - rec.id
+                  } else {
+                    selectedPortfolioIds + rec.id
+                  }
+                },
                 onApplyRecommendation = {
                   onApplyBridge(rec.toSmartLeaveBridge())
                   Toast.makeText(
@@ -659,15 +923,23 @@ fun AiLeaveRecommendationSection(
                     Toast.LENGTH_SHORT
                   ).show()
                 },
-                onCopyMemo = {
-                  copyRecommendationToClipboard(context, rec)
-                }
+                onToggleTentativeHold = { onToggleTentativeHold(rec) },
+                onSimulateInBuilder = { onSimulateInBuilder(rec) },
+                onOpenSanctionLetter = { sanctionLetterRec = rec },
+                onCopyMemo = { copyRecommendationToClipboard(context, rec) }
               )
             }
           }
         }
       }
     }
+  }
+
+  sanctionLetterRec?.let { rec ->
+    HodSanctionLetterDialog(
+      rec = rec,
+      onDismiss = { sanctionLetterRec = null }
+    )
   }
 }
 
@@ -707,8 +979,14 @@ private fun copyRecommendationToClipboard(
     }
     appendLine("Strategic Rationale: ${rec.whyOptimalForHod}")
     appendLine("FIFO / Rule Check: ${rec.tnRuleComplianceCheck}")
+    if (rec.opdImpactNote.isNotBlank()) {
+      appendLine("Clinical OPD Impact: ${rec.opdImpactNote}")
+    }
     if (rec.projectedBalanceAfter.isNotBlank()) {
       appendLine("Projected Balance After: ${rec.projectedBalanceAfter}")
+    }
+    if (rec.portfolioBalanceAfter.isNotBlank()) {
+      appendLine("Cumulative Sequence Balance: ${rec.portfolioBalanceAfter}")
     }
   }
   clipboard.setPrimaryClip(ClipData.newPlainText("Optimal Leave Plan", memoText))
@@ -720,37 +998,47 @@ private fun copyRecommendationToClipboard(
 private fun AiRecommendationItemCard(
   rank: Int,
   rec: AiLeaveRecommendation,
+  isSelectedForPortfolio: Boolean,
+  isHeldOnCalendar: Boolean,
+  onTogglePortfolioSelection: () -> Unit,
   onApplyRecommendation: () -> Unit,
+  onToggleTentativeHold: () -> Unit,
+  onSimulateInBuilder: () -> Unit,
+  onOpenSanctionLetter: () -> Unit,
   onCopyMemo: () -> Unit
 ) {
-  var expanded by remember(rec.id) { mutableStateOf(rank <= 2) }
+  val neu = LocalNeumorphicColors.current
+  var expanded by remember(rec.id) { mutableStateOf(rank <= 1) }
 
   val primaryTag = when {
+    rec.isElBridge || rec.creditMixSummary.contains("EL", ignoreCase = true) -> "EL"
     rec.creditMixSummary.contains("COL", ignoreCase = true) -> "COL"
     rec.creditMixSummary.contains("RH", ignoreCase = true) -> "RH"
     else -> "CL"
   }
 
   val badgeColor = when (primaryTag) {
+    "EL" -> ElVioletBadge
     "COL" -> BadgeColCyan
     "RH" -> BadgeRhSlate
     else -> BadgeClGreen
   }
+  val pillTextAccent = if (primaryTag == "RH" && neu.isDark) Color(0xFF94A3B8) else badgeColor
 
-  Surface(
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .iosFrostedGlassCard(
-        accentColor = badgeColor,
+      .neumorphicExtruded(
         shape = IosSharpCardShape,
-        borderWidth = 1.1.dp,
-        borderAlpha = 0.42f
+        elevation = if (isSelectedForPortfolio) 5.5.dp else 4.dp,
+        blurRadius = 8.dp,
+        accentTint = if (isSelectedForPortfolio) EmeraldOptimal else badgeColor,
+        accentTintAlpha = if (isSelectedForPortfolio) 0.06f else 0.03f,
+        borderAlpha = if (isSelectedForPortfolio) 0.55f else 0.32f,
+        neu = neu
       )
       .clickable { expanded = !expanded }
-      .testTag("ai_rec_card_$rank"),
-    shape = IosSharpCardShape,
-    color = Color.Transparent,
-    tonalElevation = 0.dp
+      .testTag("ai_rec_card_$rank")
   ) {
     Column(
       modifier = Modifier
@@ -772,8 +1060,13 @@ private fun AiRecommendationItemCard(
           Box(
             modifier = Modifier
               .size(28.dp)
-              .clip(CircleShape)
-              .background(badgeColor),
+              .neumorphicExtruded(
+                shape = CircleShape,
+                elevation = 2.5.dp,
+                blurRadius = 4.dp,
+                surfaceColor = badgeColor,
+                neu = neu
+              ),
             contentAlignment = Alignment.Center
           ) {
             Text(
@@ -788,7 +1081,7 @@ private fun AiRecommendationItemCard(
               text = rec.title,
               style = MaterialTheme.typography.titleSmall,
               fontWeight = FontWeight.ExtraBold,
-              color = MaterialTheme.colorScheme.onSurface
+              color = neu.textPrimary
             )
             Row(
               verticalAlignment = Alignment.CenterVertically,
@@ -797,7 +1090,7 @@ private fun AiRecommendationItemCard(
               Icon(
                 imageVector = Icons.Default.CalendarMonth,
                 contentDescription = null,
-                tint = badgeColor,
+                tint = pillTextAccent,
                 modifier = Modifier.size(13.dp)
               )
               Text(
@@ -806,7 +1099,7 @@ private fun AiRecommendationItemCard(
                   fontFamily = JetBrainsMonoFontFamily
                 ),
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = neu.textSecondary,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis
@@ -821,10 +1114,16 @@ private fun AiRecommendationItemCard(
           verticalArrangement = Arrangement.spacedBy(4.dp),
           modifier = Modifier.padding(start = 8.dp)
         ) {
-          Surface(
-            shape = IosSharpBadgeShape,
-            color = EmeraldOptimal.copy(alpha = 0.16f),
-            border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.45f))
+          Box(
+            modifier = Modifier.neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 1.5.dp,
+              blurRadius = 3.dp,
+              accentTint = EmeraldOptimal,
+              accentTintAlpha = 0.14f,
+              borderColor = EmeraldOptimal.copy(alpha = 0.45f),
+              neu = neu
+            )
           ) {
             Text(
               text = "${rec.totalDaysOff}d Off • ${rec.efficiencyMultiplier}x",
@@ -840,31 +1139,45 @@ private fun AiRecommendationItemCard(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Surface(
-              shape = IosSharpBadgeShape,
-              color = badgeColor.copy(alpha = 0.16f)
+            Box(
+              modifier = Modifier.neumorphicInset(
+                shape = IosSharpBadgeShape,
+                depth = 1.5.dp,
+                blurRadius = 3.dp,
+                accentTint = badgeColor,
+                accentTintAlpha = 0.12f,
+                borderColor = badgeColor.copy(alpha = 0.30f),
+                neu = neu
+              )
             ) {
               Text(
                 text = "Use ${formatCreditCount(rec.leaveCreditsUsed)} Cr",
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = badgeColor,
+                color = pillTextAccent,
                 maxLines = 1,
                 softWrap = false
               )
             }
             if (rec.freeDaysUnlocked > 0) {
-              Surface(
-                shape = IosSharpBadgeShape,
-                color = MaterialTheme.colorScheme.tertiaryContainer
+              Box(
+                modifier = Modifier.neumorphicInset(
+                  shape = IosSharpBadgeShape,
+                  depth = 1.5.dp,
+                  blurRadius = 3.dp,
+                  accentTint = MaterialTheme.colorScheme.tertiary,
+                  accentTintAlpha = 0.12f,
+                  borderColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.28f),
+                  neu = neu
+                )
               ) {
                 Text(
                   text = "+${rec.freeDaysUnlocked} Free",
                   modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onTertiaryContainer,
+                  color = MaterialTheme.colorScheme.tertiary,
                   maxLines = 1,
                   softWrap = false
                 )
@@ -874,12 +1187,96 @@ private fun AiRecommendationItemCard(
         }
       }
 
+      // Intelligence Badges Row (Portfolio toggle + Expiry Urgency + Rule-8 EL + 0.5 CL + OPD + Hold)
+      FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+      ) {
+        // Portfolio Select Toggle Chip
+        Box(
+          modifier = Modifier
+            .then(
+              if (isSelectedForPortfolio) {
+                Modifier.neumorphicExtruded(
+                  shape = IosSharpBadgeShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  surfaceColor = EmeraldOptimal,
+                  neu = neu
+                )
+              } else {
+                Modifier.neumorphicInset(
+                  shape = IosSharpBadgeShape,
+                  depth = 1.5.dp,
+                  blurRadius = 3.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.08f,
+                  borderColor = neu.primaryAccent.copy(alpha = 0.30f),
+                  neu = neu
+                )
+              }
+            )
+            .clickable { onTogglePortfolioSelection() }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .testTag("portfolio_select_chip_$rank")
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Default.Layers,
+              contentDescription = null,
+              tint = if (isSelectedForPortfolio) Color.White else neu.primaryAccent,
+              modifier = Modifier.size(12.dp)
+            )
+            Text(
+              text = if (isSelectedForPortfolio) "✓ In Portfolio" else "+ Portfolio",
+              fontSize = 10.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = if (isSelectedForPortfolio) Color.White else neu.primaryAccent,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
+        }
+
+        if (isHeldOnCalendar) {
+          IntelligenceStatusTag(label = "HELD ON CALENDAR", accent = HoldIndigoBadge)
+        }
+        if (rec.expiryUrgencyTag.isNotBlank()) {
+          IntelligenceStatusTag(label = rec.expiryUrgencyTag, accent = StatusAlertRed)
+        }
+        if (rec.isElBridge) {
+          IntelligenceStatusTag(label = "RULE-8 EL PREFIX/SUFFIX", accent = ElVioletBadge)
+        }
+        if (rec.isHalfDayBridge) {
+          IntelligenceStatusTag(label = "0.5 CL HALF-DAY", accent = EmeraldOptimal)
+        }
+        if (rec.hasOpdConflict) {
+          IntelligenceStatusTag(label = "OPD OVERLAP", accent = StatusPendingOrange)
+        } else if (rec.opdImpactNote.isNotBlank()) {
+          IntelligenceStatusTag(label = "OPD-SAFE", accent = EmeraldOptimal)
+        }
+      }
+
+      // Visual Color-Coded Timeline Strip (instant bridge geometry understanding)
+      BridgeVisualTimelineStrip(dailyPlan = rec.dailyPlan)
+
       // Always-Visible Callout: EXACT DATES TO APPLY FOR LEAVE
       if (rec.exactDatesToApply.isNotEmpty()) {
-        Surface(
-          shape = IosSharpWellShape,
-          color = badgeColor.copy(alpha = 0.10f),
-          border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.30f))
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = badgeColor,
+              accentTintAlpha = 0.08f,
+              borderColor = badgeColor.copy(alpha = 0.30f),
+              neu = neu
+            )
         ) {
           Column(
             modifier = Modifier
@@ -894,14 +1291,14 @@ private fun AiRecommendationItemCard(
               Icon(
                 imageVector = Icons.Default.DateRange,
                 contentDescription = null,
-                tint = badgeColor,
+                tint = pillTextAccent,
                 modifier = Modifier.size(14.dp)
               )
               Text(
-                text = "EXACT DATES TO APPLY FOR LEAVE (${rec.exactDatesToApply.size} ${if (rec.exactDatesToApply.size == 1) "DATE" else "DATES"}):",
+                text = "EXACT DATES TO APPLY (${rec.exactDatesToApply.size} ${if (rec.exactDatesToApply.size == 1) "DATE" else "DATES"}):",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.ExtraBold,
-                color = badgeColor
+                color = pillTextAccent
               )
             }
             FlowRow(
@@ -917,10 +1314,16 @@ private fun AiRecommendationItemCard(
                 } else {
                   applyDateChip
                 }
-                Surface(
-                  shape = IosSharpBadgeShape,
-                  color = MaterialTheme.colorScheme.surface,
-                  border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.45f))
+                Box(
+                  modifier = Modifier.neumorphicExtruded(
+                    shape = IosSharpBadgeShape,
+                    elevation = 1.5.dp,
+                    blurRadius = 3.dp,
+                    accentTint = badgeColor,
+                    accentTintAlpha = 0.04f,
+                    borderAlpha = 0.35f,
+                    neu = neu
+                  )
                 ) {
                   Text(
                     text = displayChip,
@@ -929,7 +1332,7 @@ private fun AiRecommendationItemCard(
                       fontFamily = JetBrainsMonoFontFamily
                     ),
                     fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = neu.textPrimary
                   )
                 }
               }
@@ -942,8 +1345,8 @@ private fun AiRecommendationItemCard(
       Text(
         text = rec.whyOptimalForHod,
         style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = if (expanded) 5 else 2,
+        color = neu.textSecondary,
+        maxLines = if (expanded) 6 else 2,
         overflow = TextOverflow.Ellipsis
       )
 
@@ -956,16 +1359,14 @@ private fun AiRecommendationItemCard(
           modifier = Modifier.fillMaxWidth(),
           verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-          HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-          )
+          HorizontalDivider(color = neu.hairlineDivider)
 
           // Day-by-Day Chronological Schedule Pills
           Text(
-            text = "FULL LONG-WEEKEND SCHEDULE (${rec.totalDaysOff} CONSECUTIVE DAYS OFF)",
+            text = "FULL SCHEDULE BREAKDOWN (${rec.totalDaysOff} CONSECUTIVE DAYS OFF)",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.primary
+            color = neu.primaryAccent
           )
 
           FlowRow(
@@ -973,22 +1374,27 @@ private fun AiRecommendationItemCard(
             verticalArrangement = Arrangement.spacedBy(6.dp)
           ) {
             rec.dailyPlan.forEach { dayStep ->
-              val isLeaveAction = dayStep.creditType.uppercase(Locale.US) in setOf("CL", "RH", "COL")
-              Surface(
-                shape = IosSharpBadgeShape,
-                color = if (isLeaveAction) {
-                  badgeColor.copy(alpha = 0.15f)
+              val isLeaveAction = dayStep.creditType.uppercase(Locale.US) in setOf("CL", "HALF_CL", "RH", "COL", "EL")
+              Box(
+                modifier = if (isLeaveAction) {
+                  Modifier.neumorphicInset(
+                    shape = IosSharpBadgeShape,
+                    depth = 1.5.dp,
+                    blurRadius = 3.dp,
+                    accentTint = badgeColor,
+                    accentTintAlpha = 0.12f,
+                    borderColor = badgeColor.copy(alpha = 0.42f),
+                    neu = neu
+                  )
                 } else {
-                  MaterialTheme.colorScheme.surface
-                },
-                border = BorderStroke(
-                  width = 1.dp,
-                  color = if (isLeaveAction) {
-                    badgeColor.copy(alpha = 0.45f)
-                  } else {
-                    MaterialTheme.colorScheme.outlineVariant
-                  }
-                )
+                  Modifier.neumorphicExtruded(
+                    shape = IosSharpBadgeShape,
+                    elevation = 1.5.dp,
+                    blurRadius = 3.dp,
+                    borderAlpha = 0.20f,
+                    neu = neu
+                  )
+                }
               ) {
                 Text(
                   text = "${dayStep.dayLabel}: ${dayStep.description}",
@@ -997,16 +1403,22 @@ private fun AiRecommendationItemCard(
                     fontFamily = JetBrainsMonoFontFamily
                   ),
                   fontWeight = if (isLeaveAction) FontWeight.Bold else FontWeight.Medium,
-                  color = if (isLeaveAction) badgeColor else MaterialTheme.colorScheme.onSurface
+                  color = if (isLeaveAction) pillTextAccent else neu.textPrimary
                 )
               }
             }
           }
 
-          // Compliance & Projected Balance Footer
-          Surface(
-            shape = IosSharpWellShape,
-            color = MaterialTheme.colorScheme.surface
+          // Compliance, OPD, LTC Synergy & Sequential Balance Footer
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                neu = neu
+              )
           ) {
             Column(
               modifier = Modifier
@@ -1028,23 +1440,91 @@ private fun AiRecommendationItemCard(
                   text = rec.tnRuleComplianceCheck,
                   style = MaterialTheme.typography.labelSmall,
                   fontWeight = FontWeight.SemiBold,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                  color = neu.textSecondary
+                )
+              }
+              if (rec.opdImpactNote.isNotBlank()) {
+                Text(
+                  text = "Clinical OPD Check: ${rec.opdImpactNote}",
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = FontWeight.SemiBold,
+                  color = if (rec.hasOpdConflict) StatusPendingOrange else EmeraldOptimal
+                )
+              }
+              if (rec.ltcOdSynergyNote.isNotBlank()) {
+                Text(
+                  text = "LTC / Conference Synergy: ${rec.ltcOdSynergyNote}",
+                  style = MaterialTheme.typography.labelSmall,
+                  fontWeight = FontWeight.SemiBold,
+                  color = ElVioletBadge
                 )
               }
               if (rec.projectedBalanceAfter.isNotBlank()) {
                 Text(
-                  text = "Projected Balance After: ${rec.projectedBalanceAfter}",
+                  text = "After This Plan: ${rec.projectedBalanceAfter}",
                   style = MaterialTheme.typography.labelSmall.copy(
                     fontFamily = JetBrainsMonoFontFamily
                   ),
                   fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.primary
+                  color = neu.primaryAccent
+                )
+              }
+              if (rec.portfolioBalanceAfter.isNotBlank()) {
+                Text(
+                  text = "Cumulative Sequence: ${rec.portfolioBalanceAfter}",
+                  style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = JetBrainsMonoFontFamily
+                  ),
+                  fontWeight = FontWeight.Medium,
+                  color = neu.textSecondary
                 )
               }
             }
           }
 
-          // Action Buttons Row
+          // Secondary Tactical Actions Row: Hold on Calendar | Simulate in Builder | Sanction Letter
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+          ) {
+            TacticalCardActionChip(
+              icon = if (isHeldOnCalendar) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+              label = if (isHeldOnCalendar) "Held ✓" else "Hold",
+              accent = HoldIndigoBadge,
+              isActive = isHeldOnCalendar,
+              onClick = onToggleTentativeHold,
+              modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .testTag("hold_ai_rec_btn_$rank")
+            )
+            TacticalCardActionChip(
+              icon = Icons.Default.Tune,
+              label = "Simulate",
+              accent = BadgeColCyan,
+              isActive = false,
+              onClick = onSimulateInBuilder,
+              modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .testTag("simulate_ai_rec_btn_$rank")
+            )
+            TacticalCardActionChip(
+              icon = Icons.Default.Description,
+              label = "HOD Letter",
+              accent = neu.primaryAccent,
+              isActive = false,
+              onClick = onOpenSanctionLetter,
+              modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .testTag("letter_ai_rec_btn_$rank")
+            )
+          }
+
+          // Primary Apply Action Row + Quick Copy
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1064,7 +1544,7 @@ private fun AiRecommendationItemCard(
               Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,
-                tint = Color(0xFF042F2E),
+                tint = Color.White,
                 modifier = Modifier.size(16.dp)
               )
               Spacer(modifier = Modifier.width(6.dp))
@@ -1072,23 +1552,36 @@ private fun AiRecommendationItemCard(
                 text = "Apply Exact Leave Dates to Ledger",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF042F2E),
+                color = Color.White,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis
               )
             }
 
-            IconButton(
-              onClick = onCopyMemo,
-              modifier = Modifier.testTag("copy_ai_rec_btn_$rank")
+            Box(
+              modifier = Modifier
+                .size(40.dp)
+                .neumorphicExtruded(
+                  shape = IosSharpMicroShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  borderAlpha = 0.22f,
+                  neu = neu
+                ),
+              contentAlignment = Alignment.Center
             ) {
-              Icon(
-                imageVector = Icons.Default.ContentCopy,
-                contentDescription = "Copy Optimal Leave Plan",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-              )
+              IconButton(
+                onClick = onCopyMemo,
+                modifier = Modifier.testTag("copy_ai_rec_btn_$rank")
+              ) {
+                Icon(
+                  imageVector = Icons.Default.ContentCopy,
+                  contentDescription = "Copy Optimal Leave Plan",
+                  tint = neu.primaryAccent,
+                  modifier = Modifier.size(18.dp)
+                )
+              }
             }
           }
         }
@@ -1101,7 +1594,7 @@ private fun AiRecommendationItemCard(
         verticalAlignment = Alignment.CenterVertically
       ) {
         Text(
-          text = if (expanded) "Hide day-by-day breakdown" else "View day-by-day breakdown & 1-tap apply",
+          text = if (expanded) "Hide breakdown & actions" else "Inspect schedule, Hold, Simulate or HOD Letter",
           style = MaterialTheme.typography.labelSmall,
           color = MaterialTheme.colorScheme.primary,
           fontWeight = FontWeight.SemiBold
@@ -1118,17 +1611,116 @@ private fun AiRecommendationItemCard(
 }
 
 @Composable
+private fun IntelligenceStatusTag(
+  label: String,
+  accent: Color
+) {
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = Modifier.neumorphicInset(
+      shape = IosSharpBadgeShape,
+      depth = 1.5.dp,
+      blurRadius = 3.dp,
+      accentTint = accent,
+      accentTintAlpha = 0.14f,
+      borderColor = accent.copy(alpha = 0.42f),
+      neu = neu
+    )
+  ) {
+    Text(
+      text = label,
+      modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.5.dp),
+      fontFamily = JetBrainsMonoFontFamily,
+      fontSize = 9.5.sp,
+      fontWeight = FontWeight.ExtraBold,
+      color = accent,
+      maxLines = 1,
+      softWrap = false
+    )
+  }
+}
+
+@Composable
+private fun TacticalCardActionChip(
+  icon: androidx.compose.ui.graphics.vector.ImageVector,
+  label: String,
+  accent: Color,
+  isActive: Boolean,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier
+) {
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier
+      .then(
+        if (isActive) {
+          Modifier.neumorphicInset(
+            shape = IosSharpButtonShape,
+            depth = 2.dp,
+            blurRadius = 4.dp,
+            accentTint = accent,
+            accentTintAlpha = 0.16f,
+            borderColor = accent.copy(alpha = 0.55f),
+            neu = neu
+          )
+        } else {
+          Modifier.neumorphicExtruded(
+            shape = IosSharpButtonShape,
+            elevation = 2.dp,
+            blurRadius = 4.dp,
+            accentTint = accent,
+            accentTintAlpha = 0.05f,
+            borderAlpha = 0.30f,
+            neu = neu
+          )
+        }
+      )
+      .clickable { onClick() }
+      .padding(horizontal = 8.dp, vertical = 9.dp),
+    contentAlignment = Alignment.Center
+  ) {
+    Row(
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+      Icon(
+        imageVector = icon,
+        contentDescription = label,
+        tint = accent,
+        modifier = Modifier.size(14.dp)
+      )
+      Text(
+        text = label,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.ExtraBold,
+        color = accent,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis
+      )
+    }
+  }
+}
+
+@Composable
 private fun LiveCreditInputPill(
   label: String,
   value: String,
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    modifier = modifier,
-    shape = IosSharpButtonShape,
-    color = accent.copy(alpha = 0.11f),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.28f))
+  val neu = LocalNeumorphicColors.current
+  val safeAccent = if (accent == BadgeRhSlate && neu.isDark) Color(0xFF94A3B8) else accent
+  Box(
+    modifier = modifier.neumorphicInset(
+      shape = IosSharpButtonShape,
+      depth = 2.dp,
+      blurRadius = 4.dp,
+      accentTint = accent,
+      accentTintAlpha = 0.08f,
+      borderColor = accent.copy(alpha = 0.28f),
+      neu = neu
+    )
   ) {
     Column(
       modifier = Modifier
@@ -1143,7 +1735,7 @@ private fun LiveCreditInputPill(
           fontSize = 10.sp,
           lineHeight = 12.sp
         ),
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -1157,7 +1749,7 @@ private fun LiveCreditInputPill(
           lineHeight = 14.sp
         ),
         fontWeight = FontWeight.ExtraBold,
-        color = accent,
+        color = safeAccent,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis

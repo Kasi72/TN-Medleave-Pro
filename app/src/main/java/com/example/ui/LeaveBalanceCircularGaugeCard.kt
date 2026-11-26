@@ -805,9 +805,16 @@ fun EnterpriseLeaveBalanceCircularCard(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(24.dp)
           ) {
-            Surface(
-              shape = RoundedCornerShape(6.dp),
-              color = centerAccent.copy(alpha = 0.14f)
+            Box(
+              modifier = Modifier.neumorphicInset(
+                shape = RoundedCornerShape(6.dp),
+                depth = 1.5.dp,
+                blurRadius = 3.dp,
+                accentTint = centerAccent,
+                accentTintAlpha = 0.14f,
+                borderColor = centerAccent.copy(alpha = 0.30f),
+                neu = neu
+              )
             ) {
               Text(
                 text = if (showUsedInCenter) "USED" else "REMAINING",
@@ -1248,9 +1255,16 @@ private fun SubPoolCircularMiniCard(
           centerTextColor = accentColor
         )
 
-        Surface(
-          shape = RoundedCornerShape(7.dp),
-          color = accentColor.copy(alpha = 0.15f)
+        Box(
+          modifier = Modifier.neumorphicInset(
+            shape = RoundedCornerShape(7.dp),
+            depth = 1.5.dp,
+            blurRadius = 3.dp,
+            accentTint = accentColor,
+            accentTintAlpha = 0.14f,
+            borderColor = accentColor.copy(alpha = 0.28f),
+            neu = neu
+          )
         ) {
           Text(
             text = code,

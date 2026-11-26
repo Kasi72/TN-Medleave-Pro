@@ -273,112 +273,33 @@ object LeaveOptimizerEngine {
   }
 
   /**
-   * Generates optimal Tamil Nadu Government Leave Bridges for 2026 & upcoming festivals
+   * Dynamically generates optimal Tamil Nadu Government Leave Bridges for 2026–2027 & upcoming festivals
    * combining Weekends (Sat/Sun), Government Public Holidays (GH), Restricted Holidays (RH),
-   * and optimal CL / COL / PL credits while strictly adhering to the TN 10-day continuous
-   * stretch rule (Annexure VII, TN Fundamental Rules).
+   * and optimal CL / COL / EL credits while strictly adhering to TN Leave Rules 1933 & FR Annexure VII.
    */
   fun generateOptimalLeaveBridges(
     summary2026: YearCreditSummary,
-    records2026: List<LeaveRecord>
+    records2026: List<LeaveRecord>,
+    allRecords: List<LeaveRecord> = records2026,
+    colGhAuditAllYears: ColGhAuditSummary? = null,
+    summary2027: YearCreditSummary? = null
   ): List<SmartLeaveBridge> {
-    val takenDates = records2026.map { it.dateIso }.toSet()
-    val clAvail = summary2026.clRemaining.toInt()
-    val rhAvail = summary2026.rhRemaining
-
-    return listOf(
-      SmartLeaveBridge(
-        id = "bridge_nov_deepavali_2026",
-        title = "Deepavali & All Souls' Mega Bridge (Nov 2026)",
-        startDateIso = "2026-11-07",
-        endDateIso = "2026-11-10",
-        totalDaysOff = 4,
-        leaveCreditsRequired = 1,
-        efficiencyRatio = 4.0f,
-        recommendedMix = "1 PL (Nov 9 already logged) + Sat/Sun + Deepavali Nonbu",
-        dayByDayBreakdown = listOf(
-          BridgeDayStep("2026-11-07", "Sat, Nov 7", "LEAVE_CREDIT", if ("2026-11-07" in takenDates) "COL Logged (vs 4-9-26)" else "Weekend / COL"),
-          BridgeDayStep("2026-11-08", "Sun, Nov 8", "GH", "Deepavali (தீபாவளி) & Deepavali Nonbu RL"),
-          BridgeDayStep("2026-11-09", "Mon, Nov 9", "LEAVE_CREDIT", if ("2026-11-09" in takenDates) "PL Already Logged in Sheet" else "Use 1 CL or PL Credit"),
-          BridgeDayStep("2026-11-10", "Tue, Nov 10", "LEAVE_CREDIT", "Optional +1 COL (against unused GH 2026-09-04)")
-        ),
-        tnRuleComplianceNote = "Complies with TN Leave Rule: Total continuous absence is 4 days (well under the 10-day maximum stretch for CL/RH/Holidays)."
-      ),
-      SmartLeaveBridge(
-        id = "bridge_nov_karthigai_2026",
-        title = "Karthigai Deepam 4-Day Golden Bridge (Nov 2026)",
-        startDateIso = "2026-11-21",
-        endDateIso = "2026-11-24",
-        totalDaysOff = 4,
-        leaveCreditsRequired = 2,
-        efficiencyRatio = 2.0f,
-        recommendedMix = "1 COL/CL (Mon Nov 23) + 1 RH (Tue Nov 24 - Karthigai Deepam)",
-        dayByDayBreakdown = listOf(
-          BridgeDayStep("2026-11-21", "Sat, Nov 21", "WEEKEND", "Saturday Prefix Weekend"),
-          BridgeDayStep("2026-11-22", "Sun, Nov 22", "WEEKEND", "Sunday Weekend"),
-          BridgeDayStep("2026-11-23", "Mon, Nov 23", "LEAVE_CREDIT", "Take 1 COL (pair with unused GH 2026-10-10) or 1 CL ($clAvail left)"),
-          BridgeDayStep("2026-11-24", "Tue, Nov 24", "RH", "Take 1 RH: கார்த்திகை தீபம் (Karthigai Deepam RL)")
-        ),
-        tnRuleComplianceNote = "High-yield November bridge! Uses 1 of your $rhAvail remaining RH credits (24.11.2026) + 1 COL/CL to unlock a 4-day break."
-      ),
-      SmartLeaveBridge(
-        id = "bridge_dec_christmas_arudhra_2026",
-        title = "Christmas & Arudhra Darisanam 4-Day Year-End Escape",
-        startDateIso = "2026-12-24",
-        endDateIso = "2026-12-27",
-        totalDaysOff = 4,
-        leaveCreditsRequired = 1,
-        efficiencyRatio = 4.0f,
-        recommendedMix = "1 RH (Thu Dec 24) + Christmas GH (Fri Dec 25) + Weekend",
-        dayByDayBreakdown = listOf(
-          BridgeDayStep("2026-12-24", "Thu, Dec 24", "RH", "Take 1 RH: ஆருத்ரா தரிசனம் / கிறிஸ்துமஸ் ஈவ் (RL List)"),
-          BridgeDayStep("2026-12-25", "Fri, Dec 25", "GH", "Christmas Day (கிறிஸ்துமஸ் - TN Govt Holiday)"),
-          BridgeDayStep("2026-12-26", "Sat, Dec 26", "WEEKEND", "Saturday Suffix Weekend"),
-          BridgeDayStep("2026-12-27", "Sun, Dec 27", "WEEKEND", "Sunday Suffix Weekend")
-        ),
-        tnRuleComplianceNote = "4.0x Multiplier! Only 1 RH credit (Dec 24) combines with Christmas GH + Weekend for 4 full days off."
-      ),
-      SmartLeaveBridge(
-        id = "bridge_dec_mega_year_end_2026",
-        title = "9-Day Year-End Grand Finale (Max TN Stretch Rule)",
-        startDateIso = "2026-12-24",
-        endDateIso = "2027-01-01",
-        totalDaysOff = 9,
-        leaveCreditsRequired = 4,
-        efficiencyRatio = 2.25f,
-        recommendedMix = "1 RH (Dec 24) + 3 CL (Dec 28, 29, 30) + 1 RH (Dec 31)",
-        dayByDayBreakdown = listOf(
-          BridgeDayStep("2026-12-24", "Thu, Dec 24", "RH", "RH #2: Christmas Eve / Arudhra Darisanam"),
-          BridgeDayStep("2026-12-25", "Fri, Dec 25", "GH", "Christmas Day (Govt Holiday)"),
-          BridgeDayStep("2026-12-26", "Sat, Dec 26", "WEEKEND", "Saturday Weekend"),
-          BridgeDayStep("2026-12-27", "Sun, Dec 27", "WEEKEND", "Sunday Weekend"),
-          BridgeDayStep("2026-12-28", "Mon, Dec 28", "LEAVE_CREDIT", "Take CL #10 of 2026"),
-          BridgeDayStep("2026-12-29", "Tue, Dec 29", "LEAVE_CREDIT", "Take CL #11 of 2026"),
-          BridgeDayStep("2026-12-30", "Wed, Dec 30", "LEAVE_CREDIT", "Take CL #12 (Zero CL Lapsed!)"),
-          BridgeDayStep("2026-12-31", "Thu, Dec 31", "RH", "RH #3: நியூ இயர் ஈவ் (New Year's Eve RL)"),
-          BridgeDayStep("2027-01-01", "Fri, Jan 1", "GH", "New Year's Day 2027 (Govt Holiday)")
-        ),
-        tnRuleComplianceNote = "Zero-Waste Strategy: Consumes all 3 remaining 2026 CLs + both remaining 2026 RHs before Dec 31 expiry, staying strictly at 9 days (<10-day TN limit)."
-      ),
-      SmartLeaveBridge(
-        id = "bridge_aug_onam_upakarma_2026",
-        title = "August Onam + Avani Avittam + Gayathri Japam 5-Day Cluster",
-        startDateIso = "2026-08-26",
-        endDateIso = "2026-08-30",
-        totalDaysOff = 5,
-        leaveCreditsRequired = 2,
-        efficiencyRatio = 2.5f,
-        recommendedMix = "Milad-un-Nabi/Onam (Aug 26) + 2 RH/CL (Aug 27, 28) + Weekend",
-        dayByDayBreakdown = listOf(
-          BridgeDayStep("2026-08-26", "Wed, Aug 26", "GH", "Milad-un-Nabi GH / ஓணம் (PL Logged in Sheet)"),
-          BridgeDayStep("2026-08-27", "Thu, Aug 27", "RH", "RL: ஆவணி அவிட்டம் (Avani Avittam)"),
-          BridgeDayStep("2026-08-28", "Fri, Aug 28", "RH", "RL: காயத்ரி ஜெபம் (Gayathri Japam)"),
-          BridgeDayStep("2026-08-29", "Sat, Aug 29", "WEEKEND", "Saturday Weekend"),
-          BridgeDayStep("2026-08-30", "Sun, Aug 30", "WEEKEND", "Sunday Weekend")
-        ),
-        tnRuleComplianceNote = "Demonstrates TN RL clustering where Wednesday GH + Thu/Fri RL links directly into the weekend."
+    val audit = colGhAuditAllYears ?: auditColAndGhWorked(allRecords, filterYear = null)
+    val dynamic2026Plus = AiLeaveRecommendationEngine.scanHolidayDatabaseForLongWeekends(
+      summary2026 = summary2026,
+      colGhAuditAllYears = audit,
+      records = allRecords,
+      focusGoal = "Maximize Long Weekends (Highest ROI)",
+      summary2027 = summary2027,
+      constraints = OptimizerConstraints(
+        allowHalfDayCl = true,
+        prioritizeExpiringCol = true
       )
     )
+    if (dynamic2026Plus.isNotEmpty()) {
+      return dynamic2026Plus.map { it.toSmartLeaveBridge() }
+    }
+    return TnHolidays2027Catalog.smartBridges2027
   }
 
   /**

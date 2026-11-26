@@ -38,7 +38,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -586,6 +586,7 @@ fun ColGhAuditTabScreen(
 
   // Modal 1: Pair an unaccounted COL with any Unused GH Worked credit (or custom GH date)
   manualPairItem?.let { auditItem ->
+    val neu = LocalNeumorphicColors.current
     val unusedCandidates = state.colGhAuditAllYears.unusedGhRecords
     var customGhDate by remember {
       mutableStateOf(
@@ -597,7 +598,8 @@ fun ColGhAuditTabScreen(
 
     AlertDialog(
       onDismissRequest = { manualPairItem = null },
-      shape = RoundedCornerShape(28.dp),
+      shape = IosSharpCardShape,
+      containerColor = neu.baseBg,
       title = {
         ExecutiveDialogHeader(
           icon = Icons.Default.Link,
@@ -611,7 +613,7 @@ fun ColGhAuditTabScreen(
           Text(
             text = "Select an available unclaimed GH Worked date below or enter a specific GH Worked date to account for this COL:",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = neu.textSecondary
           )
 
           if (unusedCandidates.isNotEmpty()) {
@@ -624,25 +626,44 @@ fun ColGhAuditTabScreen(
               modifier = Modifier
                 .fillMaxWidth()
                 .height(180.dp)
-                .horizontalScroll(rememberScrollState()),
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 4.dp, vertical = 4.dp),
               verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
               unusedCandidates.take(6).forEach { gh ->
                 val isChosen = customGhDate == gh.dateIso
-                Surface(
-                  shape = RoundedCornerShape(12.dp),
-                  color = if (isChosen) BadgeGhLime else BadgeGhLime.copy(alpha = 0.14f),
+                Box(
                   modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .then(
+                      if (isChosen) {
+                        Modifier.neumorphicExtruded(
+                          shape = IosSharpButtonShape,
+                          elevation = 2.5.dp,
+                          blurRadius = 5.dp,
+                          surfaceColor = BadgeGhLime,
+                          neu = neu
+                        )
+                      } else {
+                        Modifier.neumorphicInset(
+                          shape = IosSharpButtonShape,
+                          depth = 2.dp,
+                          blurRadius = 4.dp,
+                          accentTint = BadgeGhLime,
+                          accentTintAlpha = 0.10f,
+                          borderColor = BadgeGhLime.copy(alpha = 0.35f),
+                          neu = neu
+                        )
+                      }
+                    )
                     .clickable { customGhDate = gh.dateIso }
                 ) {
                   Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically
                   ) {
                     Text(
                       text = "${ClinicalDateFormatter.formatFriendlyDate(gh.dateIso)} • ${gh.notes.ifBlank { "GH Duty" }}",
-                      color = if (isChosen) Color.White else BadgeGhLime,
+                      color = if (isChosen) Color(0xFF042F2E) else if (neu.isDark) BadgeGhLime else EmeraldOptimal,
                       fontWeight = FontWeight.Bold,
                       fontSize = 12.sp
                     )
@@ -668,7 +689,7 @@ fun ColGhAuditTabScreen(
               manualPairItem = null
             }
           },
-          shape = RoundedCornerShape(14.dp),
+          shape = IosSharpButtonShape,
           colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal)
         ) {
           Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -686,12 +707,14 @@ fun ColGhAuditTabScreen(
 
   // Modal 2: Avail an Unused GH Worked credit as a new COL Leave
   claimUnusedGhRecord?.let { ghRec ->
+    val neu = LocalNeumorphicColors.current
     var newColDate by remember { mutableStateOf("${ghRec.year}-11-23") }
     var colNotes by remember { mutableStateOf("COL availed against GH Worked on ${ghRec.dateIso}") }
 
     AlertDialog(
       onDismissRequest = { claimUnusedGhRecord = null },
-      shape = RoundedCornerShape(28.dp),
+      shape = IosSharpCardShape,
+      containerColor = neu.baseBg,
       title = {
         ExecutiveDialogHeader(
           icon = Icons.Default.EventAvailable,
@@ -704,7 +727,8 @@ fun ColGhAuditTabScreen(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
           Text(
             text = "You worked on Government Holiday ${ClinicalDateFormatter.formatFriendlyDate(ghRec.dateIso)} (${ghRec.notes.ifBlank { "Hospital Duty" }}) and haven't linked a COL to it yet. Pick a date to avail this COL:",
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium,
+            color = neu.textSecondary
           )
           DatePickerOutlinedField(
             value = newColDate,
@@ -712,13 +736,30 @@ fun ColGhAuditTabScreen(
             label = "COL Leave Date to Avail (YYYY-MM-DD)",
             modifier = Modifier.fillMaxWidth()
           )
-          OutlinedTextField(
-            value = colNotes,
-            onValueChange = { colNotes = it },
-            label = { Text("Notes") },
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth()
-          )
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                neu = neu
+              )
+          ) {
+            OutlinedTextField(
+              value = colNotes,
+              onValueChange = { colNotes = it },
+              label = { Text("Notes") },
+              shape = IosSharpWellShape,
+              colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+              ),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
         }
       },
       confirmButton = {
@@ -729,7 +770,7 @@ fun ColGhAuditTabScreen(
               claimUnusedGhRecord = null
             }
           },
-          shape = RoundedCornerShape(14.dp),
+          shape = IosSharpButtonShape,
           colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal)
         ) {
           Icon(Icons.Default.EventAvailable, contentDescription = null, modifier = Modifier.size(18.dp))

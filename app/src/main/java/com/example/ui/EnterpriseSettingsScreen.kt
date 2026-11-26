@@ -116,6 +116,7 @@ import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.LocalAppThemeMode
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -135,6 +136,8 @@ object HodProfileSettingsStore {
   private const val KEY_ENFORCE_10_DAY_CAP = "enforce_10_day_cap"
   private const val KEY_ENFORCE_FIFO_COL = "enforce_fifo_col"
   private const val KEY_INCLUDE_SATURDAY_BRIDGE = "include_saturday_bridge"
+  private const val KEY_PROTECTED_OPD_DAYS = "protected_opd_days"
+  private const val KEY_SAFETY_CL_RESERVE = "safety_cl_reserve_default"
 
   fun getOfficerName(context: Context): String =
     context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -227,6 +230,37 @@ object HodProfileSettingsStore {
     context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
       .edit()
       .putBoolean(KEY_INCLUDE_SATURDAY_BRIDGE, enabled)
+      .apply()
+  }
+
+  fun getProtectedOpdDays(context: Context): Set<DayOfWeek> {
+    val raw = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      .getString(KEY_PROTECTED_OPD_DAYS, "")
+      .orEmpty()
+    if (raw.isBlank()) return emptySet()
+    return raw.split(",")
+      .mapNotNull { token -> runCatching { DayOfWeek.valueOf(token.trim()) }.getOrNull() }
+      .toSet()
+  }
+
+  fun setProtectedOpdDays(context: Context, days: Set<DayOfWeek>) {
+    val serialized = days.sortedBy { it.value }.joinToString(",") { it.name }
+    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      .edit()
+      .putString(KEY_PROTECTED_OPD_DAYS, serialized)
+      .apply()
+  }
+
+  fun getSafetyClReserveDefault(context: Context): Double {
+    val stored = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      .getFloat(KEY_SAFETY_CL_RESERVE, 0f)
+    return stored.toDouble().coerceIn(0.0, 6.0)
+  }
+
+  fun setSafetyClReserveDefault(context: Context, reserve: Double) {
+    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      .edit()
+      .putFloat(KEY_SAFETY_CL_RESERVE, reserve.coerceIn(0.0, 6.0).toFloat())
       .apply()
   }
 
@@ -1676,6 +1710,12 @@ private fun AppConfigSecurityAndExportSubTab(
   var includeSaturdayBridge by remember {
     mutableStateOf(HodProfileSettingsStore.isIncludeSaturdayBridgeEnabled(context))
   }
+  var protectedOpdDays by remember {
+    mutableStateOf(HodProfileSettingsStore.getProtectedOpdDays(context))
+  }
+  var defaultClReserve by remember {
+    mutableStateOf(HodProfileSettingsStore.getSafetyClReserveDefault(context))
+  }
 
   val neu = LocalNeumorphicColors.current
   Column(
@@ -1790,6 +1830,134 @@ private fun AppConfigSecurityAndExportSubTab(
             HodProfileSettingsStore.setIncludeSaturdayBridgeEnabled(context, it)
           }
         )
+
+        HorizontalDivider(color = neu.hairlineDivider)
+
+        // Clinical OPD / Ward Round Duty Day Protection
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+          Text(
+            text = "PROTECTED OPD / CLINICAL DUTY DAYS (AI OPTIMIZER)",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = neu.primaryAccent
+          )
+          Text(
+            text = "Tap weekdays with Psychiatry OPD, ECT, or Clinics so the AI Optimizer prioritizes bridges avoiding them.",
+            style = MaterialTheme.typography.labelSmall,
+            color = neu.textSecondary
+          )
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+          ) {
+            listOf(
+              DayOfWeek.MONDAY to "MON",
+              DayOfWeek.TUESDAY to "TUE",
+              DayOfWeek.WEDNESDAY to "WED",
+              DayOfWeek.THURSDAY to "THU",
+              DayOfWeek.FRIDAY to "FRI",
+              DayOfWeek.SATURDAY to "SAT"
+            ).forEach { (dow, shortLabel) ->
+              val isOpd = dow in protectedOpdDays
+              Box(
+                modifier = Modifier
+                  .weight(1f)
+                  .then(
+                    if (isOpd) {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpMicroShape,
+                        elevation = 2.5.dp,
+                        blurRadius = 5.dp,
+                        surfaceColor = BadgePlGold,
+                        neu = neu
+                      )
+                    } else {
+                      Modifier.neumorphicInset(
+                        shape = IosSharpMicroShape,
+                        depth = 1.5.dp,
+                        blurRadius = 3.dp,
+                        neu = neu
+                      )
+                    }
+                  )
+                  .clickable {
+                    val next = if (isOpd) protectedOpdDays - dow else protectedOpdDays + dow
+                    protectedOpdDays = next
+                    HodProfileSettingsStore.setProtectedOpdDays(context, next)
+                  }
+                  .padding(vertical = 8.dp)
+                  .testTag("opd_day_chip_${shortLabel.lowercase()}"),
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = shortLabel,
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = if (isOpd) Color.White else neu.textSecondary,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
+            }
+          }
+        }
+
+        // Default Emergency CL Reserve Floor
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+          Text(
+            text = "DEFAULT EMERGENCY CL SAFETY RESERVE",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = EmeraldOptimal
+          )
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+          ) {
+            listOf(0.0, 1.0, 2.0, 3.0, 4.0).forEach { reserve ->
+              val selected = defaultClReserve == reserve
+              Box(
+                modifier = Modifier
+                  .weight(1f)
+                  .then(
+                    if (selected) {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpMicroShape,
+                        elevation = 2.5.dp,
+                        blurRadius = 5.dp,
+                        surfaceColor = EmeraldOptimal,
+                        neu = neu
+                      )
+                    } else {
+                      Modifier.neumorphicInset(
+                        shape = IosSharpMicroShape,
+                        depth = 1.5.dp,
+                        blurRadius = 3.dp,
+                        neu = neu
+                      )
+                    }
+                  )
+                  .clickable {
+                    defaultClReserve = reserve
+                    HodProfileSettingsStore.setSafetyClReserveDefault(context, reserve)
+                  }
+                  .padding(vertical = 7.dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = if (reserve == 0.0) "0 CL" else "${reserve.toInt()} CL",
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = if (selected) Color.White else neu.textSecondary,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
+            }
+          }
+        }
       }
     }
 

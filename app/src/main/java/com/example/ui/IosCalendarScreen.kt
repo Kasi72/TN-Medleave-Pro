@@ -29,6 +29,9 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Star
@@ -59,6 +62,8 @@ import com.example.data.InitialLeaveSeedData
 import com.example.data.LeaveCategory
 import com.example.data.LeaveRecord
 import com.example.data.TnHolidayItem
+import com.example.domain.BuilderPreloadRequest
+import com.example.domain.TentativeHoldRecord
 import com.example.domain.TnHolidays2027Catalog
 import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
@@ -83,6 +88,7 @@ private val GoldHolidayHighlight = Color(0xFFF59E0B)
 private val TealRhHighlight = Color(0xFF14B8A6)
 private val CyanColHighlight = Color(0xFF06B6D4)
 private val EmeraldLeaveHighlight = Color(0xFF10B981)
+private val TentativeHoldViolet = Color(0xFF6366F1)
 
 @Composable
 fun IosCalendarTabScreen(
@@ -95,7 +101,12 @@ fun IosCalendarTabScreen(
   onTriggerHolidaySync: (String) -> Unit = {},
   onAddLocalHolidayToRoom: (TnHolidayItem) -> Unit = {},
   initialSubMode: Int = 0,
-  onApplyBridge: (com.example.data.SmartLeaveBridge) -> Unit = {}
+  onApplyBridge: (com.example.data.SmartLeaveBridge) -> Unit = {},
+  tentativeHolds: Map<String, TentativeHoldRecord> = emptyMap(),
+  onPromoteTentativeHold: (TentativeHoldRecord) -> Unit = {},
+  onClearTentativeHold: (String) -> Unit = {},
+  pendingBuilderPreload: BuilderPreloadRequest? = null,
+  onBuilderPreloadConsumed: () -> Unit = {}
 ) {
   var currentMonthValue by rememberSaveable(state.selectedYear) {
     mutableIntStateOf(
@@ -208,7 +219,9 @@ fun IosCalendarTabScreen(
           item {
             InteractiveLeaveBuilderSection(
               state = state,
-              onCommitDraftLeaves = onCommitDraftLeaves
+              onCommitDraftLeaves = onCommitDraftLeaves,
+              pendingPreload = pendingBuilderPreload,
+              onPreloadConsumed = onBuilderPreloadConsumed
             )
           }
         }
@@ -316,9 +329,14 @@ fun IosCalendarTabScreen(
                         .padding(12.dp),
                       verticalAlignment = Alignment.CenterVertically
                     ) {
-                      Surface(
-                        shape = IosSharpMicroShape,
-                        color = hAccent
+                      Box(
+                        modifier = Modifier.neumorphicExtruded(
+                          shape = IosSharpMicroShape,
+                          elevation = 1.5.dp,
+                          blurRadius = 3.dp,
+                          surfaceColor = hAccent,
+                          neu = neu
+                        )
                       ) {
                         Text(
                           text = if (hItem.isRestrictedHoliday) "RL" else "GH",
@@ -706,6 +724,7 @@ fun IosCalendarTabScreen(
                             dayRecords = dayRecords,
                             ghItem = ghItem,
                             rhItem = rhItem,
+                            tentativeHold = tentativeHolds[dateIso],
                             onClick = { selectedDateIso = dateIso },
                             modifier = Modifier.weight(1f)
                           )
@@ -794,6 +813,9 @@ fun IosCalendarTabScreen(
               dayRecords = recordsByDate[selectedDateIso].orEmpty(),
               ghItem = ghByDate[selectedDateIso],
               rhItem = rhByDate[selectedDateIso],
+              tentativeHold = tentativeHolds[selectedDateIso],
+              onPromoteTentativeHold = onPromoteTentativeHold,
+              onClearTentativeHold = onClearTentativeHold,
               onQuickLogLeave = onQuickLogLeave,
               onOpenFullAddDialog = onOpenFullAddDialog
             )
@@ -956,6 +978,7 @@ private fun IosCalendarDayCell(
   dayRecords: List<LeaveRecord>,
   ghItem: TnHolidayItem?,
   rhItem: TnHolidayItem?,
+  tentativeHold: TentativeHoldRecord? = null,
   onClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
@@ -966,11 +989,13 @@ private fun IosCalendarDayCell(
   val isColOrDuty = recordCode == "COL" || recordCode == "GHW" || primaryRecord?.leaveType == "GH_WORKED"
   val isPlRecord = recordCode == "PL"
   val isLeaveRecord = primaryRecord != null && !isColOrDuty && !isPlRecord
+  val hasHoldOnly = primaryRecord == null && tentativeHold != null
 
   val goldText = if (neu.isDark) Color(0xFFFDE68A) else Color(0xFFB45309)
   val tealText = if (neu.isDark) Color(0xFF99F6E4) else Color(0xFF0F766E)
   val cyanText = if (neu.isDark) Color(0xFF67E8F9) else Color(0xFF0369A1)
   val emeraldText = if (neu.isDark) Color(0xFF6EE7B7) else Color(0xFF047857)
+  val holdText = if (neu.isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA)
   val sunColor = if (neu.isDark) Color(0xFFFCD34D) else Color(0xFFD97706)
   val satColor = if (neu.isDark) Color(0xFF7DD3FC) else Color(0xFF0284C7)
 
@@ -978,6 +1003,7 @@ private fun IosCalendarDayCell(
     isColOrDuty -> CyanColHighlight
     isPlRecord || ghItem != null -> GoldHolidayHighlight
     isLeaveRecord -> EmeraldLeaveHighlight
+    hasHoldOnly -> TentativeHoldViolet
     rhItem != null -> TealRhHighlight
     else -> null
   }
@@ -987,6 +1013,7 @@ private fun IosCalendarDayCell(
     isColOrDuty -> cyanText
     isPlRecord || ghItem != null -> goldText
     isLeaveRecord -> emeraldText
+    hasHoldOnly -> holdText
     rhItem != null -> tealText
     isSunday -> sunColor
     isSaturday -> satColor
@@ -995,6 +1022,7 @@ private fun IosCalendarDayCell(
 
   val badgeLabel: String? = when {
     primaryRecord != null -> primaryRecord.category.shortLabel.take(4)
+    hasHoldOnly -> "HOLD"
     ghItem != null -> "GH"
     rhItem != null -> "RL"
     else -> null
@@ -1004,6 +1032,7 @@ private fun IosCalendarDayCell(
     isColOrDuty -> CyanColHighlight
     isPlRecord || ghItem != null -> GoldHolidayHighlight
     isLeaveRecord -> EmeraldLeaveHighlight
+    hasHoldOnly -> TentativeHoldViolet
     rhItem != null -> TealRhHighlight
     else -> EmeraldOptimal
   }
@@ -1046,12 +1075,12 @@ private fun IosCalendarDayCell(
   ) {
     // Multi-Record Count Badge (top-left)
     if (dayRecords.size > 1) {
-      Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = neu.primaryAccent.copy(alpha = 0.22f),
+      Box(
         modifier = Modifier
           .align(Alignment.TopStart)
           .padding(top = 1.dp, start = 1.dp)
+          .clip(RoundedCornerShape(4.dp))
+          .background(neu.primaryAccent.copy(alpha = 0.22f))
       ) {
         Text(
           text = "×${dayRecords.size}",
@@ -1093,9 +1122,10 @@ private fun IosCalendarDayCell(
 
       if (badgeLabel != null) {
         Spacer(modifier = Modifier.height(3.dp))
-        Surface(
-          shape = RoundedCornerShape(6.dp),
-          color = badgePillBg
+        Box(
+          modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(badgePillBg)
         ) {
           Text(
             text = badgeLabel,
@@ -1154,9 +1184,14 @@ private fun CalendarLegendPill(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(7.dp)
     ) {
-      Surface(
-        shape = RoundedCornerShape(5.dp),
-        color = dotColor
+      Box(
+        modifier = Modifier.neumorphicExtruded(
+          shape = RoundedCornerShape(5.dp),
+          elevation = 1.dp,
+          blurRadius = 2.dp,
+          surfaceColor = dotColor,
+          neu = neu
+        )
       ) {
         Text(
           text = badgeCode,
@@ -1186,6 +1221,9 @@ private fun SelectedDayInspectorCard(
   dayRecords: List<LeaveRecord>,
   ghItem: TnHolidayItem?,
   rhItem: TnHolidayItem?,
+  tentativeHold: TentativeHoldRecord? = null,
+  onPromoteTentativeHold: (TentativeHoldRecord) -> Unit = {},
+  onClearTentativeHold: (String) -> Unit = {},
   onQuickLogLeave: (leaveType: String, dateIso: String, notes: String) -> Unit,
   onOpenFullAddDialog: () -> Unit
 ) {
@@ -1367,6 +1405,124 @@ private fun SelectedDayInspectorCard(
         }
       }
 
+      if (tentativeHold != null) {
+        val holdText = if (neu.isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA)
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = TentativeHoldViolet,
+              accentTintAlpha = 0.12f,
+              borderColor = TentativeHoldViolet.copy(alpha = 0.55f),
+              neu = neu
+            )
+            .padding(12.dp)
+        ) {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                imageVector = Icons.Default.Bookmark,
+                contentDescription = null,
+                tint = TentativeHoldViolet,
+                modifier = Modifier.size(18.dp)
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = "TENTATIVE AI HOLD (${tentativeHold.creditType})",
+                  style = MaterialTheme.typography.labelLarge,
+                  color = holdText,
+                  fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                  text = "${tentativeHold.bridgeTitle} — ${tentativeHold.note}",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = neu.textSecondary
+                )
+              }
+            }
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              Box(
+                modifier = Modifier
+                  .weight(1f)
+                  .neumorphicExtruded(
+                    shape = IosSharpButtonShape,
+                    elevation = 2.dp,
+                    blurRadius = 4.dp,
+                    surfaceColor = EmeraldOptimal,
+                    neu = neu
+                  )
+                  .clickable { onPromoteTentativeHold(tentativeHold) }
+                  .padding(vertical = 8.dp, horizontal = 8.dp)
+                  .testTag("promote_hold_btn_$selectedDateIso"),
+                contentAlignment = Alignment.Center
+              ) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(14.dp)
+                  )
+                  Text(
+                    text = "Promote to Ledger",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    maxLines = 1,
+                    softWrap = false
+                  )
+                }
+              }
+              Box(
+                modifier = Modifier
+                  .neumorphicExtruded(
+                    shape = IosSharpButtonShape,
+                    elevation = 2.dp,
+                    blurRadius = 4.dp,
+                    accentTint = Color(0xFFEF4444),
+                    accentTintAlpha = 0.08f,
+                    borderAlpha = 0.35f,
+                    neu = neu
+                  )
+                  .clickable { onClearTentativeHold(tentativeHold.dateIso) }
+                  .padding(vertical = 8.dp, horizontal = 12.dp)
+                  .testTag("clear_hold_btn_$selectedDateIso"),
+                contentAlignment = Alignment.Center
+              ) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.DeleteOutline,
+                    contentDescription = "Remove Hold",
+                    tint = Color(0xFFEF4444),
+                    modifier = Modifier.size(14.dp)
+                  )
+                  Text(
+                    text = "Clear",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFEF4444)
+                  )
+                }
+              }
+            }
+          }
+        }
+      }
+
       if (dayRecords.isNotEmpty()) {
         dayRecords.forEach { rec ->
           val accent = rec.category.accentColor()
@@ -1386,9 +1542,14 @@ private fun SelectedDayInspectorCard(
               .padding(12.dp)
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              Surface(
-                shape = IosSharpMicroShape,
-                color = accent
+              Box(
+                modifier = Modifier.neumorphicExtruded(
+                  shape = IosSharpMicroShape,
+                  elevation = 1.5.dp,
+                  blurRadius = 3.dp,
+                  surfaceColor = accent,
+                  neu = neu
+                )
               ) {
                 Text(
                   text = rec.category.shortLabel,

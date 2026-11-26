@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.DonutLarge
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -70,7 +69,12 @@ import com.example.ui.theme.BadgeOnDutyBlue
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import kotlin.math.roundToInt
 
 data class MonthlyLeavePoint(
@@ -115,6 +119,10 @@ fun PsychiatryLeaveAnalyticsSection(
 
   val inspectedMonth = monthlySeries.getOrNull((selectedMonthIdx - 1).coerceIn(0, 11)) ?: monthlySeries.first()
 
+  val neu = LocalNeumorphicColors.current
+  val colLineAccent = if (neu.isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+  val ghBarAccent = if (neu.isDark) BadgeGhLime else Color(0xFF4D7C0F)
+
   Column(
     modifier = modifier
       .fillMaxWidth()
@@ -122,17 +130,16 @@ fun PsychiatryLeaveAnalyticsSection(
     verticalArrangement = Arrangement.spacedBy(16.dp)
   ) {
     // 1. Primary Monthly Leaves Taken vs. Available Credits Interactive Chart Card
-    Surface(
-      shape = RoundedCornerShape(26.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 2.dp,
-      shadowElevation = 3.dp,
+    Box(
       modifier = Modifier
         .fillMaxWidth()
-        .border(
-          1.dp,
-          MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-          RoundedCornerShape(26.dp)
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 5.dp,
+          blurRadius = 10.dp,
+          accentTint = neu.primaryAccent,
+          borderAlpha = 0.34f,
+          neu = neu
         )
     ) {
       Column(modifier = Modifier.padding(18.dp)) {
@@ -149,8 +156,15 @@ fun PsychiatryLeaveAnalyticsSection(
             Box(
               modifier = Modifier
                 .size(36.dp)
-                .clip(RoundedCornerShape(11.dp))
-                .background(EmeraldOptimal.copy(alpha = 0.15f)),
+                .neumorphicInset(
+                  shape = IosSharpButtonShape,
+                  depth = 2.dp,
+                  blurRadius = 4.dp,
+                  accentTint = EmeraldOptimal,
+                  accentTintAlpha = 0.12f,
+                  borderColor = EmeraldOptimal.copy(alpha = 0.30f),
+                  neu = neu
+                ),
               contentAlignment = Alignment.Center
             ) {
               Icon(
@@ -185,14 +199,21 @@ fun PsychiatryLeaveAnalyticsSection(
 
           Spacer(modifier = Modifier.width(8.dp))
 
-          Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.primaryContainer
+          Box(
+            modifier = Modifier.neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 1.5.dp,
+              blurRadius = 3.dp,
+              accentTint = neu.primaryAccent,
+              accentTintAlpha = 0.10f,
+              borderColor = neu.primaryAccent.copy(alpha = 0.25f),
+              neu = neu
+            )
           ) {
             Text(
               text = "${yearRecords.size} Records",
               style = MaterialTheme.typography.labelMedium,
-              color = MaterialTheme.colorScheme.onPrimaryContainer,
+              color = neu.primaryAccent,
               maxLines = 1,
               softWrap = false,
               modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
@@ -211,8 +232,8 @@ fun PsychiatryLeaveAnalyticsSection(
           verticalAlignment = Alignment.CenterVertically
         ) {
           ChartLegendChip(label = "Leaves Taken (CL/COL/RH/EL)", color = BadgeClGreen)
-          ChartLegendChip(label = "GH Worked (+COL Credit)", color = BadgeGhLime)
-          ChartLegendChip(label = "Available Credits Curve", color = Color(0xFF0284C7), isLine = true)
+          ChartLegendChip(label = "GH Worked (+COL Credit)", color = ghBarAccent)
+          ChartLegendChip(label = "Available Credits Curve", color = colLineAccent, isLine = true)
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -222,14 +243,18 @@ fun PsychiatryLeaveAnalyticsSection(
           modifier = Modifier
             .fillMaxWidth()
             .height(215.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f))
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 3.dp,
+              blurRadius = 6.dp,
+              neu = neu
+            )
             .padding(horizontal = 12.dp, vertical = 14.dp)
             .testTag("monthly_leaves_vs_credits_canvas")
         ) {
-          val gridColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f)
-          val selectedHighlightColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-          val creditLineColor = Color(0xFF0284C7)
+          val gridColor = neu.textSecondary.copy(alpha = 0.18f)
+          val selectedHighlightColor = neu.primaryAccent.copy(alpha = 0.14f)
+          val creditLineColor = colLineAccent
 
           Canvas(
             modifier = Modifier
@@ -400,10 +425,18 @@ fun PsychiatryLeaveAnalyticsSection(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Interactive Month Tooltip Callout Card (for the selected month)
-        Surface(
-          shape = RoundedCornerShape(18.dp),
-          color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f),
-          modifier = Modifier.fillMaxWidth()
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = neu.primaryAccent,
+              accentTintAlpha = 0.05f,
+              borderColor = neu.primaryAccent.copy(alpha = 0.22f),
+              neu = neu
+            )
         ) {
           Column(modifier = Modifier.padding(14.dp)) {
             Row(
@@ -415,7 +448,7 @@ fun PsychiatryLeaveAnalyticsSection(
                 text = "${inspectedMonth.monthLabel} $selectedYear • Monthly Breakdown",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = neu.textPrimary,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 softWrap = false,
@@ -426,7 +459,7 @@ fun PsychiatryLeaveAnalyticsSection(
                 text = "Tap any month bar to inspect",
                 fontSize = 10.sp,
                 lineHeight = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = neu.textSecondary,
                 maxLines = 1,
                 softWrap = false
               )
@@ -453,7 +486,7 @@ fun PsychiatryLeaveAnalyticsSection(
                 title = "GH Worked",
                 value = "+${inspectedMonth.ghWorkedCreditsEarned.roundToInt()}d",
                 sub = "PL Off: ${inspectedMonth.plDays.roundToInt()}d",
-                accent = BadgeGhLime,
+                accent = ghBarAccent,
                 modifier = Modifier
                   .weight(1f)
                   .fillMaxHeight()
@@ -462,7 +495,7 @@ fun PsychiatryLeaveAnalyticsSection(
                 title = "Credits Left",
                 value = "${formatDoubleDays(inspectedMonth.availableCreditsRemaining)}d",
                 sub = "CL+RH+COL Pool",
-                accent = Color(0xFF0284C7),
+                accent = colLineAccent,
                 modifier = Modifier
                   .weight(1f)
                   .fillMaxHeight()
@@ -495,10 +528,17 @@ private fun MiniTooltipMetricBox(
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(14.dp),
-    color = MaterialTheme.colorScheme.surface,
-    modifier = modifier.border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier.neumorphicExtruded(
+      shape = IosSharpButtonShape,
+      elevation = 2.5.dp,
+      blurRadius = 5.dp,
+      accentTint = accent,
+      accentTintAlpha = 0.04f,
+      borderAlpha = 0.28f,
+      neu = neu
+    )
   ) {
     Column(
       modifier = Modifier
@@ -563,11 +603,18 @@ private fun CategoryDistributionDonutCard(
 
   val totalDays = slices.sumOf { it.second }.coerceAtLeast(1.0)
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    modifier = Modifier.fillMaxWidth()
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = Modifier
+      .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = BadgeColCyan,
+        borderAlpha = 0.32f,
+        neu = neu
+      )
   ) {
     Column(modifier = Modifier.padding(18.dp)) {
       Row(
@@ -710,11 +757,19 @@ private fun MultiYearComparisonChartCard(
 
   val maxVal = (yearStats.maxOfOrNull { maxOf(it.second, it.third) } ?: 30.0).coerceAtLeast(10.0)
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    modifier = Modifier.fillMaxWidth()
+  val neu = LocalNeumorphicColors.current
+  val ghBarAccent = if (neu.isDark) BadgeGhLime else Color(0xFF4D7C0F)
+  Box(
+    modifier = Modifier
+      .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = BadgeInLieuLavender,
+        borderAlpha = 0.32f,
+        neu = neu
+      )
   ) {
     Column(modifier = Modifier.padding(18.dp)) {
       Row(
@@ -750,13 +805,14 @@ private fun MultiYearComparisonChartCard(
           modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 5.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(
-              if (isSelectedYear) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-              } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-              }
+            .neumorphicInset(
+              shape = IosSharpButtonShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = if (isSelectedYear) neu.primaryAccent else null,
+              accentTintAlpha = 0.08f,
+              borderColor = if (isSelectedYear) neu.primaryAccent.copy(alpha = 0.35f) else null,
+              neu = neu
             )
             .padding(10.dp)
         ) {
@@ -770,33 +826,29 @@ private fun MultiYearComparisonChartCard(
               fontWeight = FontWeight.Bold,
               fontSize = 12.sp,
               lineHeight = 15.sp,
-              color = if (isSelectedYear) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+              color = if (isSelectedYear) neu.primaryAccent else neu.textPrimary
             )
             Text(
               text = "Leaves + PL: ${formatDoubleDays(leavesTotal)}d • GH/In-Lieu Duty: ${formatDoubleDays(dutyTotal)}d",
               fontFamily = JetBrainsMonoFontFamily,
               fontSize = 11.sp,
               lineHeight = 14.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false
             )
           }
-          Spacer(modifier = Modifier.height(6.dp))
-          Box(
-            modifier = Modifier
-              .fillMaxWidth(leaveFraction)
-              .height(7.dp)
-              .clip(RoundedCornerShape(4.dp))
-              .background(EmeraldOptimal)
+          Spacer(modifier = Modifier.height(7.dp))
+          NeumorphicLinearProgress(
+            progress = leaveFraction,
+            accentColor = EmeraldOptimal,
+            height = 7.dp
           )
-          Spacer(modifier = Modifier.height(4.dp))
-          Box(
-            modifier = Modifier
-              .fillMaxWidth(dutyFraction)
-              .height(7.dp)
-              .clip(RoundedCornerShape(4.dp))
-              .background(BadgeGhLime)
+          Spacer(modifier = Modifier.height(5.dp))
+          NeumorphicLinearProgress(
+            progress = dutyFraction,
+            accentColor = ghBarAccent,
+            height = 7.dp
           )
         }
       }

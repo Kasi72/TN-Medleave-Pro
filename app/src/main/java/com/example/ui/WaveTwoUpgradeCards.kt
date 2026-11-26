@@ -95,16 +95,19 @@ import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.LocalAppThemeMode
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.NeonAquaAccent
 import com.example.ui.theme.NeonCyanBright
 import com.example.ui.theme.NeonCyanText
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
 import com.example.ui.theme.StatusVerifiedGreen
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 // ============================================================================
 // APPLE iOS 18 PRO SHARP-EDGED SEGMENTED SUB-TAB SWITCHER
@@ -235,12 +238,19 @@ fun UndoDeleteBannerCard(
   onDismissUndo: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(18.dp),
-    color = StatusPendingOrange.copy(alpha = 0.14f),
-    border = BorderStroke(1.2.dp, StatusPendingOrange.copy(alpha = 0.50f)),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpWellShape,
+        elevation = 4.dp,
+        blurRadius = 8.dp,
+        accentTint = StatusPendingOrange,
+        accentTintAlpha = 0.08f,
+        borderAlpha = 0.45f,
+        neu = neu
+      )
       .testTag("undo_delete_banner_card")
   ) {
     Row(
@@ -265,7 +275,7 @@ fun UndoDeleteBannerCard(
           text = deletedRecord.notes.ifBlank { deletedRecord.category.fullTitle },
           style = MaterialTheme.typography.bodySmall,
           fontSize = 11.sp,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          color = neu.textSecondary,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
         )
@@ -275,28 +285,37 @@ fun UndoDeleteBannerCard(
 
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
       ) {
-        Button(
-          onClick = onUndoDelete,
-          shape = RoundedCornerShape(10.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = EmeraldOptimal,
-            contentColor = Color.White
-          ),
-          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
+        Box(
           modifier = Modifier
             .height(32.dp)
-            .testTag("undo_delete_restore_btn")
+            .neumorphicExtruded(
+              shape = IosSharpBadgeShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              surfaceColor = EmeraldOptimal,
+              borderAlpha = 0.35f,
+              neu = neu
+            )
+            .clickable { onUndoDelete() }
+            .padding(horizontal = 10.dp)
+            .testTag("undo_delete_restore_btn"),
+          contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(14.dp))
-          Spacer(modifier = Modifier.width(4.dp))
-          Text(
-            text = "UNDO",
-            fontFamily = JetBrainsMonoFontFamily,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
-          )
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+          ) {
+            Icon(Icons.Default.Restore, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+            Text(
+              text = "UNDO",
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 10.sp,
+              fontWeight = FontWeight.Bold,
+              color = Color.White
+            )
+          }
         }
         IconButton(
           onClick = onDismissUndo,
@@ -305,7 +324,7 @@ fun UndoDeleteBannerCard(
           Icon(
             imageVector = Icons.Default.Clear,
             contentDescription = "Dismiss Undo",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = neu.textSecondary,
             modifier = Modifier.size(15.dp)
           )
         }
@@ -320,6 +339,7 @@ fun EditLeaveRecordDialog(
   onDismiss: () -> Unit,
   onSaveEditedRecord: (LeaveRecord) -> Unit
 ) {
+  val neu = LocalNeumorphicColors.current
   var selectedCat by remember { mutableStateOf(record.category) }
   var dateIso by remember { mutableStateOf(record.dateIso) }
   var pairedDateIso by remember { mutableStateOf(record.pairedDateIso) }
@@ -336,7 +356,8 @@ fun EditLeaveRecordDialog(
 
   AlertDialog(
     onDismissRequest = onDismiss,
-    shape = RoundedCornerShape(26.dp),
+    shape = IosSharpCardShape,
+    containerColor = neu.baseBg,
     title = {
       ExecutiveDialogHeader(
         icon = Icons.Default.Edit,
@@ -352,22 +373,43 @@ fun EditLeaveRecordDialog(
       ) {
         Text(
           text = "Category:",
-          style = MaterialTheme.typography.labelLarge
+          style = MaterialTheme.typography.labelLarge,
+          color = neu.textPrimary
         )
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 4.dp),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
           LeaveCategory.entries.forEach { cat ->
             val isSel = cat == selectedCat
             val accent = cat.accentColor()
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = if (isSel) accent else accent.copy(alpha = 0.12f),
+            Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
+                .then(
+                  if (isSel) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 3.dp,
+                      blurRadius = 6.dp,
+                      surfaceColor = accent,
+                      borderAlpha = 0.45f,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 2.dp,
+                      blurRadius = 4.dp,
+                      accentTint = accent,
+                      accentTintAlpha = 0.06f,
+                      borderAlpha = 0.22f,
+                      neu = neu
+                    )
+                  }
+                )
                 .clickable {
                   selectedCat = cat
                   if (cat != LeaveCategory.CL) {
@@ -397,40 +439,52 @@ fun EditLeaveRecordDialog(
           Text(
             text = "Session (Full Day vs Forenoon FN / Afternoon AN):",
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = neu.textPrimary
           )
           Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
             HalfDaySession.entries.forEach { sess ->
               val isSel = selectedSession == sess
-              Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = if (isSel) BadgeClGreen.copy(alpha = 0.20f) else MaterialTheme.colorScheme.surfaceVariant,
-                border = BorderStroke(
-                  width = if (isSel) 1.2.dp else 1.dp,
-                  color = if (isSel) BadgeClGreen else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                ),
+              Box(
                 modifier = Modifier
                   .weight(1f)
-                  .clip(RoundedCornerShape(10.dp))
-                  .clickable { selectedSession = sess }
-              ) {
-                Box(
-                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Text(
-                    text = sess.badgeLabel,
-                    fontFamily = JetBrainsMonoFontFamily,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSel) BadgeClGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    softWrap = false
+                  .then(
+                    if (isSel) {
+                      Modifier.neumorphicInset(
+                        shape = IosSharpBadgeShape,
+                        depth = 2.dp,
+                        blurRadius = 4.dp,
+                        accentTint = BadgeClGreen,
+                        accentTintAlpha = 0.14f,
+                        borderColor = BadgeClGreen.copy(alpha = 0.55f),
+                        neu = neu
+                      )
+                    } else {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpBadgeShape,
+                        elevation = 2.dp,
+                        blurRadius = 4.dp,
+                        borderAlpha = 0.20f,
+                        neu = neu
+                      )
+                    }
                   )
-                }
+                  .clickable { selectedSession = sess },
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = sess.badgeLabel,
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = if (isSel) BadgeClGreen else neu.textSecondary,
+                  maxLines = 1,
+                  softWrap = false,
+                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp)
+                )
               }
             }
           }
@@ -443,13 +497,30 @@ fun EditLeaveRecordDialog(
           modifier = Modifier.fillMaxWidth()
         )
 
-        OutlinedTextField(
-          value = notes,
-          onValueChange = { notes = it },
-          label = { Text("Reason / Remarks / Order Ref") },
-          shape = RoundedCornerShape(12.dp),
-          modifier = Modifier.fillMaxWidth()
-        )
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 3.dp,
+              blurRadius = 6.dp,
+              neu = neu
+            )
+        ) {
+          OutlinedTextField(
+            value = notes,
+            onValueChange = { notes = it },
+            label = { Text("Reason / Remarks / Order Ref") },
+            shape = IosSharpWellShape,
+            colors = OutlinedTextFieldDefaults.colors(
+              focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+              unfocusedBorderColor = Color.Transparent,
+              focusedContainerColor = Color.Transparent,
+              unfocusedContainerColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
       }
     },
     confirmButton = {
@@ -478,7 +549,7 @@ fun EditLeaveRecordDialog(
             )
           }
         },
-        shape = RoundedCornerShape(12.dp),
+        shape = IosSharpButtonShape,
         modifier = Modifier.testTag("save_edited_leave_btn")
       ) {
         Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -511,14 +582,17 @@ fun GlobalLedgerSearchAndFilterCard(
   resultCount: Int,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(22.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    shadowElevation = 2.dp,
-    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 4.5.dp,
+        blurRadius = 9.dp,
+        borderAlpha = 0.25f,
+        neu = neu
+      )
       .testTag("global_ledger_search_card")
   ) {
     Column(
@@ -527,45 +601,63 @@ fun GlobalLedgerSearchAndFilterCard(
         .padding(14.dp),
       verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-      OutlinedTextField(
-        value = searchQuery,
-        onValueChange = onSearchQueryChange,
-        placeholder = {
-          Text(
-            text = "Search date, Pongal, Univ Exam, Order Ref, FN/AN...",
-            fontSize = 12.sp
-          )
-        },
-        leadingIcon = {
-          Icon(
-            imageVector = Icons.Default.Search,
-            contentDescription = "Search Ledger",
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(18.dp)
-          )
-        },
-        trailingIcon = {
-          if (searchQuery.isNotBlank()) {
-            IconButton(onClick = { onSearchQueryChange("") }) {
-              Icon(
-                imageVector = Icons.Default.Clear,
-                contentDescription = "Clear Search",
-                modifier = Modifier.size(16.dp)
-              )
-            }
-          }
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(14.dp),
+      Box(
         modifier = Modifier
           .fillMaxWidth()
-          .testTag("ledger_global_search_input")
-      )
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 3.dp,
+            blurRadius = 6.dp,
+            neu = neu
+          )
+      ) {
+        OutlinedTextField(
+          value = searchQuery,
+          onValueChange = onSearchQueryChange,
+          placeholder = {
+            Text(
+              text = "Search date, Pongal, Univ Exam, Order Ref, FN/AN...",
+              fontSize = 12.sp
+            )
+          },
+          leadingIcon = {
+            Icon(
+              imageVector = Icons.Default.Search,
+              contentDescription = "Search Ledger",
+              tint = neu.primaryAccent,
+              modifier = Modifier.size(18.dp)
+            )
+          },
+          trailingIcon = {
+            if (searchQuery.isNotBlank()) {
+              IconButton(onClick = { onSearchQueryChange("") }) {
+                Icon(
+                  imageVector = Icons.Default.Clear,
+                  contentDescription = "Clear Search",
+                  modifier = Modifier.size(16.dp)
+                )
+              }
+            }
+          },
+          singleLine = true,
+          shape = IosSharpWellShape,
+          colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+            unfocusedBorderColor = Color.Transparent,
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent
+          ),
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("ledger_global_search_input")
+        )
+      }
 
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .horizontalScroll(rememberScrollState()),
+          .horizontalScroll(rememberScrollState())
+          .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
@@ -587,17 +679,22 @@ fun GlobalLedgerSearchAndFilterCard(
           accent = BadgeColCyan,
           onClick = onToggleOnlyPairedOrRef
         )
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant
+        Box(
+          modifier = Modifier
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              neu = neu
+            )
         ) {
           Text(
             text = "$resultCount MATCHES",
             fontFamily = JetBrainsMonoFontFamily,
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+            color = neu.textSecondary,
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
           )
         }
       }
@@ -612,15 +709,30 @@ private fun SearchQuickTogglePill(
   accent: Color,
   onClick: () -> Unit
 ) {
-  Surface(
-    shape = RoundedCornerShape(10.dp),
-    color = if (isActive) accent.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-    border = BorderStroke(
-      1.dp,
-      if (isActive) accent else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-    ),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = Modifier
-      .clip(RoundedCornerShape(10.dp))
+      .then(
+        if (isActive) {
+          Modifier.neumorphicInset(
+            shape = IosSharpBadgeShape,
+            depth = 2.dp,
+            blurRadius = 4.dp,
+            accentTint = accent,
+            accentTintAlpha = 0.14f,
+            borderColor = accent.copy(alpha = 0.55f),
+            neu = neu
+          )
+        } else {
+          Modifier.neumorphicExtruded(
+            shape = IosSharpBadgeShape,
+            elevation = 2.dp,
+            blurRadius = 4.dp,
+            borderAlpha = 0.20f,
+            neu = neu
+          )
+        }
+      )
       .clickable { onClick() }
   ) {
     Text(
@@ -629,10 +741,10 @@ private fun SearchQuickTogglePill(
       fontSize = 10.sp,
       lineHeight = 12.sp,
       fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-      color = if (isActive) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+      color = if (isActive) accent else neu.textSecondary,
       maxLines = 1,
       softWrap = false,
-      modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+      modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
     )
   }
 }
@@ -648,29 +760,25 @@ fun AcademicOdSubQuotaCard(
   onQuickLogSubOd: (odSubCategory: OdSubCategory, dateIso: String, notes: String) -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val neu = LocalNeumorphicColors.current
   val summary = remember(allRecords, selectedYear) {
     AcademicOdSubQuotaEngine.analyzeOdSubQuotas(allRecords, selectedYear)
   }
   var activeSubOdDialog by remember { mutableStateOf<OdSubCategory?>(null) }
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .testTag("academic_od_sub_quota_card")
-      .border(
-        width = 1.2.dp,
-        brush = Brush.linearGradient(
-          colors = listOf(
-            BadgeOnDutyBlue.copy(alpha = 0.50f),
-            BadgeColCyan.copy(alpha = 0.25f)
-          )
-        ),
-        shape = RoundedCornerShape(26.dp)
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = BadgeOnDutyBlue,
+        accentTintAlpha = 0.04f,
+        borderAlpha = 0.34f,
+        neu = neu
       )
+      .testTag("academic_od_sub_quota_card")
   ) {
     Column(
       modifier = Modifier
@@ -687,20 +795,25 @@ fun AcademicOdSubQuotaCard(
           modifier = Modifier.weight(1f),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Surface(
-            shape = RoundedCornerShape(13.dp),
-            color = BadgeOnDutyBlue.copy(alpha = 0.16f),
-            border = BorderStroke(1.dp, BadgeOnDutyBlue.copy(alpha = 0.40f)),
-            modifier = Modifier.size(40.dp)
+          Box(
+            modifier = Modifier
+              .size(40.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = BadgeOnDutyBlue,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.School,
-                contentDescription = "Academic On-Duty Sub-Quota Tracker",
-                tint = BadgeOnDutyBlue,
-                modifier = Modifier.size(20.dp)
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.School,
+              contentDescription = "Academic On-Duty Sub-Quota Tracker",
+              tint = BadgeOnDutyBlue,
+              modifier = Modifier.size(20.dp)
+            )
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column(modifier = Modifier.weight(1f)) {
@@ -708,7 +821,7 @@ fun AcademicOdSubQuotaCard(
               text = "On-Duty (OD) Academic Sub-Quotas ($selectedYear)",
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -718,7 +831,7 @@ fun AcademicOdSubQuotaCard(
               style = MaterialTheme.typography.bodySmall,
               fontSize = 11.sp,
               lineHeight = 14.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -728,10 +841,17 @@ fun AcademicOdSubQuotaCard(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = BadgeOnDutyBlue.copy(alpha = 0.15f),
-          border = BorderStroke(1.dp, BadgeOnDutyBlue.copy(alpha = 0.40f))
+        Box(
+          modifier = Modifier
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = BadgeOnDutyBlue,
+              accentTintAlpha = 0.12f,
+              borderColor = BadgeOnDutyBlue.copy(alpha = 0.35f),
+              neu = neu
+            )
         ) {
           Text(
             text = "${summary.totalOdUsed}d OD TOTAL",
@@ -751,17 +871,24 @@ fun AcademicOdSubQuotaCard(
           OdSubCategory.DME_NMC -> BadgePlGold
           OdSubCategory.COURT_BOARD -> BadgeColCyan
         }
-        Surface(
-          shape = RoundedCornerShape(16.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
-          border = BorderStroke(1.dp, subAccent.copy(alpha = 0.30f)),
-          modifier = Modifier.fillMaxWidth()
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = subAccent,
+              accentTintAlpha = 0.04f,
+              borderColor = subAccent.copy(alpha = 0.25f),
+              neu = neu
+            )
         ) {
           Column(
             modifier = Modifier
               .fillMaxWidth()
               .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
           ) {
             Row(
               modifier = Modifier.fillMaxWidth(),
@@ -773,9 +900,10 @@ fun AcademicOdSubQuotaCard(
                   verticalAlignment = Alignment.CenterVertically,
                   horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                  Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = subAccent.copy(alpha = 0.18f)
+                  Box(
+                    modifier = Modifier
+                      .clip(IosSharpMicroShape)
+                      .background(subAccent.copy(alpha = 0.16f))
                   ) {
                     Text(
                       text = item.subCategory.shortTag,
@@ -790,7 +918,7 @@ fun AcademicOdSubQuotaCard(
                     text = item.subCategory.title,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = neu.textPrimary,
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis
@@ -801,7 +929,7 @@ fun AcademicOdSubQuotaCard(
                   style = MaterialTheme.typography.bodySmall,
                   fontSize = 10.sp,
                   lineHeight = 13.sp,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  color = neu.textSecondary,
                   maxLines = 1,
                   softWrap = false,
                   overflow = TextOverflow.Ellipsis
@@ -812,7 +940,7 @@ fun AcademicOdSubQuotaCard(
 
               Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
               ) {
                 Text(
                   text = "${item.usedDays}/${item.ceilingDays}d",
@@ -821,12 +949,17 @@ fun AcademicOdSubQuotaCard(
                   fontWeight = FontWeight.Bold,
                   color = subAccent
                 )
-                Surface(
-                  shape = RoundedCornerShape(8.dp),
-                  color = subAccent.copy(alpha = 0.16f),
-                  border = BorderStroke(1.dp, subAccent.copy(alpha = 0.40f)),
+                Box(
                   modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .neumorphicExtruded(
+                      shape = IosSharpMicroShape,
+                      elevation = 2.dp,
+                      blurRadius = 4.dp,
+                      accentTint = subAccent,
+                      accentTintAlpha = 0.12f,
+                      borderAlpha = 0.35f,
+                      neu = neu
+                    )
                     .clickable { activeSubOdDialog = item.subCategory }
                 ) {
                   Text(
@@ -835,27 +968,17 @@ fun AcademicOdSubQuotaCard(
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = subAccent,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
                   )
                 }
               }
             }
 
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .height(5.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-              Box(
-                modifier = Modifier
-                  .fillMaxWidth(item.utilizationFraction.coerceIn(0.05f, 1f))
-                  .height(5.dp)
-                  .clip(RoundedCornerShape(3.dp))
-                  .background(subAccent)
-              )
-            }
+            NeumorphicLinearProgress(
+              progress = item.utilizationFraction,
+              accentColor = subAccent,
+              height = 6.dp
+            )
           }
         }
       }
@@ -867,7 +990,8 @@ fun AcademicOdSubQuotaCard(
     var odNotes by remember { mutableStateOf(subCat.title) }
     AlertDialog(
       onDismissRequest = { activeSubOdDialog = null },
-      shape = RoundedCornerShape(26.dp),
+      shape = IosSharpCardShape,
+      containerColor = neu.baseBg,
       title = {
         ExecutiveDialogHeader(
           icon = Icons.Default.School,
@@ -881,7 +1005,7 @@ fun AcademicOdSubQuotaCard(
           Text(
             text = subCat.ruleNote,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = neu.textSecondary
           )
           DatePickerOutlinedField(
             value = odDate,
@@ -889,13 +1013,30 @@ fun AcademicOdSubQuotaCard(
             label = "On-Duty Date (YYYY-MM-DD)",
             modifier = Modifier.fillMaxWidth()
           )
-          OutlinedTextField(
-            value = odNotes,
-            onValueChange = { odNotes = it },
-            label = { Text("College / University / Order Details") },
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
-          )
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 3.dp,
+                blurRadius = 6.dp,
+                neu = neu
+              )
+          ) {
+            OutlinedTextField(
+              value = odNotes,
+              onValueChange = { odNotes = it },
+              label = { Text("College / University / Order Details") },
+              shape = IosSharpWellShape,
+              colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+              ),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
         }
       },
       confirmButton = {
@@ -906,7 +1047,7 @@ fun AcademicOdSubQuotaCard(
               activeSubOdDialog = null
             }
           },
-          shape = RoundedCornerShape(12.dp)
+          shape = IosSharpButtonShape
         ) {
           Text("Save On-Duty")
         }
@@ -930,6 +1071,8 @@ fun DualHolidayDutyColLoggerCard(
   onLogDualDutyAndCol: (dutyDateIso: String, colDateIso: String, dutyNotes: String) -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val neu = LocalNeumorphicColors.current
+  val ghAccent = if (neu.isDark) BadgeGhLime else Color(0xFF4D7C0F)
   var dutyDateIso by remember { mutableStateOf("$selectedYear-11-08") }
   var colDateIso by remember { mutableStateOf("$selectedYear-11-23") }
   var dutyNotes by remember {
@@ -937,24 +1080,19 @@ fun DualHolidayDutyColLoggerCard(
   }
   var alsoScheduleColNow by remember { mutableStateOf(true) }
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .testTag("dual_holiday_duty_col_logger_card")
-      .border(
-        width = 1.2.dp,
-        brush = Brush.linearGradient(
-          colors = listOf(
-            BadgeGhLime.copy(alpha = 0.50f),
-            BadgeColCyan.copy(alpha = 0.40f)
-          )
-        ),
-        shape = RoundedCornerShape(26.dp)
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = ghAccent,
+        accentTintAlpha = 0.04f,
+        borderAlpha = 0.34f,
+        neu = neu
       )
+      .testTag("dual_holiday_duty_col_logger_card")
   ) {
     Column(
       modifier = Modifier
@@ -967,27 +1105,32 @@ fun DualHolidayDutyColLoggerCard(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
       ) {
-        Surface(
-          shape = RoundedCornerShape(13.dp),
-          color = BadgeGhLime.copy(alpha = 0.16f),
-          border = BorderStroke(1.dp, BadgeGhLime.copy(alpha = 0.40f)),
-          modifier = Modifier.size(40.dp)
+        Box(
+          modifier = Modifier
+            .size(40.dp)
+            .neumorphicInset(
+              shape = IosSharpButtonShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = ghAccent,
+              accentTintAlpha = 0.14f,
+              neu = neu
+            ),
+          contentAlignment = Alignment.Center
         ) {
-          Box(contentAlignment = Alignment.Center) {
-            Icon(
-              imageVector = Icons.Default.LocalHospital,
-              contentDescription = "Dual Holiday Duty & Comp-Off Logger",
-              tint = BadgeGhLime,
-              modifier = Modifier.size(20.dp)
-            )
-          }
+          Icon(
+            imageVector = Icons.Default.LocalHospital,
+            contentDescription = "Dual Holiday Duty & Comp-Off Logger",
+            tint = ghAccent,
+            modifier = Modifier.size(20.dp)
+          )
         }
         Column(modifier = Modifier.weight(1f)) {
           Text(
             text = "1-Tap Holiday Call Duty ↔ Comp-Off Dual Logger",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = neu.textPrimary,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis
@@ -997,7 +1140,7 @@ fun DualHolidayDutyColLoggerCard(
             style = MaterialTheme.typography.bodySmall,
             fontSize = 11.sp,
             lineHeight = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = neu.textSecondary,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis
@@ -1022,22 +1165,44 @@ fun DualHolidayDutyColLoggerCard(
         }
       }
 
-      OutlinedTextField(
-        value = dutyNotes,
-        onValueChange = { dutyNotes = it },
-        label = { Text("Hospital Turn / Call Duty Description") },
-        singleLine = true,
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth()
-      )
-
-      Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = EmeraldOptimal.copy(alpha = 0.08f),
-        border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.28f)),
+      Box(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(14.dp))
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 3.dp,
+            blurRadius = 6.dp,
+            neu = neu
+          )
+      ) {
+        OutlinedTextField(
+          value = dutyNotes,
+          onValueChange = { dutyNotes = it },
+          label = { Text("Hospital Turn / Call Duty Description") },
+          singleLine = true,
+          shape = IosSharpWellShape,
+          colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+            unfocusedBorderColor = Color.Transparent,
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent
+          ),
+          modifier = Modifier.fillMaxWidth()
+        )
+      }
+
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            accentTint = EmeraldOptimal,
+            accentTintAlpha = 0.06f,
+            borderColor = EmeraldOptimal.copy(alpha = 0.25f),
+            neu = neu
+          )
           .clickable { alsoScheduleColNow = !alsoScheduleColNow }
       ) {
         Row(
@@ -1068,7 +1233,7 @@ fun DualHolidayDutyColLoggerCard(
               },
               fontFamily = JetBrainsMonoFontFamily,
               fontSize = 10.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -1085,7 +1250,7 @@ fun DualHolidayDutyColLoggerCard(
             onLogDualDutyAndCol(dutyDateIso, targetCol, dutyNotes)
           }
         },
-        shape = RoundedCornerShape(14.dp),
+        shape = IosSharpButtonShape,
         colors = ButtonDefaults.buttonColors(
           containerColor = EmeraldOptimal,
           contentColor = Color.White
@@ -1120,22 +1285,23 @@ fun TnGovtLtcBlockTrackerCard(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val neu = LocalNeumorphicColors.current
   var ltcState by remember { mutableStateOf(LtcBlockTrackerStore.readState(context)) }
   var showEditLtcDialog by remember { mutableStateOf(false) }
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .testTag("tn_govt_ltc_block_tracker_card")
-      .border(
-        width = 1.2.dp,
-        color = BadgePlGold.copy(alpha = 0.40f),
-        shape = RoundedCornerShape(26.dp)
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = BadgePlGold,
+        accentTintAlpha = 0.04f,
+        borderAlpha = 0.34f,
+        neu = neu
       )
+      .testTag("tn_govt_ltc_block_tracker_card")
   ) {
     Column(
       modifier = Modifier
@@ -1152,20 +1318,25 @@ fun TnGovtLtcBlockTrackerCard(
           modifier = Modifier.weight(1f),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Surface(
-            shape = RoundedCornerShape(13.dp),
-            color = BadgePlGold.copy(alpha = 0.16f),
-            border = BorderStroke(1.dp, BadgePlGold.copy(alpha = 0.40f)),
-            modifier = Modifier.size(40.dp)
+          Box(
+            modifier = Modifier
+              .size(40.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = BadgePlGold,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.FlightTakeoff,
-                contentDescription = "TN Govt LTC Block Tracker",
-                tint = BadgePlGold,
-                modifier = Modifier.size(20.dp)
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.FlightTakeoff,
+              contentDescription = "TN Govt LTC Block Tracker",
+              tint = BadgePlGold,
+              modifier = Modifier.size(20.dp)
+            )
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column(modifier = Modifier.weight(1f)) {
@@ -1173,7 +1344,7 @@ fun TnGovtLtcBlockTrackerCard(
               text = "TN Govt LTC & Leave Encashment Block",
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -1182,18 +1353,24 @@ fun TnGovtLtcBlockTrackerCard(
               text = ltcState.blockPeriodLabel,
               style = MaterialTheme.typography.bodySmall,
               fontSize = 11.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false
             )
           }
         }
 
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant,
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .neumorphicExtruded(
+              shape = IosSharpBadgeShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              borderAlpha = 0.25f,
+              neu = neu
+            )
             .clickable { showEditLtcDialog = true }
             .testTag("edit_ltc_block_btn")
         ) {
@@ -1202,8 +1379,8 @@ fun TnGovtLtcBlockTrackerCard(
             fontFamily = JetBrainsMonoFontFamily,
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+            color = neu.textPrimary,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
           )
         }
       }
@@ -1219,6 +1396,7 @@ fun TnGovtLtcBlockTrackerCard(
           statusText = if (ltcState.homeTownAvailed) "AVAILED" else "ELIGIBLE",
           subText = ltcState.homeTownDateNote,
           accent = if (ltcState.homeTownAvailed) BadgeColCyan else EmeraldOptimal,
+          isToggled = ltcState.homeTownAvailed,
           onClick = {
             val updated = ltcState.copy(homeTownAvailed = !ltcState.homeTownAvailed)
             ltcState = updated
@@ -1231,6 +1409,7 @@ fun TnGovtLtcBlockTrackerCard(
           statusText = if (ltcState.allIndiaAvailed) "AVAILED" else "ELIGIBLE",
           subText = ltcState.allIndiaDestination,
           accent = if (ltcState.allIndiaAvailed) BadgeColCyan else EmeraldOptimal,
+          isToggled = ltcState.allIndiaAvailed,
           onClick = {
             val updated = ltcState.copy(allIndiaAvailed = !ltcState.allIndiaAvailed)
             ltcState = updated
@@ -1243,6 +1422,7 @@ fun TnGovtLtcBlockTrackerCard(
           statusText = "${ltcState.elEncashedWithLtcDays} / 10d",
           subText = "10d EL Encashable",
           accent = BadgePlGold,
+          isToggled = ltcState.elEncashedWithLtcDays > 0,
           onClick = { showEditLtcDialog = true },
           modifier = Modifier.weight(1f).fillMaxHeight()
         )
@@ -1255,7 +1435,8 @@ fun TnGovtLtcBlockTrackerCard(
     var encashInput by remember { mutableStateOf(ltcState.elEncashedWithLtcDays.toString()) }
     AlertDialog(
       onDismissRequest = { showEditLtcDialog = false },
-      shape = RoundedCornerShape(26.dp),
+      shape = IosSharpCardShape,
+      containerColor = neu.baseBg,
       title = {
         ExecutiveDialogHeader(
           icon = Icons.Default.FlightTakeoff,
@@ -1266,22 +1447,56 @@ fun TnGovtLtcBlockTrackerCard(
       },
       text = {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-          OutlinedTextField(
-            value = destInput,
-            onValueChange = { destInput = it },
-            label = { Text("All-India LTC Destination / Order Note") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
-          )
-          OutlinedTextField(
-            value = encashInput,
-            onValueChange = { encashInput = it.filter { ch -> ch.isDigit() } },
-            label = { Text("EL Days Encashed with LTC (Max 10 Days)") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
-          )
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 3.dp,
+                blurRadius = 6.dp,
+                neu = neu
+              )
+          ) {
+            OutlinedTextField(
+              value = destInput,
+              onValueChange = { destInput = it },
+              label = { Text("All-India LTC Destination / Order Note") },
+              singleLine = true,
+              shape = IosSharpWellShape,
+              colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+              ),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 3.dp,
+                blurRadius = 6.dp,
+                neu = neu
+              )
+          ) {
+            OutlinedTextField(
+              value = encashInput,
+              onValueChange = { encashInput = it.filter { ch -> ch.isDigit() } },
+              label = { Text("EL Days Encashed with LTC (Max 10 Days)") },
+              singleLine = true,
+              shape = IosSharpWellShape,
+              colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+              ),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
         }
       },
       confirmButton = {
@@ -1296,7 +1511,7 @@ fun TnGovtLtcBlockTrackerCard(
             showEditLtcDialog = false
             onShowStatusBanner("Updated 2024–2027 TN Govt LTC Block status!")
           },
-          shape = RoundedCornerShape(12.dp)
+          shape = IosSharpButtonShape
         ) {
           Text("Save LTC Block")
         }
@@ -1316,15 +1531,36 @@ private fun LtcStatusTile(
   statusText: String,
   subText: String,
   accent: Color,
+  isToggled: Boolean = false,
   onClick: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(14.dp),
-    color = accent.copy(alpha = 0.10f),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.30f)),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = modifier
-      .clip(RoundedCornerShape(14.dp))
+      .then(
+        if (isToggled) {
+          Modifier.neumorphicInset(
+            shape = IosSharpButtonShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            accentTint = accent,
+            accentTintAlpha = 0.08f,
+            borderColor = accent.copy(alpha = 0.35f),
+            neu = neu
+          )
+        } else {
+          Modifier.neumorphicExtruded(
+            shape = IosSharpButtonShape,
+            elevation = 3.dp,
+            blurRadius = 6.dp,
+            accentTint = accent,
+            accentTintAlpha = 0.04f,
+            borderAlpha = 0.25f,
+            neu = neu
+          )
+        }
+      )
       .clickable { onClick() }
   ) {
     Column(
@@ -1339,7 +1575,7 @@ private fun LtcStatusTile(
         fontSize = 8.sp,
         lineHeight = 10.sp,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false
       )
@@ -1358,7 +1594,7 @@ private fun LtcStatusTile(
         style = MaterialTheme.typography.bodySmall,
         fontSize = 9.sp,
         lineHeight = 11.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -1378,20 +1614,21 @@ fun PhoneCalendarIcsExportCard(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val neu = LocalNeumorphicColors.current
 
-  Surface(
-    shape = RoundedCornerShape(24.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 3.dp,
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .testTag("phone_calendar_ics_export_card")
-      .border(
-        width = 1.dp,
-        color = EmeraldOptimal.copy(alpha = 0.35f),
-        shape = RoundedCornerShape(24.dp)
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = EmeraldOptimal,
+        accentTintAlpha = 0.04f,
+        borderAlpha = 0.30f,
+        neu = neu
       )
+      .testTag("phone_calendar_ics_export_card")
   ) {
     Column(
       modifier = Modifier
@@ -1404,27 +1641,32 @@ fun PhoneCalendarIcsExportCard(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
       ) {
-        Surface(
-          shape = RoundedCornerShape(12.dp),
-          color = EmeraldOptimal.copy(alpha = 0.14f),
-          border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.35f)),
-          modifier = Modifier.size(38.dp)
+        Box(
+          modifier = Modifier
+            .size(38.dp)
+            .neumorphicInset(
+              shape = IosSharpButtonShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = EmeraldOptimal,
+              accentTintAlpha = 0.14f,
+              neu = neu
+            ),
+          contentAlignment = Alignment.Center
         ) {
-          Box(contentAlignment = Alignment.Center) {
-            Icon(
-              imageVector = Icons.Default.CalendarMonth,
-              contentDescription = "Google Calendar & .ICS Sync",
-              tint = EmeraldOptimal,
-              modifier = Modifier.size(20.dp)
-            )
-          }
+          Icon(
+            imageVector = Icons.Default.CalendarMonth,
+            contentDescription = "Google Calendar & .ICS Sync",
+            tint = EmeraldOptimal,
+            modifier = Modifier.size(20.dp)
+          )
         }
         Column(modifier = Modifier.weight(1f)) {
           Text(
             text = "Google / Phone Calendar & .ICS Sync",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = neu.textPrimary,
             maxLines = 1,
             softWrap = false
           )
@@ -1432,7 +1674,7 @@ fun PhoneCalendarIcsExportCard(
             text = "Export 2026–2027 Leaves & TN Govt Holidays to Google Calendar / Outlook",
             style = MaterialTheme.typography.bodySmall,
             fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = neu.textSecondary,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis
@@ -1456,7 +1698,7 @@ fun PhoneCalendarIcsExportCard(
                 onShowStatusBanner("ICS export error: ${err.localizedMessage}")
               }
           },
-          shape = RoundedCornerShape(12.dp),
+          shape = IosSharpButtonShape,
           colors = ButtonDefaults.buttonColors(
             containerColor = EmeraldOptimal,
             contentColor = Color.White
@@ -1491,7 +1733,7 @@ fun PhoneCalendarIcsExportCard(
               onShowStatusBanner("Use Export .ICS File to import into your calendar app.")
             }
           },
-          shape = RoundedCornerShape(12.dp),
+          shape = IosSharpButtonShape,
           border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.50f)),
           modifier = Modifier
             .weight(1f)
@@ -1523,20 +1765,26 @@ fun ExecutiveDigestShareBar(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val neu = LocalNeumorphicColors.current
 
-  Surface(
-    shape = RoundedCornerShape(18.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
-    border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.30f)),
+  Box(
     modifier = modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpWellShape,
+        elevation = 4.dp,
+        blurRadius = 8.dp,
+        accentTint = EmeraldOptimal,
+        accentTintAlpha = 0.03f,
+        borderAlpha = 0.28f,
+        neu = neu
+      )
       .testTag("executive_digest_share_bar")
   ) {
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 12.dp, vertical = 9.dp),
+        .padding(horizontal = 12.dp, vertical = 10.dp),
       horizontalArrangement = Arrangement.SpaceBetween,
       verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1555,7 +1803,7 @@ fun ExecutiveDigestShareBar(
           text = titleLabel,
           style = MaterialTheme.typography.bodySmall,
           fontSize = 11.sp,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          color = neu.textSecondary,
           maxLines = 1,
           softWrap = false,
           overflow = TextOverflow.Ellipsis
@@ -1564,13 +1812,16 @@ fun ExecutiveDigestShareBar(
 
       Spacer(modifier = Modifier.width(8.dp))
 
-      Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant,
-          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+      Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .neumorphicExtruded(
+              shape = IosSharpBadgeShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              borderAlpha = 0.24f,
+              neu = neu
+            )
             .clickable {
               val text = digestContentProvider()
               ExecutiveDigestShareService.copyDigestToClipboard(context, titleLabel, text)
@@ -1586,7 +1837,7 @@ fun ExecutiveDigestShareBar(
             Icon(
               imageVector = Icons.Default.ContentCopy,
               contentDescription = "Copy Digest",
-              tint = MaterialTheme.colorScheme.onSurface,
+              tint = neu.textPrimary,
               modifier = Modifier.size(13.dp)
             )
             Text(
@@ -1594,17 +1845,22 @@ fun ExecutiveDigestShareBar(
               fontFamily = JetBrainsMonoFontFamily,
               fontSize = 10.sp,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface
+              color = neu.textPrimary
             )
           }
         }
 
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = EmeraldOptimal.copy(alpha = 0.16f),
-          border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.45f)),
+        Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .neumorphicExtruded(
+              shape = IosSharpBadgeShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = EmeraldOptimal,
+              accentTintAlpha = 0.12f,
+              borderAlpha = 0.40f,
+              neu = neu
+            )
             .clickable {
               val text = digestContentProvider()
               ExecutiveDigestShareService.shareDigestToWhatsAppOrApps(
@@ -1651,6 +1907,8 @@ fun WhatIfLeaveSimulatorCard(
   onCommitSimulatedWorkingDays: (category: LeaveCategory, workingDateIsos: List<String>, notes: String) -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val neu = LocalNeumorphicColors.current
+  val rhAdaptiveAccent = if (neu.isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
   var simStart by remember { mutableStateOf("2026-12-24") }
   var simEnd by remember { mutableStateOf("2026-12-30") }
   var simCategory by remember { mutableStateOf(LeaveCategory.CL) }
@@ -1669,24 +1927,19 @@ fun WhatIfLeaveSimulatorCard(
     SmartRangeSplicerEngine.analyzeRangeForAutoSkip(simStart, simEnd)
   }
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .testTag("what_if_leave_simulator_card")
-      .border(
-        width = 1.2.dp,
-        brush = Brush.linearGradient(
-          colors = listOf(
-            EmeraldOptimal.copy(alpha = 0.50f),
-            BadgeColCyan.copy(alpha = 0.35f)
-          )
-        ),
-        shape = RoundedCornerShape(26.dp)
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = EmeraldOptimal,
+        accentTintAlpha = 0.04f,
+        borderAlpha = 0.34f,
+        neu = neu
       )
+      .testTag("what_if_leave_simulator_card")
   ) {
     Column(
       modifier = Modifier
@@ -1699,27 +1952,32 @@ fun WhatIfLeaveSimulatorCard(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
       ) {
-        Surface(
-          shape = RoundedCornerShape(13.dp),
-          color = EmeraldOptimal.copy(alpha = 0.16f),
-          border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.40f)),
-          modifier = Modifier.size(40.dp)
+        Box(
+          modifier = Modifier
+            .size(40.dp)
+            .neumorphicInset(
+              shape = IosSharpButtonShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = EmeraldOptimal,
+              accentTintAlpha = 0.14f,
+              neu = neu
+            ),
+          contentAlignment = Alignment.Center
         ) {
-          Box(contentAlignment = Alignment.Center) {
-            Icon(
-              imageVector = Icons.Default.Science,
-              contentDescription = "What-If Leave Balance Simulator",
-              tint = EmeraldOptimal,
-              modifier = Modifier.size(20.dp)
-            )
-          }
+          Icon(
+            imageVector = Icons.Default.Science,
+            contentDescription = "What-If Leave Balance Simulator",
+            tint = EmeraldOptimal,
+            modifier = Modifier.size(20.dp)
+          )
         }
         Column(modifier = Modifier.weight(1f)) {
           Text(
             text = "\"What-If\" Leave Balance Simulator (Sandbox)",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = neu.textPrimary,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis
@@ -1728,7 +1986,7 @@ fun WhatIfLeaveSimulatorCard(
             text = "Preview Before vs. After quota balances & auto-skip weekends/GH before booking",
             style = MaterialTheme.typography.bodySmall,
             fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = neu.textSecondary,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis
@@ -1738,38 +1996,51 @@ fun WhatIfLeaveSimulatorCard(
 
       // Category Selector for Simulation (CL | RH | COL | EL)
       Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp)
       ) {
         listOf(LeaveCategory.CL, LeaveCategory.RH, LeaveCategory.COL, LeaveCategory.EL).forEach { cat ->
           val isSel = simCategory == cat
           val accent = cat.accentColor()
-          Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = if (isSel) accent.copy(alpha = 0.20f) else MaterialTheme.colorScheme.surfaceVariant,
-            border = BorderStroke(
-              width = if (isSel) 1.2.dp else 1.dp,
-              color = if (isSel) accent else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-            ),
+          Box(
             modifier = Modifier
               .weight(1f)
-              .clip(RoundedCornerShape(10.dp))
-              .clickable { simCategory = cat }
-          ) {
-            Box(
-              modifier = Modifier.padding(vertical = 7.dp),
-              contentAlignment = Alignment.Center
-            ) {
-              Text(
-                text = "Simulate ${cat.shortLabel}",
-                fontFamily = JetBrainsMonoFontFamily,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isSel) accent else MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                softWrap = false
+              .then(
+                if (isSel) {
+                  Modifier.neumorphicInset(
+                    shape = IosSharpBadgeShape,
+                    depth = 2.dp,
+                    blurRadius = 4.dp,
+                    accentTint = accent,
+                    accentTintAlpha = 0.14f,
+                    borderColor = accent.copy(alpha = 0.55f),
+                    neu = neu
+                  )
+                } else {
+                  Modifier.neumorphicExtruded(
+                    shape = IosSharpBadgeShape,
+                    elevation = 2.dp,
+                    blurRadius = 4.dp,
+                    borderAlpha = 0.20f,
+                    neu = neu
+                  )
+                }
               )
-            }
+              .clickable { simCategory = cat },
+            contentAlignment = Alignment.Center
+          ) {
+            Text(
+              text = "Sim ${cat.shortLabel}",
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 10.sp,
+              fontWeight = FontWeight.Bold,
+              color = if (isSel) accent else neu.textSecondary,
+              maxLines = 1,
+              softWrap = false,
+              modifier = Modifier.padding(vertical = 7.dp)
+            )
           }
         }
       }
@@ -1811,7 +2082,7 @@ fun WhatIfLeaveSimulatorCard(
             label = "RH BALANCE",
             beforeVal = "${simResult.rhBefore}d",
             afterVal = "${simResult.rhAfter}d",
-            accent = Color(0xFF38BDF8),
+            accent = rhAdaptiveAccent,
             modifier = Modifier.weight(1f).fillMaxHeight()
           )
           BeforeAfterSimPill(
@@ -1823,11 +2094,18 @@ fun WhatIfLeaveSimulatorCard(
           )
         }
 
-        Surface(
-          shape = RoundedCornerShape(14.dp),
-          color = verdictColor.copy(alpha = 0.11f),
-          border = BorderStroke(1.dp, verdictColor.copy(alpha = 0.35f)),
-          modifier = Modifier.fillMaxWidth()
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = verdictColor,
+              accentTintAlpha = 0.08f,
+              borderColor = verdictColor.copy(alpha = 0.35f),
+              neu = neu
+            )
         ) {
           Column(
             modifier = Modifier.padding(12.dp),
@@ -1844,7 +2122,7 @@ fun WhatIfLeaveSimulatorCard(
               text = simResult.verdictDetail,
               style = MaterialTheme.typography.bodySmall,
               fontSize = 11.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = neu.textSecondary
             )
           }
         }
@@ -1859,7 +2137,7 @@ fun WhatIfLeaveSimulatorCard(
                 "Booked via What-If Simulator ($friendlyRange, weekends/GH auto-skipped)"
               )
             },
-            shape = RoundedCornerShape(12.dp),
+            shape = IosSharpButtonShape,
             colors = ButtonDefaults.buttonColors(
               containerColor = EmeraldOptimal,
               contentColor = Color.White
@@ -1892,11 +2170,17 @@ private fun BeforeAfterSimPill(
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(14.dp),
-    color = accent.copy(alpha = 0.10f),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.30f)),
-    modifier = modifier
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier.neumorphicInset(
+      shape = IosSharpButtonShape,
+      depth = 2.dp,
+      blurRadius = 4.dp,
+      accentTint = accent,
+      accentTintAlpha = 0.06f,
+      borderColor = accent.copy(alpha = 0.26f),
+      neu = neu
+    )
   ) {
     Column(
       modifier = Modifier
@@ -1909,7 +2193,7 @@ private fun BeforeAfterSimPill(
         fontFamily = JetBrainsMonoFontFamily,
         fontSize = 8.sp,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false
       )
@@ -1925,7 +2209,7 @@ private fun BeforeAfterSimPill(
       Text(
         text = "Before → After",
         fontSize = 9.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false
       )

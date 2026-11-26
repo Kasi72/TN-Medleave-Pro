@@ -71,6 +71,8 @@ import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
@@ -302,21 +304,28 @@ fun OfficialPdfExportDialog(
     }
   }
 
+  val neuDialog = LocalNeumorphicColors.current
+
   Dialog(
     onDismissRequest = onDismiss,
     properties = DialogProperties(usePlatformDefaultWidth = false)
   ) {
-    Surface(
-      shape = RoundedCornerShape(26.dp),
-      color = MaterialTheme.colorScheme.background,
+    Box(
       modifier = Modifier
         .fillMaxSize()
         .padding(horizontal = 12.dp, vertical = 20.dp)
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 6.dp,
+          blurRadius = 12.dp,
+          surfaceColor = neuDialog.baseBg,
+          borderAlpha = 0.35f,
+          neu = neuDialog
+        )
         .testTag("official_pdf_preview_dialog")
     ) {
       Column(modifier = Modifier.fillMaxSize()) {
         // Top Header Bar
-        val neuDialog = LocalNeumorphicColors.current
         Box(
           modifier = Modifier
             .fillMaxWidth()
@@ -405,12 +414,22 @@ fun OfficialPdfExportDialog(
 
         // Save Confirmation Banner inside Modal
         localSaveStatus?.let { msg ->
-          Surface(
-            color = EmeraldOptimal.copy(alpha = 0.15f),
-            modifier = Modifier.fillMaxWidth()
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 12.dp, vertical = 6.dp)
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = EmeraldOptimal,
+                accentTintAlpha = 0.14f,
+                borderColor = EmeraldOptimal.copy(alpha = 0.35f),
+                neu = neuDialog
+              )
           ) {
             Row(
-              modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+              modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
               verticalAlignment = Alignment.CenterVertically
             ) {
               Icon(
@@ -491,9 +510,10 @@ fun OfficialPdfExportDialog(
                       modifier = Modifier.weight(1f)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                      shape = RoundedCornerShape(8.dp),
-                      color = Color(0xFF10B981).copy(alpha = 0.2f)
+                    Box(
+                      modifier = Modifier
+                        .clip(IosSharpMicroShape)
+                        .background(Color(0xFF10B981).copy(alpha = 0.2f))
                     ) {
                       Text(
                         text = "${bundle.pageCount} A4 Pages Ready",
@@ -540,11 +560,17 @@ fun OfficialPdfExportDialog(
         }
 
         // Bottom Action Bar: Save PDF to Device & Share / Submit to Office
-        Surface(
-          color = MaterialTheme.colorScheme.surface,
-          tonalElevation = 4.dp,
-          modifier = Modifier.fillMaxWidth()
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .background(neuDialog.surfaceRaised)
         ) {
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(1.dp)
+              .background(neuDialog.hairlineDivider)
+          )
           Row(
             modifier = Modifier
               .fillMaxWidth()
@@ -559,7 +585,7 @@ fun OfficialPdfExportDialog(
                 }
               },
               enabled = generatedBundle != null && !isGenerating,
-              shape = RoundedCornerShape(14.dp),
+              shape = IosSharpButtonShape,
               border = BorderStroke(1.5.dp, EmeraldOptimal),
               modifier = Modifier
                 .weight(1f)
@@ -594,7 +620,7 @@ fun OfficialPdfExportDialog(
                 }
               },
               enabled = generatedBundle != null && !isGenerating,
-              shape = RoundedCornerShape(14.dp),
+              shape = IosSharpButtonShape,
               colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
               modifier = Modifier
                 .weight(1f)

@@ -41,7 +41,8 @@ data class LeaveNotificationAlertItem(
   val efficiencyBadge: String,
   val complianceTag: String,
   val isAlreadyLoggedInLedger: Boolean = false,
-  val bridgeToApply: SmartLeaveBridge? = null
+  val bridgeToApply: SmartLeaveBridge? = null,
+  val optimizerGoalHint: String? = null
 )
 
 class LeaveAlertReceiver : BroadcastReceiver() {
@@ -280,23 +281,34 @@ object LeaveNotificationHelper {
       }
     }
 
-    // 2. Unused GH Worked Credits -> COL Alert (6-Month Statutory Rule)
-    val unusedGhList = state.colGhAuditAllYears.unusedGhRecords
+    // 2. Unused GH Worked Credits -> COL Alert (6-Month Statutory 180-Day FIFO Countdown)
+    val unusedGhList = state.colGhAuditAllYears.unusedGhRecords.sortedBy { it.dateIso }
     if (unusedGhList.isNotEmpty()) {
+      val earliestGh = unusedGhList.first()
+      val earliestDate = runCatching { LocalDate.parse(earliestGh.dateIso) }.getOrNull()
+      val daysLeft = earliestDate?.let { ChronoUnit.DAYS.between(referenceDate, it.plusDays(180)) }
+      val expiryDateStr = earliestDate?.plusDays(180)?.toString().orEmpty()
+      val urgencyBadge = when {
+        daysLeft == null -> "ACTIONABLE CREDIT"
+        daysLeft <= 0 -> "EXPIRED — AUDIT"
+        daysLeft <= 45 -> "EXPIRES IN ${daysLeft}d"
+        else -> "${daysLeft}d TO EXPIRY"
+      }
       val sampleDates = unusedGhList.take(3).joinToString(", ") { it.dateIso }
       alerts.add(
         LeaveNotificationAlertItem(
           id = "unused_gh_col_credit_alert",
           alertType = LeaveAlertType.COL_CREDIT_EXPIRY,
-          title = "${unusedGhList.size} Unused GH Worked Credits Ready for COL",
-          subtitle = "Earned on: $sampleDates • Combine with RH/Weekends",
-          bodyText = "You have ${unusedGhList.size} unclaimed Government Holiday hospital duty credit(s) ($sampleDates). Under TN Leave Rules, pair them as Compensatory Off Leave (COL) adjacent to an upcoming weekend or Restricted Holiday for 0 CL impact.",
-          targetDateIso = unusedGhList.first().dateIso,
-          countdownBadge = "ACTIONABLE CREDIT",
+          title = "${unusedGhList.size} Unused GH Worked Credit(s) — FIFO COL Priority",
+          subtitle = "Oldest Duty: ${earliestGh.dateIso}${if (expiryDateStr.isNotBlank()) " • Expires $expiryDateStr" else ""}",
+          bodyText = "You have ${unusedGhList.size} unclaimed Government Holiday hospital duty credit(s) ($sampleDates). Pair oldest credit (${earliestGh.dateIso}) first as Compensatory Off Leave (COL) adjacent to an upcoming weekend or RH for 0 CL impact.",
+          targetDateIso = earliestGh.dateIso,
+          countdownBadge = urgencyBadge,
           efficiencyBadge = "${unusedGhList.size} COL Free",
-          complianceTag = "TN COL Rule: Avail within 6 months of GH Duty",
+          complianceTag = "TN COL Rule: Avail FIFO within 180 days of GH Duty",
           isAlreadyLoggedInLedger = false,
-          bridgeToApply = null
+          bridgeToApply = null,
+          optimizerGoalHint = "Consume Expiring GH Worked (FIFO COL)"
         )
       )
     }
@@ -331,7 +343,8 @@ object LeaveNotificationHelper {
           efficiencyBadge = "${bridge.efficiencyRatio}x • ${bridge.totalDaysOff}d Off",
           complianceTag = "TN FR Annexure VII ≤10d Continuous Cap Verified",
           isAlreadyLoggedInLedger = alreadyLogged,
-          bridgeToApply = bridge
+          bridgeToApply = bridge,
+          optimizerGoalHint = "Maximize Long Weekends (Highest ROI)"
         )
       )
     }
@@ -373,7 +386,8 @@ object LeaveNotificationHelper {
           efficiencyBadge = if (hol.isRestrictedHoliday) "TN RH Quota" else "0 Credit GH",
           complianceTag = bridgeHint,
           isAlreadyLoggedInLedger = isLogged,
-          bridgeToApply = null
+          bridgeToApply = null,
+          optimizerGoalHint = if (hol.isRestrictedHoliday) "Zero-CL Combos (RH + COL Only)" else "Festival Megabridges (Pongal / Puja / Christmas)"
         )
       )
     }

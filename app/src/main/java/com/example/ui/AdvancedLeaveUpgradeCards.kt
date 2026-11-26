@@ -52,6 +52,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -97,7 +98,13 @@ import com.example.ui.theme.BadgeOnDutyBlue
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
 import com.example.ui.theme.StatusVerifiedGreen
@@ -113,31 +120,28 @@ fun ColSixMonthExpiryRadarCard(
   onClaimFifoGhAsCol: (ghRecord: LeaveRecord) -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val neu = LocalNeumorphicColors.current
+  val cyanAccent = if (neu.isDark) Color(0xFF22D3EE) else BadgeColCyan
   val expiryItems = remember(unusedGhRecords) {
     ColExpiryRadarEngine.analyzeUnusedGhCredits(unusedGhRecords)
   }
   val criticalCount = expiryItems.count {
     it.urgency == ColExpiryUrgency.CRITICAL_WITHIN_30D || it.urgency == ColExpiryUrgency.WARNING_31_TO_60D
   }
+  val countBadgeColor = if (criticalCount > 0) StatusPendingOrange else EmeraldOptimal
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .testTag("col_six_month_expiry_radar_card")
-      .border(
-        width = 1.2.dp,
-        brush = Brush.linearGradient(
-          colors = listOf(
-            BadgePlGold.copy(alpha = 0.50f),
-            BadgeColCyan.copy(alpha = 0.25f)
-          )
-        ),
-        shape = RoundedCornerShape(26.dp)
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = BadgePlGold,
+        borderAlpha = 0.36f,
+        neu = neu
       )
+      .testTag("col_six_month_expiry_radar_card")
   ) {
     Column(
       modifier = Modifier
@@ -154,20 +158,25 @@ fun ColSixMonthExpiryRadarCard(
           modifier = Modifier.weight(1f),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Surface(
-            shape = RoundedCornerShape(13.dp),
-            color = BadgePlGold.copy(alpha = 0.16f),
-            border = BorderStroke(1.dp, BadgePlGold.copy(alpha = 0.40f)),
-            modifier = Modifier.size(40.dp)
+          Box(
+            modifier = Modifier
+              .size(40.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = BadgePlGold,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.HourglassBottom,
-                contentDescription = "6-Month COL Expiry Radar",
-                tint = BadgePlGold,
-                modifier = Modifier.size(20.dp)
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.HourglassBottom,
+              contentDescription = "6-Month COL Expiry Radar",
+              tint = BadgePlGold,
+              modifier = Modifier.size(20.dp)
+            )
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column(modifier = Modifier.weight(1f)) {
@@ -175,7 +184,7 @@ fun ColSixMonthExpiryRadarCard(
               text = "6-Month COL Expiry & FIFO Radar",
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -185,7 +194,7 @@ fun ColSixMonthExpiryRadarCard(
               style = MaterialTheme.typography.bodySmall,
               fontSize = 11.sp,
               lineHeight = 14.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -195,16 +204,15 @@ fun ColSixMonthExpiryRadarCard(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = if (criticalCount > 0) {
-            StatusPendingOrange.copy(alpha = 0.16f)
-          } else {
-            EmeraldOptimal.copy(alpha = 0.14f)
-          },
-          border = BorderStroke(
-            1.dp,
-            if (criticalCount > 0) StatusPendingOrange.copy(alpha = 0.45f) else EmeraldOptimal.copy(alpha = 0.40f)
+        Box(
+          modifier = Modifier.neumorphicInset(
+            shape = IosSharpBadgeShape,
+            depth = 2.dp,
+            blurRadius = 4.dp,
+            accentTint = countBadgeColor,
+            accentTintAlpha = 0.12f,
+            borderColor = countBadgeColor.copy(alpha = 0.40f),
+            neu = neu
           )
         ) {
           Text(
@@ -213,7 +221,7 @@ fun ColSixMonthExpiryRadarCard(
             fontSize = 10.sp,
             lineHeight = 12.sp,
             fontWeight = FontWeight.Bold,
-            color = if (criticalCount > 0) StatusPendingOrange else EmeraldOptimal,
+            color = countBadgeColor,
             maxLines = 1,
             softWrap = false,
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
@@ -222,11 +230,18 @@ fun ColSixMonthExpiryRadarCard(
       }
 
       if (expiryItems.isEmpty()) {
-        Surface(
-          shape = RoundedCornerShape(16.dp),
-          color = EmeraldOptimal.copy(alpha = 0.10f),
-          border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.30f)),
-          modifier = Modifier.fillMaxWidth()
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = EmeraldOptimal,
+              accentTintAlpha = 0.08f,
+              borderColor = EmeraldOptimal.copy(alpha = 0.30f),
+              neu = neu
+            )
         ) {
           Row(
             modifier = Modifier.padding(12.dp),
@@ -242,18 +257,25 @@ fun ColSixMonthExpiryRadarCard(
             Text(
               text = "All GH Worked credits have been paired & availed — zero risk of 6-month credit lapse!",
               style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurface
+              color = neu.textPrimary
             )
           }
         }
       } else {
         // FIFO Priority Recommendation Banner for Oldest Unused GH Credit
         val fifoOldest = expiryItems.first()
-        Surface(
-          shape = RoundedCornerShape(16.dp),
-          color = BadgeColCyan.copy(alpha = 0.10f),
-          border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.35f)),
-          modifier = Modifier.fillMaxWidth()
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = cyanAccent,
+              accentTintAlpha = 0.08f,
+              borderColor = cyanAccent.copy(alpha = 0.36f),
+              neu = neu
+            )
         ) {
           Row(
             modifier = Modifier
@@ -269,7 +291,7 @@ fun ColSixMonthExpiryRadarCard(
                 fontSize = 9.sp,
                 lineHeight = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = BadgeColCyan,
+                color = cyanAccent,
                 maxLines = 1,
                 softWrap = false
               )
@@ -277,7 +299,7 @@ fun ColSixMonthExpiryRadarCard(
                 text = "GH Duty ${ClinicalDateFormatter.formatFriendlyDate(fifoOldest.dutyDateIso)} (${fifoOldest.holidayName})",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = neu.textPrimary,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis
@@ -287,7 +309,7 @@ fun ColSixMonthExpiryRadarCard(
                 fontFamily = JetBrainsMonoFontFamily,
                 fontSize = 10.sp,
                 lineHeight = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = neu.textSecondary,
                 maxLines = 1,
                 softWrap = false
               )
@@ -295,23 +317,27 @@ fun ColSixMonthExpiryRadarCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Button(
-              onClick = { onClaimFifoGhAsCol(fifoOldest.ghRecord) },
-              shape = RoundedCornerShape(12.dp),
-              colors = ButtonDefaults.buttonColors(
-                containerColor = BadgeColCyan,
-                contentColor = Color(0xFF042F2E)
-              ),
-              contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            Box(
               modifier = Modifier
                 .height(34.dp)
-                .testTag("fifo_claim_oldest_gh_btn")
+                .neumorphicExtruded(
+                  shape = IosSharpButtonShape,
+                  elevation = 2.5.dp,
+                  blurRadius = 5.dp,
+                  surfaceColor = BadgeColCyan,
+                  neu = neu
+                )
+                .clickable { onClaimFifoGhAsCol(fifoOldest.ghRecord) }
+                .padding(horizontal = 12.dp)
+                .testTag("fifo_claim_oldest_gh_btn"),
+              contentAlignment = Alignment.Center
             ) {
               Text(
                 text = "Use FIFO #1",
                 fontFamily = JetBrainsMonoFontFamily,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
+                color = Color.White,
                 maxLines = 1,
                 softWrap = false
               )
@@ -338,6 +364,7 @@ private fun UnusedGhCountdownRow(
   item: UnusedGhExpiryItem,
   onAvailClick: () -> Unit
 ) {
+  val neu = LocalNeumorphicColors.current
   val badgeAccent = when (item.urgency) {
     ColExpiryUrgency.CRITICAL_WITHIN_30D -> StatusAlertRed
     ColExpiryUrgency.WARNING_31_TO_60D -> StatusPendingOrange
@@ -360,20 +387,25 @@ private fun UnusedGhCountdownRow(
     }
   }
 
-  Surface(
-    shape = RoundedCornerShape(14.dp),
-    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-    border = BorderStroke(1.dp, badgeAccent.copy(alpha = 0.28f)),
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(RoundedCornerShape(14.dp))
+      .neumorphicInset(
+        shape = IosSharpWellShape,
+        depth = 2.5.dp,
+        blurRadius = 5.dp,
+        accentTint = badgeAccent,
+        accentTintAlpha = 0.06f,
+        borderColor = badgeAccent.copy(alpha = 0.28f),
+        neu = neu
+      )
       .clickable { onAvailClick() }
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(horizontal = 12.dp, vertical = 9.dp),
-      verticalArrangement = Arrangement.spacedBy(6.dp)
+        .padding(horizontal = 12.dp, vertical = 10.dp),
+      verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
       Row(
         modifier = Modifier.fillMaxWidth(),
@@ -385,9 +417,15 @@ private fun UnusedGhCountdownRow(
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-          Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = badgeAccent.copy(alpha = 0.16f)
+          Box(
+            modifier = Modifier.neumorphicExtruded(
+              shape = IosSharpMicroShape,
+              elevation = 1.5.dp,
+              blurRadius = 3.dp,
+              accentTint = badgeAccent,
+              accentTintAlpha = 0.14f,
+              neu = neu
+            )
           ) {
             Text(
               text = "#$rank",
@@ -404,7 +442,7 @@ private fun UnusedGhCountdownRow(
               text = "$friendlyDutyDate • ${item.holidayName}",
               style = MaterialTheme.typography.labelLarge,
               fontWeight = FontWeight.SemiBold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -425,10 +463,16 @@ private fun UnusedGhCountdownRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Surface(
-          shape = RoundedCornerShape(8.dp),
-          color = badgeAccent.copy(alpha = 0.15f),
-          border = BorderStroke(1.dp, badgeAccent.copy(alpha = 0.35f))
+        Box(
+          modifier = Modifier.neumorphicExtruded(
+            shape = IosSharpBadgeShape,
+            elevation = 2.dp,
+            blurRadius = 4.dp,
+            accentTint = badgeAccent,
+            accentTintAlpha = 0.14f,
+            borderAlpha = 0.36f,
+            neu = neu
+          )
         ) {
           Text(
             text = "+ Avail COL",
@@ -442,22 +486,12 @@ private fun UnusedGhCountdownRow(
         }
       }
 
-      // 180-Day Statutory Countdown Progress Bar
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(4.dp)
-          .clip(RoundedCornerShape(2.dp))
-          .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f))
-      ) {
-        Box(
-          modifier = Modifier
-            .fillMaxWidth(statutoryProgress)
-            .height(4.dp)
-            .clip(RoundedCornerShape(2.dp))
-            .background(badgeAccent)
-        )
-      }
+      // 180-Day Statutory Countdown Neumorphic Progress Bar
+      NeumorphicLinearProgress(
+        progress = statutoryProgress,
+        accentColor = badgeAccent,
+        height = 5.dp
+      )
     }
   }
 }
@@ -473,6 +507,7 @@ fun EarnedLeaveMasterPassbookCard(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val neu = LocalNeumorphicColors.current
   var openingEl2023 by remember {
     mutableStateOf(LedgerEnrichmentStore.getOpeningElBalance2023(context))
   }
@@ -493,24 +528,18 @@ fun EarnedLeaveMasterPassbookCard(
   val ceilingProgress =
     (passbook.currentNetElBalance.toFloat() / passbook.maxEncashmentCeiling.toFloat()).coerceIn(0f, 1f)
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .testTag("earned_leave_master_passbook_card")
-      .border(
-        width = 1.2.dp,
-        brush = Brush.linearGradient(
-          colors = listOf(
-            BadgePlGold.copy(alpha = 0.45f),
-            EmeraldOptimal.copy(alpha = 0.30f)
-          )
-        ),
-        shape = RoundedCornerShape(26.dp)
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = BadgePlGold,
+        borderAlpha = 0.36f,
+        neu = neu
       )
+      .testTag("earned_leave_master_passbook_card")
   ) {
     Column(
       modifier = Modifier
@@ -528,20 +557,25 @@ fun EarnedLeaveMasterPassbookCard(
           modifier = Modifier.weight(1f),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Surface(
-            shape = RoundedCornerShape(13.dp),
-            color = BadgePlGold.copy(alpha = 0.16f),
-            border = BorderStroke(1.dp, BadgePlGold.copy(alpha = 0.40f)),
-            modifier = Modifier.size(40.dp)
+          Box(
+            modifier = Modifier
+              .size(40.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = BadgePlGold,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.AccountBalanceWallet,
-                contentDescription = "Earned Leave Master Passbook",
-                tint = BadgePlGold,
-                modifier = Modifier.size(20.dp)
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.AccountBalanceWallet,
+              contentDescription = "Earned Leave Master Passbook",
+              tint = BadgePlGold,
+              modifier = Modifier.size(20.dp)
+            )
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column(modifier = Modifier.weight(1f)) {
@@ -549,7 +583,7 @@ fun EarnedLeaveMasterPassbookCard(
               text = "Earned Leave (EL) Master Passbook",
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -559,7 +593,7 @@ fun EarnedLeaveMasterPassbookCard(
               style = MaterialTheme.typography.bodySmall,
               fontSize = 11.sp,
               lineHeight = 14.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -569,24 +603,27 @@ fun EarnedLeaveMasterPassbookCard(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant,
-          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .neumorphicExtruded(
+              shape = IosSharpBadgeShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              borderAlpha = 0.35f,
+              neu = neu
+            )
             .clickable { showConfigDialog = true }
             .testTag("configure_el_passbook_btn")
         ) {
           Row(
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
           ) {
             Icon(
               imageVector = Icons.Default.Edit,
               contentDescription = "Edit Opening EL",
-              tint = MaterialTheme.colorScheme.onSurfaceVariant,
+              tint = neu.textSecondary,
               modifier = Modifier.size(12.dp)
             )
             Text(
@@ -595,7 +632,7 @@ fun EarnedLeaveMasterPassbookCard(
               fontSize = 9.sp,
               lineHeight = 11.sp,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false
             )
@@ -661,10 +698,13 @@ fun EarnedLeaveMasterPassbookCard(
             fontSize = 9.sp,
             lineHeight = 11.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = neu.textSecondary,
             maxLines = 1,
-            softWrap = false
+            softWrap = false,
+            modifier = Modifier.weight(1f),
+            overflow = TextOverflow.Ellipsis
           )
+          Spacer(modifier = Modifier.width(6.dp))
           Text(
             text = "${passbook.currentNetElBalance} / 240 DAYS (${(ceilingProgress * 100).toInt()}%)",
             fontFamily = JetBrainsMonoFontFamily,
@@ -676,41 +716,30 @@ fun EarnedLeaveMasterPassbookCard(
             softWrap = false
           )
         }
-        Box(
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(7.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-          Box(
-            modifier = Modifier
-              .fillMaxWidth(ceilingProgress.coerceIn(0.05f, 1f))
-              .height(7.dp)
-              .clip(RoundedCornerShape(4.dp))
-              .background(
-                Brush.horizontalGradient(
-                  colors = listOf(EmeraldOptimal, BadgePlGold)
-                )
-              )
-          )
-        }
+        NeumorphicLinearProgress(
+          progress = ceilingProgress,
+          accentColor = EmeraldOptimal,
+          height = 7.dp
+        )
       }
 
       // Expandable Half-Yearly Accrual Passbook Table
-      Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+      Box(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(14.dp))
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            neu = neu
+          )
           .clickable { showHalfYearlyTable = !showHalfYearlyTable }
           .testTag("toggle_el_half_yearly_table")
       ) {
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 9.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically
         ) {
@@ -724,7 +753,7 @@ fun EarnedLeaveMasterPassbookCard(
             fontSize = 11.sp,
             lineHeight = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = neu.textPrimary,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis,
@@ -733,7 +762,7 @@ fun EarnedLeaveMasterPassbookCard(
           Icon(
             imageVector = if (showHalfYearlyTable) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = neu.textSecondary,
             modifier = Modifier.size(18.dp)
           )
         }
@@ -742,11 +771,16 @@ fun EarnedLeaveMasterPassbookCard(
       AnimatedVisibility(visible = showHalfYearlyTable) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
           passbook.halfYearRows.forEach { row ->
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-              border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-              modifier = Modifier.fillMaxWidth()
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .neumorphicInset(
+                  shape = IosSharpButtonShape,
+                  depth = 2.dp,
+                  blurRadius = 4.dp,
+                  borderColor = neu.hairlineDivider,
+                  neu = neu
+                )
             ) {
               Row(
                 modifier = Modifier
@@ -762,7 +796,7 @@ fun EarnedLeaveMasterPassbookCard(
                     fontSize = 11.sp,
                     lineHeight = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = neu.textPrimary,
                     maxLines = 1,
                     softWrap = false
                   )
@@ -771,15 +805,21 @@ fun EarnedLeaveMasterPassbookCard(
                     fontFamily = JetBrainsMonoFontFamily,
                     fontSize = 9.sp,
                     lineHeight = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = neu.textSecondary,
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis
                   )
                 }
-                Surface(
-                  shape = RoundedCornerShape(8.dp),
-                  color = EmeraldOptimal.copy(alpha = 0.14f)
+                Box(
+                  modifier = Modifier.neumorphicExtruded(
+                    shape = IosSharpMicroShape,
+                    elevation = 1.5.dp,
+                    blurRadius = 3.dp,
+                    accentTint = EmeraldOptimal,
+                    accentTintAlpha = 0.14f,
+                    neu = neu
+                  )
                 ) {
                   Text(
                     text = "${row.closingBalance}d EL",
@@ -804,7 +844,8 @@ fun EarnedLeaveMasterPassbookCard(
     var surrInput by remember { mutableStateOf(surrenderedDays.toString()) }
     AlertDialog(
       onDismissRequest = { showConfigDialog = false },
-      shape = RoundedCornerShape(26.dp),
+      containerColor = neu.baseBg,
+      shape = IosSharpCardShape,
       title = {
         ExecutiveDialogHeader(
           icon = Icons.Default.AccountBalanceWallet,
@@ -818,24 +859,48 @@ fun EarnedLeaveMasterPassbookCard(
           Text(
             text = "Align your Opening EL Balance (as on Jan 1, 2023 in your GEMC&H Service Register) and any Surrendered Leave (SLS) days:",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = neu.textSecondary
           )
-          OutlinedTextField(
-            value = openInput,
-            onValueChange = { openInput = it.filter { ch -> ch.isDigit() } },
-            label = { Text("Opening EL Balance on Jan 1, 2023 (Days)") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
-          )
-          OutlinedTextField(
-            value = surrInput,
-            onValueChange = { surrInput = it.filter { ch -> ch.isDigit() } },
-            label = { Text("EL Surrendered / Encashed (Days)") },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
-          )
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(shape = IosSharpWellShape, depth = 3.dp, blurRadius = 6.dp, neu = neu)
+          ) {
+            OutlinedTextField(
+              value = openInput,
+              onValueChange = { openInput = it.filter { ch -> ch.isDigit() } },
+              label = { Text("Opening EL Balance on Jan 1, 2023 (Days)") },
+              singleLine = true,
+              shape = IosSharpWellShape,
+              colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+              ),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(shape = IosSharpWellShape, depth = 3.dp, blurRadius = 6.dp, neu = neu)
+          ) {
+            OutlinedTextField(
+              value = surrInput,
+              onValueChange = { surrInput = it.filter { ch -> ch.isDigit() } },
+              label = { Text("EL Surrendered / Encashed (Days)") },
+              singleLine = true,
+              shape = IosSharpWellShape,
+              colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+              ),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
         }
       },
       confirmButton = {
@@ -850,7 +915,7 @@ fun EarnedLeaveMasterPassbookCard(
             showConfigDialog = false
             onShowStatusBanner("Updated EL Passbook (Opening 2023: ${newOpen}d, Surrendered: ${newSurr}d)")
           },
-          shape = RoundedCornerShape(12.dp)
+          shape = IosSharpButtonShape
         ) {
           Text("Save Passbook")
         }
@@ -872,11 +937,17 @@ private fun PassbookStatPill(
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(14.dp),
-    color = accent.copy(alpha = 0.10f),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.28f)),
-    modifier = modifier
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier.neumorphicInset(
+      shape = IosSharpButtonShape,
+      depth = 2.5.dp,
+      blurRadius = 5.dp,
+      accentTint = accent,
+      accentTintAlpha = 0.08f,
+      borderColor = accent.copy(alpha = 0.28f),
+      neu = neu
+    )
   ) {
     Column(
       modifier = Modifier
@@ -890,7 +961,7 @@ private fun PassbookStatPill(
         fontSize = 8.sp,
         lineHeight = 10.sp,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -910,7 +981,7 @@ private fun PassbookStatPill(
         fontFamily = JetBrainsMonoFontFamily,
         fontSize = 9.sp,
         lineHeight = 11.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -931,28 +1002,23 @@ fun DecemberLapseBurnDownCard(
   onCommitAllBurnDownSlots: (List<BurnDownSlotSuggestion>) -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val neu = LocalNeumorphicColors.current
   val plan = remember(summary2026, records2026) {
     YearEndBurnDownPlanner.generateBurnDownPlan(summary2026, records2026)
   }
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .testTag("december_lapse_burndown_card")
-      .border(
-        width = 1.2.dp,
-        brush = Brush.linearGradient(
-          colors = listOf(
-            StatusPendingOrange.copy(alpha = 0.50f),
-            EmeraldOptimal.copy(alpha = 0.35f)
-          )
-        ),
-        shape = RoundedCornerShape(26.dp)
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = StatusPendingOrange,
+        borderAlpha = 0.36f,
+        neu = neu
       )
+      .testTag("december_lapse_burndown_card")
   ) {
     Column(
       modifier = Modifier
@@ -969,20 +1035,25 @@ fun DecemberLapseBurnDownCard(
           modifier = Modifier.weight(1f),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Surface(
-            shape = RoundedCornerShape(13.dp),
-            color = StatusPendingOrange.copy(alpha = 0.16f),
-            border = BorderStroke(1.dp, StatusPendingOrange.copy(alpha = 0.40f)),
-            modifier = Modifier.size(40.dp)
+          Box(
+            modifier = Modifier
+              .size(40.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = StatusPendingOrange,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.LocalFireDepartment,
-                contentDescription = "December Lapse Burn-Down Planner",
-                tint = StatusPendingOrange,
-                modifier = Modifier.size(20.dp)
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.LocalFireDepartment,
+              contentDescription = "December Lapse Burn-Down Planner",
+              tint = StatusPendingOrange,
+              modifier = Modifier.size(20.dp)
+            )
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column(modifier = Modifier.weight(1f)) {
@@ -990,7 +1061,7 @@ fun DecemberLapseBurnDownCard(
               text = "Dec 31 CL & RH Lapse Burn-Down",
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -1000,7 +1071,7 @@ fun DecemberLapseBurnDownCard(
               style = MaterialTheme.typography.bodySmall,
               fontSize = 11.sp,
               lineHeight = 14.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -1010,23 +1081,27 @@ fun DecemberLapseBurnDownCard(
 
         if (plan.suggestedSlots.isNotEmpty()) {
           Spacer(modifier = Modifier.width(8.dp))
-          Button(
-            onClick = { onCommitAllBurnDownSlots(plan.suggestedSlots) },
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(
-              containerColor = EmeraldOptimal,
-              contentColor = Color.White
-            ),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+          Box(
             modifier = Modifier
               .height(34.dp)
-              .testTag("commit_all_burndown_btn")
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 2.5.dp,
+                blurRadius = 5.dp,
+                surfaceColor = EmeraldOptimal,
+                neu = neu
+              )
+              .clickable { onCommitAllBurnDownSlots(plan.suggestedSlots) }
+              .padding(horizontal = 11.dp)
+              .testTag("commit_all_burndown_btn"),
+            contentAlignment = Alignment.Center
           ) {
             Text(
               text = "Book All (${plan.suggestedSlots.size})",
               fontFamily = JetBrainsMonoFontFamily,
               fontSize = 10.sp,
               fontWeight = FontWeight.Bold,
+              color = Color.White,
               maxLines = 1,
               softWrap = false
             )
@@ -1037,20 +1112,27 @@ fun DecemberLapseBurnDownCard(
       Text(
         text = plan.complianceSummary,
         style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
+        color = neu.textSecondary
       )
 
       plan.suggestedSlots.take(5).forEach { slot ->
         val slotAccent = if (slot.suggestedCategory == LeaveCategory.RH) {
-          Color(0xFF38BDF8)
+          if (neu.isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
         } else {
-          BadgeClGreen
+          if (neu.isDark) Color(0xFF4ADE80) else BadgeClGreen
         }
-        Surface(
-          shape = RoundedCornerShape(14.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
-          border = BorderStroke(1.dp, slotAccent.copy(alpha = 0.30f)),
-          modifier = Modifier.fillMaxWidth()
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = slotAccent,
+              accentTintAlpha = 0.06f,
+              borderColor = slotAccent.copy(alpha = 0.30f),
+              neu = neu
+            )
         ) {
           Row(
             modifier = Modifier
@@ -1064,9 +1146,15 @@ fun DecemberLapseBurnDownCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
               ) {
-                Surface(
-                  shape = RoundedCornerShape(6.dp),
-                  color = slotAccent.copy(alpha = 0.16f)
+                Box(
+                  modifier = Modifier.neumorphicExtruded(
+                    shape = IosSharpMicroShape,
+                    elevation = 1.5.dp,
+                    blurRadius = 3.dp,
+                    accentTint = slotAccent,
+                    accentTintAlpha = 0.14f,
+                    neu = neu
+                  )
                 ) {
                   Text(
                     text = "${slot.suggestedCategory.code} • ${slot.dayOfWeekLabel}",
@@ -1084,9 +1172,10 @@ fun DecemberLapseBurnDownCard(
                   fontSize = 11.sp,
                   lineHeight = 14.sp,
                   fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onSurface,
+                  color = neu.textPrimary,
                   maxLines = 1,
-                  softWrap = false
+                  softWrap = false,
+                  overflow = TextOverflow.Ellipsis
                 )
               }
               Spacer(modifier = Modifier.height(2.dp))
@@ -1095,7 +1184,7 @@ fun DecemberLapseBurnDownCard(
                 style = MaterialTheme.typography.bodySmall,
                 fontSize = 11.sp,
                 lineHeight = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = neu.textSecondary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
               )
@@ -1103,12 +1192,17 @@ fun DecemberLapseBurnDownCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Surface(
-              shape = RoundedCornerShape(10.dp),
-              color = slotAccent.copy(alpha = 0.16f),
-              border = BorderStroke(1.dp, slotAccent.copy(alpha = 0.40f)),
+            Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
+                .neumorphicExtruded(
+                  shape = IosSharpBadgeShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  accentTint = slotAccent,
+                  accentTintAlpha = 0.14f,
+                  borderAlpha = 0.40f,
+                  neu = neu
+                )
                 .clickable {
                   onQuickLogSlot(
                     slot.suggestedCategory.code,
@@ -1147,6 +1241,8 @@ fun CsvSpreadsheetHubCard(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val neu = LocalNeumorphicColors.current
+  val cyanAccent = if (neu.isDark) Color(0xFF22D3EE) else BadgeColCyan
   var showPasteCsvDialog by remember { mutableStateOf(false) }
 
   val csvFilePickerLauncher = rememberLauncherForActivityResult(
@@ -1166,19 +1262,18 @@ fun CsvSpreadsheetHubCard(
     }
   }
 
-  Surface(
-    shape = RoundedCornerShape(24.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 3.dp,
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .testTag("csv_spreadsheet_hub_card")
-      .border(
-        width = 1.dp,
-        color = BadgeColCyan.copy(alpha = 0.35f),
-        shape = RoundedCornerShape(24.dp)
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = cyanAccent,
+        borderAlpha = 0.34f,
+        neu = neu
       )
+      .testTag("csv_spreadsheet_hub_card")
   ) {
     Column(
       modifier = Modifier
@@ -1195,20 +1290,25 @@ fun CsvSpreadsheetHubCard(
           modifier = Modifier.weight(1f),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = BadgeColCyan.copy(alpha = 0.14f),
-            border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.35f)),
-            modifier = Modifier.size(38.dp)
+          Box(
+            modifier = Modifier
+              .size(38.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = cyanAccent,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.TableView,
-                contentDescription = "Excel CSV Import & Export",
-                tint = BadgeColCyan,
-                modifier = Modifier.size(20.dp)
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.TableView,
+              contentDescription = "Excel CSV Import & Export",
+              tint = cyanAccent,
+              modifier = Modifier.size(20.dp)
+            )
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column(modifier = Modifier.weight(1f)) {
@@ -1216,7 +1316,7 @@ fun CsvSpreadsheetHubCard(
               text = "2-Way Excel / CSV Spreadsheet Sync",
               style = MaterialTheme.typography.titleSmall,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -1226,7 +1326,7 @@ fun CsvSpreadsheetHubCard(
               style = MaterialTheme.typography.bodySmall,
               fontSize = 11.sp,
               lineHeight = 14.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -1241,73 +1341,100 @@ fun CsvSpreadsheetHubCard(
           .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
       ) {
-        Button(
-          onClick = {
-            CsvSpreadsheetService.exportAndShareCsv(context, allRecords, metaMap)
-              .onSuccess {
-                onShowStatusBanner("Exported ${allRecords.size} records to Excel-compatible CSV!")
-              }
-              .onFailure { err ->
-                onShowStatusBanner("CSV Export error: ${err.localizedMessage}")
-              }
-          },
-          shape = RoundedCornerShape(13.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = EmeraldOptimal,
-            contentColor = Color.White
-          ),
+        Box(
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
-            .testTag("export_csv_btn")
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              surfaceColor = EmeraldOptimal,
+              neu = neu
+            )
+            .clickable {
+              CsvSpreadsheetService.exportAndShareCsv(context, allRecords, metaMap)
+                .onSuccess {
+                  onShowStatusBanner("Exported ${allRecords.size} records to Excel-compatible CSV!")
+                }
+                .onFailure { err ->
+                  onShowStatusBanner("CSV Export error: ${err.localizedMessage}")
+                }
+            }
+            .padding(horizontal = 8.dp, vertical = 10.dp)
+            .testTag("export_csv_btn"),
+          contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = "Export .CSV",
-            fontFamily = JetBrainsMonoFontFamily,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            softWrap = false
-          )
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Download, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+              text = "Export .CSV",
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 11.sp,
+              fontWeight = FontWeight.Bold,
+              color = Color.White,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
         }
 
-        OutlinedButton(
-          onClick = { csvFilePickerLauncher.launch("text/*") },
-          shape = RoundedCornerShape(13.dp),
-          border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.50f)),
+        Box(
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
-            .testTag("import_csv_file_btn")
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = cyanAccent,
+              accentTintAlpha = 0.08f,
+              borderAlpha = 0.42f,
+              neu = neu
+            )
+            .clickable { csvFilePickerLauncher.launch("text/*") }
+            .padding(horizontal = 8.dp, vertical = 10.dp)
+            .testTag("import_csv_file_btn"),
+          contentAlignment = Alignment.Center
         ) {
-          Icon(
-            Icons.Default.FileUpload,
-            contentDescription = null,
-            tint = BadgeColCyan,
-            modifier = Modifier.size(16.dp)
-          )
-          Spacer(modifier = Modifier.width(6.dp))
-          Text(
-            text = "Import File",
-            fontFamily = JetBrainsMonoFontFamily,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = BadgeColCyan,
-            maxLines = 1,
-            softWrap = false
-          )
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+              Icons.Default.FileUpload,
+              contentDescription = null,
+              tint = cyanAccent,
+              modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+              text = "Import File",
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 11.sp,
+              fontWeight = FontWeight.Bold,
+              color = cyanAccent,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
         }
 
-        OutlinedButton(
-          onClick = { showPasteCsvDialog = true },
-          shape = RoundedCornerShape(13.dp),
-          border = BorderStroke(1.dp, BadgePlGold.copy(alpha = 0.50f)),
+        Box(
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
-            .testTag("paste_csv_rows_btn")
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = BadgePlGold,
+              accentTintAlpha = 0.08f,
+              borderAlpha = 0.42f,
+              neu = neu
+            )
+            .clickable { showPasteCsvDialog = true }
+            .padding(horizontal = 8.dp, vertical = 10.dp)
+            .testTag("paste_csv_rows_btn"),
+          contentAlignment = Alignment.Center
         ) {
           Text(
             text = "Paste CSV",
@@ -1329,11 +1456,12 @@ fun CsvSpreadsheetHubCard(
     }
     AlertDialog(
       onDismissRequest = { showPasteCsvDialog = false },
-      shape = RoundedCornerShape(26.dp),
+      containerColor = neu.baseBg,
+      shape = IosSharpCardShape,
       title = {
         ExecutiveDialogHeader(
           icon = Icons.Default.TableView,
-          accent = BadgeColCyan,
+          accent = cyanAccent,
           title = "Paste Spreadsheet / CSV Rows",
           subtitle = "BULK LEDGER IMPORT • 7-LAYER DUPLICATE GUARD"
         )
@@ -1343,17 +1471,29 @@ fun CsvSpreadsheetHubCard(
           Text(
             text = "Paste rows in format: YYYY-MM-DD, Category (CL/RH/COL/GH_WORKED/EL/OD), Session (FULL/FN/AN), PairedDate, Notes",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = neu.textSecondary
           )
-          OutlinedTextField(
-            value = csvTextInput,
-            onValueChange = { csvTextInput = it },
-            label = { Text("CSV Rows") },
-            minLines = 4,
-            maxLines = 8,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth()
-          )
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(shape = IosSharpWellShape, depth = 3.dp, blurRadius = 6.dp, neu = neu)
+          ) {
+            OutlinedTextField(
+              value = csvTextInput,
+              onValueChange = { csvTextInput = it },
+              label = { Text("CSV Rows") },
+              minLines = 4,
+              maxLines = 8,
+              shape = IosSharpWellShape,
+              colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+              ),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
         }
       },
       confirmButton = {
@@ -1367,7 +1507,7 @@ fun CsvSpreadsheetHubCard(
               onShowStatusBanner("No valid YYYY-MM-DD rows found to import.")
             }
           },
-          shape = RoundedCornerShape(12.dp)
+          shape = IosSharpButtonShape
         ) {
           Text("Import Rows")
         }
@@ -1394,23 +1534,23 @@ fun HomeScreenWidgetPreviewCard(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val neu = LocalNeumorphicColors.current
   val clDisplay = "${formatDaysCompact(summary2026.clRemaining)} / 12"
   val rhDisplay = "${summary2026.rhRemaining} / 3"
   val colDisplay = "$unusedGhCount READY"
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
+  Box(
     modifier = modifier
       .fillMaxWidth()
-      .testTag("home_screen_widget_preview_card")
-      .border(
-        width = 1.2.dp,
-        color = EmeraldOptimal.copy(alpha = 0.35f),
-        shape = RoundedCornerShape(26.dp)
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = EmeraldOptimal,
+        borderAlpha = 0.35f,
+        neu = neu
       )
+      .testTag("home_screen_widget_preview_card")
   ) {
     Column(
       modifier = Modifier
@@ -1427,20 +1567,25 @@ fun HomeScreenWidgetPreviewCard(
           modifier = Modifier.weight(1f),
           verticalAlignment = Alignment.CenterVertically
         ) {
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = EmeraldOptimal.copy(alpha = 0.15f),
-            border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.38f)),
-            modifier = Modifier.size(38.dp)
+          Box(
+            modifier = Modifier
+              .size(38.dp)
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = EmeraldOptimal,
+                accentTintAlpha = 0.14f,
+                neu = neu
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Box(contentAlignment = Alignment.Center) {
-              Icon(
-                imageVector = Icons.Default.Widgets,
-                contentDescription = "Android Home Screen Widget",
-                tint = EmeraldOptimal,
-                modifier = Modifier.size(20.dp)
-              )
-            }
+            Icon(
+              imageVector = Icons.Default.Widgets,
+              contentDescription = "Android Home Screen Widget",
+              tint = EmeraldOptimal,
+              modifier = Modifier.size(20.dp)
+            )
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column(modifier = Modifier.weight(1f)) {
@@ -1448,7 +1593,7 @@ fun HomeScreenWidgetPreviewCard(
               text = "Android Home Screen Live Widget",
               style = MaterialTheme.typography.titleMedium,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -1458,7 +1603,7 @@ fun HomeScreenWidgetPreviewCard(
               style = MaterialTheme.typography.bodySmall,
               fontSize = 11.sp,
               lineHeight = 14.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false,
               overflow = TextOverflow.Ellipsis
@@ -1468,152 +1613,168 @@ fun HomeScreenWidgetPreviewCard(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Button(
-          onClick = {
-            MedLeaveQuotaAppWidget.syncAndRefreshWidget(
-              context = context,
-              clText = clDisplay,
-              rhText = rhDisplay,
-              colText = colDisplay,
-              nextHolidayText = nextHolidayLabel,
-              updatedLabel = "SYNCED"
-            )
-            val pinned = MedLeaveQuotaAppWidget.requestPinHomeWidget(context)
-            onShowStatusBanner(
-              if (pinned) {
-                "Synced & requested Android Launcher to pin TN MedLeave Pro Widget!"
-              } else {
-                "Widget data synced! Long-press your Android Home Screen → Widgets → TN MedLeave Pro."
-              }
-            )
-          },
-          shape = RoundedCornerShape(12.dp),
-          colors = ButtonDefaults.buttonColors(
-            containerColor = EmeraldOptimal,
-            contentColor = Color.White
-          ),
-          contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        Box(
           modifier = Modifier
             .height(34.dp)
-            .testTag("pin_home_widget_btn")
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              surfaceColor = EmeraldOptimal,
+              neu = neu
+            )
+            .clickable {
+              MedLeaveQuotaAppWidget.syncAndRefreshWidget(
+                context = context,
+                clText = clDisplay,
+                rhText = rhDisplay,
+                colText = colDisplay,
+                nextHolidayText = nextHolidayLabel,
+                updatedLabel = "SYNCED"
+              )
+              val pinned = MedLeaveQuotaAppWidget.requestPinHomeWidget(context)
+              onShowStatusBanner(
+                if (pinned) {
+                  "Synced & requested Android Launcher to pin TN MedLeave Pro Widget!"
+                } else {
+                  "Widget data synced! Long-press your Android Home Screen → Widgets → TN MedLeave Pro."
+                }
+              )
+            }
+            .padding(horizontal = 12.dp)
+            .testTag("pin_home_widget_btn"),
+          contentAlignment = Alignment.Center
         ) {
           Text(
             text = "Pin / Sync Widget",
             fontFamily = JetBrainsMonoFontFamily,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
+            color = Color.White,
             maxLines = 1,
             softWrap = false
           )
         }
       }
 
-      // Live In-App Replica of the Native Android Home Screen Widget
+      // Live In-App Replica of the Native Android Home Screen Widget inside an inset frame
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .clip(RoundedCornerShape(20.dp))
-          .background(
-            Brush.linearGradient(
-              colors = listOf(
-                Color(0xFF061527),
-                Color(0xFF0B2545),
-                Color(0xFF052E2B)
-              )
-            )
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            neu = neu
           )
-          .border(1.dp, Color(0xFF34D399).copy(alpha = 0.45f), RoundedCornerShape(20.dp))
-          .padding(14.dp)
+          .padding(4.dp)
       ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-          ) {
-            Column(modifier = Modifier.weight(1f)) {
-              val widgetHeaderTitle = remember(summary2026) {
-                val desig = HodProfileSettingsStore.getDesignation(context).uppercase()
-                val dept = HodProfileSettingsStore.getDepartment(context).uppercase()
-                "TN MEDLEAVE PRO • $desig ($dept)"
-              }
-              val widgetCollegeSub = remember(summary2026) {
-                val colShort = HodProfileSettingsStore.getCollege(context).substringBefore(",")
-                "$colShort • ${summary2026.year} Live Quota"
-              }
-              Text(
-                text = widgetHeaderTitle,
-                fontFamily = JetBrainsMonoFontFamily,
-                fontSize = 9.sp,
-                lineHeight = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF34D399),
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(IosSharpButtonShape)
+            .background(
+              Brush.linearGradient(
+                colors = listOf(
+                  Color(0xFF061527),
+                  Color(0xFF0B2545),
+                  Color(0xFF052E2B)
+                )
               )
-              Text(
-                text = widgetCollegeSub,
-                fontSize = 11.sp,
-                lineHeight = 14.sp,
-                color = Color(0xFFBAE6FD),
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-              )
-            }
-            Surface(
-              shape = RoundedCornerShape(8.dp),
-              color = Color.White.copy(alpha = 0.12f)
+            )
+            .border(1.dp, Color(0xFF34D399).copy(alpha = 0.45f), IosSharpButtonShape)
+            .padding(14.dp)
+        ) {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
             ) {
-              Text(
-                text = "HOME WIDGET",
-                fontFamily = JetBrainsMonoFontFamily,
-                fontSize = 8.sp,
-                lineHeight = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF6EE7B7),
-                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+              Column(modifier = Modifier.weight(1f)) {
+                val widgetHeaderTitle = remember(summary2026) {
+                  val desig = HodProfileSettingsStore.getDesignation(context).uppercase()
+                  val dept = HodProfileSettingsStore.getDepartment(context).uppercase()
+                  "TN MEDLEAVE PRO • $desig ($dept)"
+                }
+                val widgetCollegeSub = remember(summary2026) {
+                  val colShort = HodProfileSettingsStore.getCollege(context).substringBefore(",")
+                  "$colShort • ${summary2026.year} Live Quota"
+                }
+                Text(
+                  text = widgetHeaderTitle,
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 9.sp,
+                  lineHeight = 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = Color(0xFF34D399),
+                  maxLines = 1,
+                  softWrap = false,
+                  overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                  text = widgetCollegeSub,
+                  fontSize = 11.sp,
+                  lineHeight = 14.sp,
+                  color = Color(0xFFBAE6FD),
+                  maxLines = 1,
+                  softWrap = false,
+                  overflow = TextOverflow.Ellipsis
+                )
+              }
+              Surface(
+                shape = IosSharpMicroShape,
+                color = Color.White.copy(alpha = 0.12f)
+              ) {
+                Text(
+                  text = "HOME WIDGET",
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 8.sp,
+                  lineHeight = 10.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = Color(0xFF6EE7B7),
+                  modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                )
+              }
+            }
+
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              WidgetMiniPreviewPill(
+                label = "CL LEFT",
+                value = clDisplay,
+                accent = Color(0xFF4ADE80),
+                modifier = Modifier.weight(1f).fillMaxHeight()
+              )
+              WidgetMiniPreviewPill(
+                label = "RH LEFT",
+                value = rhDisplay,
+                accent = Color(0xFF38BDF8),
+                modifier = Modifier.weight(1f).fillMaxHeight()
+              )
+              WidgetMiniPreviewPill(
+                label = "FREE GH",
+                value = colDisplay,
+                accent = Color(0xFFFBBF24),
+                modifier = Modifier.weight(1f).fillMaxHeight()
               )
             }
-          }
 
-          Row(
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-          ) {
-            WidgetMiniPreviewPill(
-              label = "CL LEFT",
-              value = clDisplay,
-              accent = Color(0xFF4ADE80),
-              modifier = Modifier.weight(1f).fillMaxHeight()
-            )
-            WidgetMiniPreviewPill(
-              label = "RH LEFT",
-              value = rhDisplay,
-              accent = Color(0xFF38BDF8),
-              modifier = Modifier.weight(1f).fillMaxHeight()
-            )
-            WidgetMiniPreviewPill(
-              label = "FREE GH",
-              value = colDisplay,
-              accent = Color(0xFFFBBF24),
-              modifier = Modifier.weight(1f).fillMaxHeight()
+            Text(
+              text = nextHolidayLabel,
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 10.sp,
+              lineHeight = 13.sp,
+              color = Color(0xFFE2E8F0),
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
             )
           }
-
-          Text(
-            text = nextHolidayLabel,
-            fontFamily = JetBrainsMonoFontFamily,
-            fontSize = 10.sp,
-            lineHeight = 13.sp,
-            color = Color(0xFFE2E8F0),
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Ellipsis
-          )
         }
       }
     }
@@ -1628,7 +1789,7 @@ private fun WidgetMiniPreviewPill(
   modifier: Modifier = Modifier
 ) {
   Surface(
-    shape = RoundedCornerShape(12.dp),
+    shape = IosSharpButtonShape,
     color = Color.White.copy(alpha = 0.09f),
     border = BorderStroke(1.dp, accent.copy(alpha = 0.35f)),
     modifier = modifier
@@ -1672,13 +1833,14 @@ fun CertificateVaultAndSrDialog(
   onDismiss: () -> Unit,
   onSaveMeta: (RecordAttachmentMeta) -> Unit
 ) {
+  val neu = LocalNeumorphicColors.current
   var selectedSrState by remember { mutableStateOf(initialMeta.srState) }
   var orderRefNo by remember { mutableStateOf(initialMeta.orderRefNo) }
   var issuingAuthority by remember {
     mutableStateOf(
       initialMeta.issuingAuthority.ifBlank {
         when (record.category) {
-          LeaveCategory.ON_DUTY -> "TN Dr. M.G.R. Medical University / DME Chennai"
+          LeaveCategory.ON_DUTY -> "TN Dr. M.G.R. Medical Medical University / DME Chennai"
           LeaveCategory.GH_WORKED -> "Dean / RMO, Govt. Erode Medical College & Hospital"
           LeaveCategory.ML -> "Medical Board, GEMC&H"
           else -> "Dean's Office (E-Section), GEMC&H"
@@ -1699,7 +1861,8 @@ fun CertificateVaultAndSrDialog(
 
   AlertDialog(
     onDismissRequest = onDismiss,
-    shape = RoundedCornerShape(26.dp),
+    containerColor = neu.baseBg,
+    shape = IosSharpCardShape,
     title = {
       ExecutiveDialogHeader(
         icon = Icons.Default.Verified,
@@ -1717,30 +1880,45 @@ fun CertificateVaultAndSrDialog(
         Text(
           text = "1. IFHRMS / Dean's Office Service Register (SR) Status:",
           style = MaterialTheme.typography.labelLarge,
+          color = neu.textPrimary,
           fontWeight = FontWeight.Bold
         )
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
           SrReconciliationState.entries.forEach { st ->
             val isSelected = selectedSrState == st
             val stAccent = when (st) {
               SrReconciliationState.SR_VERIFIED -> StatusVerifiedGreen
-              SrReconciliationState.SUBMITTED_OFFICE -> BadgeColCyan
+              SrReconciliationState.SUBMITTED_OFFICE -> if (neu.isDark) Color(0xFF22D3EE) else BadgeColCyan
               SrReconciliationState.PENDING_SUBMISSION -> StatusPendingOrange
             }
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = if (isSelected) stAccent.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-              border = BorderStroke(
-                width = if (isSelected) 1.3.dp else 1.dp,
-                color = if (isSelected) stAccent else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-              ),
+            Box(
               modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+                .then(
+                  if (isSelected) {
+                    Modifier.neumorphicInset(
+                      shape = IosSharpButtonShape,
+                      depth = 2.5.dp,
+                      blurRadius = 5.dp,
+                      accentTint = stAccent,
+                      accentTintAlpha = 0.14f,
+                      borderColor = stAccent.copy(alpha = 0.72f),
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 2.dp,
+                      blurRadius = 4.dp,
+                      borderAlpha = 0.25f,
+                      neu = neu
+                    )
+                  }
+                )
                 .clickable { selectedSrState = st }
             ) {
               Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
               ) {
@@ -1762,7 +1940,7 @@ fun CertificateVaultAndSrDialog(
                     text = st.description,
                     style = MaterialTheme.typography.bodySmall,
                     fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = neu.textSecondary
                   )
                 }
               }
@@ -1774,46 +1952,84 @@ fun CertificateVaultAndSrDialog(
         Text(
           text = "2. Attendance Certificate / Order Reference:",
           style = MaterialTheme.typography.labelLarge,
+          color = neu.textPrimary,
           fontWeight = FontWeight.Bold
         )
-        OutlinedTextField(
-          value = orderRefNo,
-          onValueChange = { orderRefNo = it },
-          label = { Text("Order / Certificate Ref. No. (e.g. Univ. Exam / C2 / 2026)") },
-          singleLine = true,
-          shape = RoundedCornerShape(12.dp),
-          modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-          value = issuingAuthority,
-          onValueChange = { issuingAuthority = it },
-          label = { Text("Issuing Institution / Authority") },
-          singleLine = true,
-          shape = RoundedCornerShape(12.dp),
-          modifier = Modifier.fillMaxWidth()
-        )
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(shape = IosSharpWellShape, depth = 3.dp, blurRadius = 6.dp, neu = neu)
+        ) {
+          OutlinedTextField(
+            value = orderRefNo,
+            onValueChange = { orderRefNo = it },
+            label = { Text("Order / Certificate Ref. No. (e.g. Univ. Exam / C2 / 2026)") },
+            singleLine = true,
+            shape = IosSharpWellShape,
+            colors = OutlinedTextFieldDefaults.colors(
+              focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+              unfocusedBorderColor = Color.Transparent,
+              focusedContainerColor = Color.Transparent,
+              unfocusedContainerColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(shape = IosSharpWellShape, depth = 3.dp, blurRadius = 6.dp, neu = neu)
+        ) {
+          OutlinedTextField(
+            value = issuingAuthority,
+            onValueChange = { issuingAuthority = it },
+            label = { Text("Issuing Institution / Authority") },
+            singleLine = true,
+            shape = IosSharpWellShape,
+            colors = OutlinedTextFieldDefaults.colors(
+              focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+              unfocusedBorderColor = Color.Transparent,
+              focusedContainerColor = Color.Transparent,
+              unfocusedContainerColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
 
         // 3. Zero-Permission Photo Picker for Certificate Scan
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          OutlinedButton(
-            onClick = {
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = neu.primaryAccent,
+              accentTintAlpha = 0.08f,
+              borderAlpha = 0.35f,
+              neu = neu
+            )
+            .clickable {
               photoPickerLauncher.launch(
                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
               )
             },
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.weight(1f)
-          ) {
-            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
+          contentAlignment = Alignment.Center
+        ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+              Icons.Default.AddPhotoAlternate,
+              contentDescription = null,
+              tint = neu.primaryAccent,
+              modifier = Modifier.size(16.dp)
+            )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
               text = if (certificateUri.isBlank()) "Attach Certificate Photo" else "Change Attached Photo",
               fontSize = 11.sp,
-              fontWeight = FontWeight.Bold
+              fontWeight = FontWeight.Bold,
+              color = neu.primaryAccent
             )
           }
         }
@@ -1827,11 +2043,18 @@ fun CertificateVaultAndSrDialog(
               }
             }.getOrNull()
           }
-          Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = EmeraldOptimal.copy(alpha = 0.10f),
-            border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.35f)),
-            modifier = Modifier.fillMaxWidth()
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = EmeraldOptimal,
+                accentTintAlpha = 0.08f,
+                borderColor = EmeraldOptimal.copy(alpha = 0.35f),
+                neu = neu
+              )
           ) {
             Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
               Row(
@@ -1858,14 +2081,14 @@ fun CertificateVaultAndSrDialog(
                   modifier = Modifier
                     .fillMaxWidth()
                     .height(110.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(IosSharpButtonShape)
                 )
               } else {
                 Text(
                   text = "URI: $certificateUri",
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 9.sp,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  color = neu.textSecondary,
                   maxLines = 1,
                   overflow = TextOverflow.Ellipsis
                 )
@@ -1887,7 +2110,7 @@ fun CertificateVaultAndSrDialog(
             )
           )
         },
-        shape = RoundedCornerShape(12.dp)
+        shape = IosSharpButtonShape
       ) {
         Text("Save Vault & SR Status")
       }

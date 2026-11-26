@@ -12,13 +12,18 @@ import com.example.data.SmartLeaveBridge
 import com.example.data.TnHolidayItem
 import com.example.data.local.LocalHolidayRepository
 import com.example.data.local.TnHolidayDatabase
+import com.example.domain.AiLeaveRecommendation
 import com.example.domain.AiLeaveRecommendationEngine
 import com.example.domain.AiRecommendationUiState
+import com.example.domain.BuilderPreloadRequest
 import com.example.domain.BurnDownSlotSuggestion
 import com.example.domain.CsvImportRow
 import com.example.domain.CustomRangeAnalysis
 import com.example.domain.HolidaySyncStatus
 import com.example.domain.LeaveOptimizerEngine
+import com.example.domain.OptimizerConstraints
+import com.example.domain.TentativeHoldRecord
+import com.example.domain.TentativePlanStore
 import com.example.domain.TnHolidayBackgroundSyncService
 import com.example.domain.TnHolidayRemoteConfigService
 import com.example.domain.TnHolidays2027Catalog
@@ -88,6 +93,27 @@ class LeaveViewModel(
   val holidaySyncStatus: StateFlow<HolidaySyncStatus> = _holidaySyncStatus.asStateFlow()
 
   private val _holidayDbVersion = MutableStateFlow(0L)
+
+  private val _optimizerConstraints = MutableStateFlow(
+    OptimizerConstraints(
+      reserveClFloor = HodProfileSettingsStore.getSafetyClReserveDefault(appContext),
+      allowHalfDayCl = true,
+      prioritizeExpiringCol = HodProfileSettingsStore.isEnforceFifoColEnabled(appContext),
+      includeSaturdays = HodProfileSettingsStore.isIncludeSaturdayBridgeEnabled(appContext),
+      enforce10DayCap = HodProfileSettingsStore.isEnforce10DayCapEnabled(appContext),
+      protectedDaysOfWeek = HodProfileSettingsStore.getProtectedOpdDays(appContext)
+    )
+  )
+  val optimizerConstraints: StateFlow<OptimizerConstraints> = _optimizerConstraints.asStateFlow()
+
+  private val _tentativeHolds = MutableStateFlow(TentativePlanStore.readHolds(appContext))
+  val tentativeHolds: StateFlow<Map<String, TentativeHoldRecord>> = _tentativeHolds.asStateFlow()
+
+  private val _builderPreloadRequest = MutableStateFlow<BuilderPreloadRequest?>(null)
+  val builderPreloadRequest: StateFlow<BuilderPreloadRequest?> = _builderPreloadRequest.asStateFlow()
+
+  private val _optimizerDeepLinkGoal = MutableStateFlow<String?>(null)
+  val optimizerDeepLinkGoal: StateFlow<String?> = _optimizerDeepLinkGoal.asStateFlow()
 
   init {
     viewModelScope.launch {
@@ -166,15 +192,16 @@ class LeaveViewModel(
     val auditYear = LeaveOptimizerEngine.auditColAndGhWorked(records, filterYear = year)
     val auditAll = LeaveOptimizerEngine.auditColAndGhWorked(records, filterYear = null)
 
-    val bridges2026 = LeaveOptimizerEngine.generateOptimalLeaveBridges(
+    val summary2027 = LeaveOptimizerEngine.computeYearSummary(records, 2027L)
+    val dynamicBridges = LeaveOptimizerEngine.generateOptimalLeaveBridges(
       summary2026 = summary2026,
-      records2026 = records.filter { it.year == 2026L }
+      records2026 = records.filter { it.year == 2026L },
+      allRecords = records,
+      colGhAuditAllYears = auditAll,
+      summary2027 = summary2027
     )
-    val bridges = if (year == 2027L) {
-      TnHolidays2027Catalog.smartBridges2027 + bridges2026
-    } else {
-      bridges2026 + TnHolidays2027Catalog.smartBridges2027
-    }
+    val bridges = (dynamicBridges + TnHolidays2027Catalog.smartBridges2027)
+      .distinctBy { "${it.startDateIso}_${it.endDateIso}" }
 
     val defaultAnalysis = customAnalysis ?: LeaveOptimizerEngine.analyzeCustomRange(
       startIso = "2026-12-24",
@@ -285,6 +312,121 @@ class LeaveViewModel(
 
   fun runCustomRangeAnalysis(startIso: String, endIso: String, summary2026: YearCreditSummary) {
     _customAnalysis.value = LeaveOptimizerEngine.analyzeCustomRange(startIso, endIso, summary2026)
+  }
+
+  fun updateOptimizerConstraints(updated: OptimizerConstraints) {
+    _optimizerConstraints.value = updated
+  }
+
+  fun syncOptimizerSettingsFromStore() {
+    val cur = _optimizerConstraints.value
+    _optimizerConstraints.value = cur.copy(
+      prioritizeExpiringCol = HodProfileSettingsStore.isEnforceFifoColEnabled(appContext),
+      includeSaturdays = HodProfileSettingsStore.isIncludeSaturdayBridgeEnabled(appContext),
+      enforce10DayCap = HodProfileSettingsStore.isEnforce10DayCapEnabled(appContext),
+      protectedDaysOfWeek = HodProfileSettingsStore.getProtectedOpdDays(appContext),
+      reserveClFloor = if (cur.reserveClFloor == 0.0) HodProfileSettingsStore.getSafetyClReserveDefault(appContext) else cur.reserveClFloor
+    )
+  }
+
+  fun toggleTentativeHoldForBridge(rec: AiLeaveRecommendation) {
+    val current = _tentativeHolds.value.toMutableMap()
+    val actionSteps = rec.dailyPlan.filter {
+      it.creditType.uppercase() in setOf("CL", "HALF_CL", "RH", "COL", "EL") && !it.isAlreadyLogged
+    }
+    if (actionSteps.isEmpty()) return
+
+    val allHeld = actionSteps.all { current[it.dateIso]?.bridgeId == rec.id }
+    if (allHeld) {
+      actionSteps.forEach { current.remove(it.dateIso) }
+      _tentativeHolds.value = current
+      TentativePlanStore.saveHolds(appContext, current)
+      _statusBanner.value = "Cleared tentative hold for '${rec.title}'."
+    } else {
+      actionSteps.forEach { step ->
+        current[step.dateIso] = TentativeHoldRecord(
+          dateIso = step.dateIso,
+          creditType = step.creditType.uppercase(),
+          bridgeId = rec.id,
+          bridgeTitle = rec.title,
+          note = step.description
+        )
+      }
+      _tentativeHolds.value = current
+      TentativePlanStore.saveHolds(appContext, current)
+      _statusBanner.value = "Marked ${actionSteps.size} tentative date(s) as HOLD on Calendar (balances unchanged)."
+    }
+  }
+
+  fun clearTentativeHold(dateIso: String) {
+    val current = _tentativeHolds.value.toMutableMap()
+    if (current.remove(dateIso) != null) {
+      _tentativeHolds.value = current
+      TentativePlanStore.saveHolds(appContext, current)
+      _statusBanner.value = "Removed tentative hold on $dateIso."
+    }
+  }
+
+  fun promoteTentativeHoldToLedger(hold: TentativeHoldRecord) {
+    val normalizedType = if (hold.creditType == "HALF_CL") "CL" else hold.creditType
+    val isHalf = hold.creditType == "HALF_CL"
+    val curSuccess = uiState.value as? LeaveUiState.Success
+    val unusedGh = curSuccess?.colGhAuditAllYears?.unusedGhRecords?.minByOrNull { it.dateIso }
+    val pairedIso = if (normalizedType == "COL") unusedGh?.dateIso.orEmpty() else ""
+
+    if (normalizedType == "COL" && unusedGh != null) {
+      logNewColAgainstUnusedGh(
+        newColDateIso = hold.dateIso,
+        ghRecord = unusedGh,
+        notes = "Promoted from Tentative Hold (${hold.bridgeTitle})"
+      )
+    } else {
+      addLeave(
+        leaveType = normalizedType,
+        dateIso = hold.dateIso,
+        pairedDateIso = pairedIso,
+        notes = "Promoted from Tentative Hold (${hold.bridgeTitle}): ${hold.note}",
+        isHalfDay = isHalf
+      )
+    }
+    clearTentativeHold(hold.dateIso)
+  }
+
+  fun simulateRecInBuilder(rec: AiLeaveRecommendation) {
+    val blocks = linkedMapOf<String, LeaveCategory>()
+    rec.dailyPlan.forEach { step ->
+      if (step.isAlreadyLogged) return@forEach
+      val cat = when (step.creditType.uppercase()) {
+        "EL" -> LeaveCategory.EL
+        "RH" -> LeaveCategory.RH
+        "COL" -> LeaveCategory.COL
+        "CL", "HALF_CL" -> LeaveCategory.CL
+        else -> null
+      }
+      if (cat != null) blocks[step.dateIso] = cat
+    }
+    val startParsed = runCatching { java.time.LocalDate.parse(rec.startDateIso) }.getOrNull()
+    val targetYr = startParsed?.year ?: 2026
+    val targetMo = startParsed?.monthValue ?: 11
+    _builderPreloadRequest.value = BuilderPreloadRequest(
+      title = rec.title,
+      targetYear = targetYr,
+      targetMonth = targetMo,
+      draftBlocks = blocks
+    )
+    _statusBanner.value = "Loaded '${rec.title}' into Interactive Leave Builder for sandbox editing!"
+  }
+
+  fun consumeBuilderPreload() {
+    _builderPreloadRequest.value = null
+  }
+
+  fun triggerOptimizerDeepLink(goalHint: String) {
+    _optimizerDeepLinkGoal.value = goalHint
+  }
+
+  fun consumeOptimizerDeepLink() {
+    _optimizerDeepLinkGoal.value = null
   }
 
   /**
@@ -491,7 +633,25 @@ class LeaveViewModel(
       )
       res.onSuccess {
         _selectedYear.value = year
-        _statusBanner.value = "Logged $leaveType on $dateIso"
+        if (leaveType == "GH_WORKED" && pairedDateIso.isBlank()) {
+          val curSuccess = uiState.value as? LeaveUiState.Success
+          val bestColBridge = curSuccess?.let { st ->
+            AiLeaveRecommendationEngine.scanHolidayDatabaseForLongWeekends(
+              summary2026 = st.summary2026,
+              colGhAuditAllYears = st.colGhAuditAllYears,
+              records = st.allRecords,
+              focusGoal = "Consume Expiring GH Worked (FIFO COL)",
+              constraints = _optimizerConstraints.value.copy(prioritizeExpiringCol = true)
+            ).firstOrNull()
+          }
+          _statusBanner.value = if (bestColBridge != null) {
+            "Banked GH Worked ($dateIso) • Optimal COL bridge unlocked: ${bestColBridge.title} (${bestColBridge.efficiencyMultiplier}x ROI)"
+          } else {
+            "Logged $leaveType on $dateIso (6-month COL pool updated)"
+          }
+        } else {
+          _statusBanner.value = "Logged $leaveType on $dateIso"
+        }
       }.onFailure { err ->
         _statusBanner.value = "⛔ ${err.localizedMessage ?: "Duplicate leave entry rejected"}"
       }
@@ -539,18 +699,23 @@ class LeaveViewModel(
 
   fun generateAiLeaveRecommendations(
     focusGoal: String,
-    state: LeaveUiState.Success
+    state: LeaveUiState.Success,
+    constraints: OptimizerConstraints = _optimizerConstraints.value
   ) {
     if (_aiRecommendationState.value is AiRecommendationUiState.Loading) return
+    _optimizerConstraints.value = constraints
     _aiRecommendationState.value = AiRecommendationUiState.Loading
     viewModelScope.launch {
       val summary2027 = LeaveOptimizerEngine.computeYearSummary(state.allRecords, 2027L)
+      val officerContext = "${HodProfileSettingsStore.getOfficerName(appContext)} (${HodProfileSettingsStore.getDesignation(appContext)}, ${HodProfileSettingsStore.getDepartment(appContext)}, ${HodProfileSettingsStore.getCollege(appContext)})"
       val result = AiLeaveRecommendationEngine.generateOptimalRecommendations(
         focusGoal = focusGoal,
         summary2026 = state.summary2026,
         colGhAuditAllYears = state.colGhAuditAllYears,
         records = state.allRecords,
-        summary2027 = summary2027
+        summary2027 = summary2027,
+        constraints = constraints,
+        officerContextNote = officerContext
       )
       result.onSuccess { successState ->
         _aiRecommendationState.value = successState
@@ -563,111 +728,194 @@ class LeaveViewModel(
     }
   }
 
+  fun applyPortfolioToLedger(recs: List<AiLeaveRecommendation>) {
+    if (recs.isEmpty()) return
+    viewModelScope.launch {
+      recs.forEach { rec ->
+        applySmartBridgeInternal(rec.toSmartLeaveBridge(), silentBanner = true)
+      }
+      _statusBanner.value = "Applied ${recs.size} selected portfolio leave plan(s) to your Firestore Ledger!"
+    }
+  }
+
   fun applySmartBridgeToLedger(bridge: SmartLeaveBridge) {
     viewModelScope.launch {
-      val isoRegex = Regex("""^\d{4}-\d{2}-\d{2}$""")
-      val currentSuccess = uiState.value as? LeaveUiState.Success
-      val unusedGhQueue = currentSuccess?.colGhAuditAllYears?.unusedGhRecords
-        ?.sortedBy { it.dateIso }
-        ?.toMutableList()
-        ?: mutableListOf()
+      applySmartBridgeInternal(bridge, silentBanner = false)
+    }
+  }
 
-      var added = 0
-      var skippedDuplicates = 0
-      var lastAddedYear: Long? = null
+  private suspend fun applySmartBridgeInternal(
+    bridge: SmartLeaveBridge,
+    silentBanner: Boolean
+  ) {
+    val isoRegex = Regex("""^\d{4}-\d{2}-\d{2}$""")
+    val currentSuccess = uiState.value as? LeaveUiState.Success
+    val unusedGhQueue = currentSuccess?.colGhAuditAllYears?.unusedGhRecords
+      ?.sortedBy { it.dateIso }
+      ?.toMutableList()
+      ?: mutableListOf()
 
-      bridge.dayByDayBreakdown.forEach { step ->
-        if (!isoRegex.matches(step.dateIso.trim())) return@forEach
-        val cleanDate = step.dateIso.trim()
-        val year = cleanDate.take(4).toLongOrNull() ?: 2026L
+    var added = 0
+    var skippedDuplicates = 0
+    var lastAddedYear: Long? = null
+    val appliedDateSet = mutableSetOf<String>()
 
-        when (step.badgeType) {
-          "RH" -> {
-            if (!step.description.contains("Already Logged", ignoreCase = true)) {
-              val res = repository.addLeaveRecord(
-                leaveType = "RH",
-                dateIso = cleanDate,
-                year = year,
-                notes = "Smart Bridge (${bridge.title}): ${step.description}"
-              )
-              if (res.isSuccess) {
-                added++
-                lastAddedYear = year
-              } else {
-                skippedDuplicates++
-              }
+    bridge.dayByDayBreakdown.forEach { step ->
+      if (!isoRegex.matches(step.dateIso.trim())) return@forEach
+      val cleanDate = step.dateIso.trim()
+      val year = cleanDate.take(4).toLongOrNull() ?: 2026L
+
+      when (step.badgeType) {
+        "RH" -> {
+          if (!step.description.contains("Already Logged", ignoreCase = true)) {
+            val res = repository.addLeaveRecord(
+              leaveType = "RH",
+              dateIso = cleanDate,
+              year = year,
+              notes = "Smart Bridge (${bridge.title}): ${step.description}"
+            )
+            if (res.isSuccess) {
+              added++
+              lastAddedYear = year
+              appliedDateSet.add(cleanDate)
             } else {
               skippedDuplicates++
             }
+          } else {
+            skippedDuplicates++
           }
-          "COL" -> {
-            if (!step.description.contains("Already Logged", ignoreCase = true)) {
-              val fifoGh = unusedGhQueue.firstOrNull()
-              val res = repository.addLeaveRecord(
-                leaveType = "COL",
-                dateIso = cleanDate,
-                year = year,
-                pairedDateIso = fifoGh?.dateIso.orEmpty(),
-                notes = if (fifoGh != null) {
-                  "AI Smart Bridge (${bridge.title}) paired FIFO w/ GH ${fifoGh.dateIso}"
-                } else {
-                  "AI Smart Bridge (${bridge.title}): ${step.description}"
-                },
-                highlightStatus = if (fifoGh != null) "VERIFIED_GREEN" else "ALERT_RED"
-              )
-              if (res.isSuccess) {
-                added++
-                lastAddedYear = year
-                if (fifoGh != null) {
-                  unusedGhQueue.removeAt(0)
-                  repository.addLeaveRecord(
-                    leaveType = "IN_LIEU",
-                    dateIso = fifoGh.dateIso,
-                    year = year,
+        }
+        "COL" -> {
+          if (!step.description.contains("Already Logged", ignoreCase = true)) {
+            val colLocal = runCatching { java.time.LocalDate.parse(cleanDate) }.getOrNull()
+            val fifoGhIdx = unusedGhQueue.indexOfFirst { gh ->
+              val gd = runCatching { java.time.LocalDate.parse(gh.dateIso) }.getOrNull()
+              gd == null || colLocal == null || java.time.temporal.ChronoUnit.DAYS.between(gd, colLocal) in 0..180
+            }
+            val fifoGh = if (fifoGhIdx >= 0) unusedGhQueue[fifoGhIdx] else unusedGhQueue.firstOrNull()
+            val res = repository.addLeaveRecord(
+              leaveType = "COL",
+              dateIso = cleanDate,
+              year = year,
+              pairedDateIso = fifoGh?.dateIso.orEmpty(),
+              notes = if (fifoGh != null) {
+                "AI Smart Bridge (${bridge.title}) paired FIFO w/ GH ${fifoGh.dateIso}"
+              } else {
+                "AI Smart Bridge (${bridge.title}): ${step.description}"
+              },
+              highlightStatus = if (fifoGh != null) "VERIFIED_GREEN" else "ALERT_RED"
+            )
+            if (res.isSuccess) {
+              added++
+              lastAddedYear = year
+              appliedDateSet.add(cleanDate)
+              if (fifoGh != null) {
+                unusedGhQueue.remove(fifoGh)
+                // Cross-year integrity: IN_LIEU keeps the GH Worked year so COL/In-Lieu audit balances cleanly across 2026->2027
+                repository.addLeaveRecord(
+                  leaveType = "IN_LIEU",
+                  dateIso = fifoGh.dateIso,
+                  year = fifoGh.year,
+                  pairedDateIso = cleanDate,
+                  notes = "In Lieu of GH Worked (${fifoGh.dateIso}) for AI Bridge COL $cleanDate",
+                  highlightStatus = "VERIFIED_GREEN"
+                )
+                repository.updateLeaveRecord(
+                  fifoGh.copy(
                     pairedDateIso = cleanDate,
-                    notes = "In Lieu of GH Worked (${fifoGh.dateIso}) for AI Bridge COL $cleanDate",
+                    notes = "GH Worked availed as AI Bridge COL on $cleanDate",
                     highlightStatus = "VERIFIED_GREEN"
                   )
-                  repository.updateLeaveRecord(
-                    fifoGh.copy(
-                      pairedDateIso = cleanDate,
-                      notes = "GH Worked availed as AI Bridge COL on $cleanDate",
-                      highlightStatus = "VERIFIED_GREEN"
-                    )
-                  )
-                }
-              } else {
-                skippedDuplicates++
+                )
               }
             } else {
               skippedDuplicates++
             }
+          } else {
+            skippedDuplicates++
           }
-          "LEAVE_CREDIT", "CL" -> {
-            if (!step.description.contains("Already Logged", ignoreCase = true) &&
-              !step.description.contains("COL Logged", ignoreCase = true)
-            ) {
-              val res = repository.addLeaveRecord(
-                leaveType = "CL",
-                dateIso = cleanDate,
-                year = year,
-                notes = "Smart Bridge (${bridge.title}): ${step.description}"
-              )
-              if (res.isSuccess) {
-                added++
-                lastAddedYear = year
-              } else {
-                skippedDuplicates++
-              }
+        }
+        "EL" -> {
+          if (!step.description.contains("Already Logged", ignoreCase = true)) {
+            val res = repository.addLeaveRecord(
+              leaveType = "EL",
+              dateIso = cleanDate,
+              year = year,
+              notes = "Rule-8 Optimal EL (${bridge.title}): ${step.description}"
+            )
+            if (res.isSuccess) {
+              added++
+              lastAddedYear = year
+              appliedDateSet.add(cleanDate)
             } else {
               skippedDuplicates++
             }
+          } else {
+            skippedDuplicates++
+          }
+        }
+        "HALF_CL" -> {
+          if (!step.description.contains("Already Logged", ignoreCase = true)) {
+            val res = repository.addLeaveRecord(
+              leaveType = "CL",
+              dateIso = cleanDate,
+              year = year,
+              notes = "Half-Day Bridge (${bridge.title}): ${step.description}",
+              isHalfDay = true
+            )
+            if (res.isSuccess) {
+              added++
+              lastAddedYear = year
+              appliedDateSet.add(cleanDate)
+            } else {
+              skippedDuplicates++
+            }
+          } else {
+            skippedDuplicates++
+          }
+        }
+        "LEAVE_CREDIT", "CL" -> {
+          if (!step.description.contains("Already Logged", ignoreCase = true) &&
+            !step.description.contains("COL Logged", ignoreCase = true)
+          ) {
+            val isHalf = step.description.contains("0.5", ignoreCase = true)
+            val res = repository.addLeaveRecord(
+              leaveType = "CL",
+              dateIso = cleanDate,
+              year = year,
+              notes = "Smart Bridge (${bridge.title}): ${step.description}",
+              isHalfDay = isHalf
+            )
+            if (res.isSuccess) {
+              added++
+              lastAddedYear = year
+              appliedDateSet.add(cleanDate)
+            } else {
+              skippedDuplicates++
+            }
+          } else {
+            skippedDuplicates++
           }
         }
       }
-      if (lastAddedYear != null) {
-        _selectedYear.value = lastAddedYear!!
+    }
+
+    if (appliedDateSet.isNotEmpty()) {
+      val updatedHolds = _tentativeHolds.value.toMutableMap()
+      var holdsChanged = false
+      appliedDateSet.forEach { d ->
+        if (updatedHolds.remove(d) != null) holdsChanged = true
       }
+      if (holdsChanged) {
+        _tentativeHolds.value = updatedHolds
+        TentativePlanStore.saveHolds(appContext, updatedHolds)
+      }
+    }
+
+    if (lastAddedYear != null) {
+      _selectedYear.value = lastAddedYear!!
+    }
+    if (!silentBanner) {
       _statusBanner.value = when {
         added > 0 && skippedDuplicates > 0 ->
           "⚡ Applied $added new leave day(s) for '${bridge.title}' (Auto-skipped $skippedDuplicates duplicate date(s))!"
@@ -801,8 +1049,21 @@ class LeaveViewModel(
           notes = dutyNotes,
           highlightStatus = "NORMAL"
         )
-        _statusBanner.value =
+        val curSuccess = uiState.value as? LeaveUiState.Success
+        val bestColBridge = curSuccess?.let { st ->
+          AiLeaveRecommendationEngine.scanHolidayDatabaseForLongWeekends(
+            summary2026 = st.summary2026,
+            colGhAuditAllYears = st.colGhAuditAllYears,
+            records = st.allRecords,
+            focusGoal = "Consume Expiring GH Worked (FIFO COL)",
+            constraints = _optimizerConstraints.value.copy(prioritizeExpiringCol = true)
+          ).firstOrNull()
+        }
+        _statusBanner.value = if (bestColBridge != null) {
+          "Banked GH Worked ($dutyDateIso) • Optimal COL bridge unlocked: ${bestColBridge.title} (${bestColBridge.efficiencyMultiplier}x ROI)"
+        } else {
           "Banked GH Worked duty credit on $dutyDateIso (Available in 6-Month COL Pool)!"
+        }
       }
     }
   }

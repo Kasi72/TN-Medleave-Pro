@@ -78,6 +78,7 @@ import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.LocalNeumorphicColors
@@ -473,9 +474,16 @@ private fun CompactAlertPreviewRow(
           modifier = Modifier.weight(1f)
         )
         Spacer(modifier = Modifier.width(6.dp))
-        Surface(
-          shape = RoundedCornerShape(8.dp),
-          color = accentColor.copy(alpha = 0.16f)
+        Box(
+          modifier = Modifier.neumorphicInset(
+            shape = IosSharpMicroShape,
+            depth = 1.5.dp,
+            blurRadius = 3.dp,
+            accentTint = accentColor,
+            accentTintAlpha = 0.14f,
+            borderColor = accentColor.copy(alpha = 0.28f),
+            neu = neu
+          )
         ) {
           Text(
             text = alert.efficiencyBadge,
@@ -512,11 +520,27 @@ private fun CompactAlertPreviewRow(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = if (isScheduled) EmeraldOptimal else MaterialTheme.colorScheme.surfaceVariant,
+        Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .then(
+              if (isScheduled) {
+                Modifier.neumorphicExtruded(
+                  shape = IosSharpMicroShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  surfaceColor = EmeraldOptimal,
+                  neu = neu
+                )
+              } else {
+                Modifier.neumorphicExtruded(
+                  shape = IosSharpMicroShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  borderAlpha = 0.22f,
+                  neu = neu
+                )
+              }
+            )
             .clickable { onToggleSchedule() }
         ) {
           Row(
@@ -526,7 +550,7 @@ private fun CompactAlertPreviewRow(
             Icon(
               imageVector = if (isScheduled) Icons.Default.AlarmOn else Icons.Default.Schedule,
               contentDescription = null,
-              tint = if (isScheduled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+              tint = if (isScheduled) Color.White else neu.textSecondary,
               modifier = Modifier.size(14.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
@@ -535,7 +559,7 @@ private fun CompactAlertPreviewRow(
               fontSize = 11.sp,
               lineHeight = 14.sp,
               fontWeight = FontWeight.Bold,
-              color = if (isScheduled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+              color = if (isScheduled) Color.White else neu.textSecondary,
               maxLines = 1,
               softWrap = false
             )
@@ -544,11 +568,15 @@ private fun CompactAlertPreviewRow(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = accentColor,
+        Box(
           modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .neumorphicExtruded(
+              shape = IosSharpMicroShape,
+              elevation = 2.dp,
+              blurRadius = 4.dp,
+              surfaceColor = accentColor,
+              neu = neu
+            )
             .clickable { onPushNow() }
         ) {
           Row(
@@ -584,7 +612,8 @@ fun SmartNotificationCenterDialog(
   aiState: AiRecommendationUiState,
   onDismiss: () -> Unit,
   onApplyBridge: (SmartLeaveBridge) -> Unit,
-  onShowStatusBanner: (String) -> Unit
+  onShowStatusBanner: (String) -> Unit,
+  onOptimizeInAi: (String) -> Unit = {}
 ) {
   val context = LocalContext.current
   val designation = remember { HodProfileSettingsStore.getDesignation(context) }
@@ -831,12 +860,22 @@ fun SmartNotificationCenterDialog(
 
         // Local confirmation banner inside modal
         localBanner?.let { msg ->
-          Surface(
-            color = EmeraldOptimal.copy(alpha = 0.15f),
-            modifier = Modifier.fillMaxWidth()
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 16.dp, vertical = 6.dp)
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = EmeraldOptimal,
+                accentTintAlpha = 0.10f,
+                borderColor = EmeraldOptimal.copy(alpha = 0.35f),
+                neu = neu
+              )
           ) {
             Row(
-              modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+              modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
               verticalAlignment = Alignment.CenterVertically
             ) {
               Icon(
@@ -901,6 +940,10 @@ fun SmartNotificationCenterDialog(
               onApplyBridge = { bridge ->
                 onApplyBridge(bridge)
                 localBanner = "Applied '${bridge.title}' directly to your ${state.selectedYear} Leave Ledger!"
+              },
+              onOptimizeInAi = { goalHint ->
+                onDismiss()
+                onOptimizeInAi(goalHint)
               }
             )
           }
@@ -968,7 +1011,8 @@ private fun FullNotificationAlertCard(
   leadDays: Int,
   onPushNow: () -> Unit,
   onToggleReminder: () -> Unit,
-  onApplyBridge: (SmartLeaveBridge) -> Unit
+  onApplyBridge: (SmartLeaveBridge) -> Unit,
+  onOptimizeInAi: (String) -> Unit = {}
 ) {
   val neu = LocalNeumorphicColors.current
   val accentColor = when (alert.alertType) {
@@ -1026,9 +1070,16 @@ private fun FullNotificationAlertCard(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Surface(
-          shape = RoundedCornerShape(8.dp),
-          color = accentColor.copy(alpha = 0.14f)
+        Box(
+          modifier = Modifier.neumorphicInset(
+            shape = IosSharpMicroShape,
+            depth = 1.5.dp,
+            blurRadius = 3.dp,
+            accentTint = accentColor,
+            accentTintAlpha = 0.14f,
+            borderColor = accentColor.copy(alpha = 0.30f),
+            neu = neu
+          )
         ) {
           Text(
             text = alert.efficiencyBadge,
@@ -1144,12 +1195,39 @@ private fun FullNotificationAlertCard(
           )
           Spacer(modifier = Modifier.width(6.dp))
           Text(
-            text = "One-Tap Apply Recommended Dates to 2026 Ledger",
+            text = "One-Tap Apply Recommended Dates to Ledger",
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis
+          )
+        }
+      }
+
+      if (!alert.optimizerGoalHint.isNullOrBlank()) {
+        OutlinedButton(
+          onClick = { onOptimizeInAi(alert.optimizerGoalHint) },
+          shape = RoundedCornerShape(12.dp),
+          border = BorderStroke(1.dp, neu.primaryAccent.copy(alpha = 0.45f)),
+          modifier = Modifier
+            .fillMaxWidth()
+            .testTag("optimize_alert_in_ai_${alert.id}")
+        ) {
+          Icon(
+            imageVector = Icons.Default.AutoAwesome,
+            contentDescription = null,
+            tint = neu.primaryAccent,
+            modifier = Modifier.size(15.dp)
+          )
+          Spacer(modifier = Modifier.width(6.dp))
+          Text(
+            text = "Optimize in AI Planner →",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = neu.primaryAccent,
+            maxLines = 1,
+            softWrap = false
           )
         }
       }

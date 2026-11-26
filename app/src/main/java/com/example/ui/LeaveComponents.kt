@@ -46,6 +46,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -445,10 +446,13 @@ fun LeaveRecordSquircleRow(
               softWrap = false
             )
             if (dowTag != null) {
-              Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+              Box(
+                modifier = Modifier.neumorphicInset(
+                  shape = IosSharpMicroShape,
+                  depth = 1.5.dp,
+                  blurRadius = 3.dp,
+                  neu = neu
+                )
               ) {
                 Text(
                   text = dowTag,
@@ -456,7 +460,7 @@ fun LeaveRecordSquircleRow(
                   fontSize = 9.sp,
                   lineHeight = 11.sp,
                   fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                  color = neu.textSecondary,
                   maxLines = 1,
                   softWrap = false,
                   modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -464,9 +468,15 @@ fun LeaveRecordSquircleRow(
               }
             }
             if (record.isHalfDay || session != HalfDaySession.FULL_DAY) {
-              Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = accent.copy(alpha = 0.2f)
+              Box(
+                modifier = Modifier.neumorphicInset(
+                  shape = IosSharpMicroShape,
+                  depth = 1.5.dp,
+                  blurRadius = 3.dp,
+                  accentTint = accent,
+                  accentTintAlpha = 0.14f,
+                  neu = neu
+                )
               ) {
                 Text(
                   text = session.badgeLabel,
@@ -488,9 +498,16 @@ fun LeaveRecordSquircleRow(
                 HighlightStatus.PENDING_ORANGE -> StatusPendingOrange to Icons.Default.Schedule
                 else -> accent to Icons.Default.CheckCircle
               }
-              Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = badgeColor.copy(alpha = 0.14f)
+              Box(
+                modifier = Modifier.neumorphicInset(
+                  shape = IosSharpMicroShape,
+                  depth = 1.5.dp,
+                  blurRadius = 3.dp,
+                  accentTint = badgeColor,
+                  accentTintAlpha = 0.12f,
+                  borderColor = badgeColor.copy(alpha = 0.30f),
+                  neu = neu
+                )
               ) {
                 Row(
                   modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -521,7 +538,7 @@ fun LeaveRecordSquircleRow(
           Text(
             text = if (record.notes.isNotBlank()) record.notes else cat.fullTitle,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = neu.textSecondary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
           )
@@ -530,19 +547,20 @@ fun LeaveRecordSquircleRow(
             val friendlyPaired = remember(record.pairedDateIso) {
               ClinicalDateFormatter.formatFriendlyWithDay(record.pairedDateIso)
             }
+            val pairedAccent = if (neu.isDark) Color(0xFF22D3EE) else BadgeColCyan
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
               Icon(
                 imageVector = Icons.Default.Link,
                 contentDescription = null,
-                tint = BadgeColCyan,
+                tint = pairedAccent,
                 modifier = Modifier.size(14.dp)
               )
               Spacer(modifier = Modifier.width(4.dp))
               Text(
                 text = "Paired Duty / Leave: $friendlyPaired (${record.pairedDateIso})",
                 style = MaterialTheme.typography.labelMedium,
-                color = BadgeColCyan,
+                color = pairedAccent,
                 fontSize = 11.sp,
                 maxLines = 1,
                 softWrap = false,
@@ -553,9 +571,11 @@ fun LeaveRecordSquircleRow(
         }
       }
 
-      // Clean Horizontal Action & SR Verification Footer (Replaces cramped 30dp vertical stack)
+      // Neumorphic Horizontal Action & SR Verification Footer
       Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
@@ -565,13 +585,19 @@ fun LeaveRecordSquircleRow(
           modifier = Modifier
             .weight(1f)
             .horizontalScroll(rememberScrollState())
+            .padding(vertical = 3.dp)
         ) {
-          Surface(
-            shape = RoundedCornerShape(9.dp),
-            color = srAccent.copy(alpha = 0.13f),
-            border = BorderStroke(1.dp, srAccent.copy(alpha = 0.35f)),
+          Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(9.dp))
+              .neumorphicExtruded(
+                shape = IosSharpBadgeShape,
+                elevation = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = srAccent,
+                accentTintAlpha = 0.09f,
+                borderAlpha = 0.35f,
+                neu = neu
+              )
               .clickable {
                 if (onToggleSrState != null) {
                   onToggleSrState(resolvedMeta.copy(srState = resolvedMeta.srState.nextToggleState()))
@@ -606,12 +632,17 @@ fun LeaveRecordSquircleRow(
           }
 
           if (resolvedMeta.orderRefNo.isNotBlank() || resolvedMeta.certificatePhotoUri.isNotBlank()) {
-            Surface(
-              shape = RoundedCornerShape(9.dp),
-              color = BadgeOnDutyBlue.copy(alpha = 0.14f),
-              border = BorderStroke(1.dp, BadgeOnDutyBlue.copy(alpha = 0.35f)),
+            Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(9.dp))
+                .neumorphicExtruded(
+                  shape = IosSharpBadgeShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  accentTint = BadgeOnDutyBlue,
+                  accentTintAlpha = 0.09f,
+                  borderAlpha = 0.35f,
+                  neu = neu
+                )
                 .clickable {
                   onOpenCertificateVault?.invoke(record, resolvedMeta)
                 }
@@ -641,15 +672,22 @@ fun LeaveRecordSquircleRow(
 
         Row(
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
+          horizontalArrangement = Arrangement.spacedBy(6.dp),
+          modifier = Modifier.padding(vertical = 3.dp)
         ) {
           if (onEditRecord != null) {
-            Surface(
-              shape = RoundedCornerShape(9.dp),
-              color = BadgeColCyan.copy(alpha = 0.14f),
-              border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.32f)),
+            val editAccent = if (neu.isDark) Color(0xFF22D3EE) else BadgeColCyan
+            Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(9.dp))
+                .neumorphicExtruded(
+                  shape = IosSharpBadgeShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  accentTint = editAccent,
+                  accentTintAlpha = 0.09f,
+                  borderAlpha = 0.34f,
+                  neu = neu
+                )
                 .clickable { onEditRecord(record) }
                 .testTag("edit_leave_${record.id}")
             ) {
@@ -661,14 +699,14 @@ fun LeaveRecordSquircleRow(
                 Icon(
                   imageVector = Icons.Default.Edit,
                   contentDescription = "Edit Leave Entry In-Place",
-                  tint = BadgeColCyan,
+                  tint = editAccent,
                   modifier = Modifier.size(13.dp)
                 )
                 Text(
                   text = "Edit",
                   fontSize = 10.sp,
                   fontWeight = FontWeight.Bold,
-                  color = BadgeColCyan,
+                  color = editAccent,
                   maxLines = 1,
                   softWrap = false
                 )
@@ -678,13 +716,18 @@ fun LeaveRecordSquircleRow(
 
           if (onOpenCertificateVault != null) {
             val hasVaultData = resolvedMeta.certificatePhotoUri.isNotBlank() || resolvedMeta.orderRefNo.isNotBlank()
-            val vaultTint = if (hasVaultData) EmeraldOptimal else MaterialTheme.colorScheme.onSurfaceVariant
-            Surface(
-              shape = RoundedCornerShape(9.dp),
-              color = if (hasVaultData) EmeraldOptimal.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-              border = BorderStroke(1.dp, vaultTint.copy(alpha = 0.32f)),
+            val vaultTint = if (hasVaultData) EmeraldOptimal else neu.textSecondary
+            Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(9.dp))
+                .neumorphicExtruded(
+                  shape = IosSharpBadgeShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  accentTint = vaultTint,
+                  accentTintAlpha = if (hasVaultData) 0.10f else 0.03f,
+                  borderAlpha = 0.32f,
+                  neu = neu
+                )
                 .clickable { onOpenCertificateVault(record, resolvedMeta) }
                 .testTag("vault_btn_${record.id}")
             ) {
@@ -711,12 +754,17 @@ fun LeaveRecordSquircleRow(
             }
           }
 
-          Surface(
-            shape = RoundedCornerShape(9.dp),
-            color = StatusAlertRed.copy(alpha = 0.12f),
-            border = BorderStroke(1.dp, StatusAlertRed.copy(alpha = 0.30f)),
+          Box(
             modifier = Modifier
-              .clip(RoundedCornerShape(9.dp))
+              .neumorphicExtruded(
+                shape = IosSharpBadgeShape,
+                elevation = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = StatusAlertRed,
+                accentTintAlpha = 0.09f,
+                borderAlpha = 0.32f,
+                neu = neu
+              )
               .clickable { onDelete(record.id) }
               .testTag("delete_leave_${record.id}")
           ) {
@@ -824,9 +872,11 @@ fun AddLeaveRecordDialog(
     }
   }
 
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
   AlertDialog(
     onDismissRequest = onDismiss,
-    shape = RoundedCornerShape(28.dp),
+    containerColor = neu.baseBg,
+    shape = IosSharpCardShape,
     title = {
       ExecutiveDialogHeader(
         icon = Icons.Default.Add,
@@ -842,22 +892,41 @@ fun AddLeaveRecordDialog(
       ) {
         Text(
           text = "Select TN Leave / Duty Category:",
-          style = MaterialTheme.typography.labelLarge
+          style = MaterialTheme.typography.labelLarge,
+          color = neu.textPrimary
         )
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 4.dp),
+          horizontalArrangement = Arrangement.spacedBy(7.dp)
         ) {
           LeaveCategory.entries.forEach { cat ->
             val selected = cat == selectedCat
             val accent = cat.accentColor()
-            Surface(
-              shape = RoundedCornerShape(14.dp),
-              color = if (selected) accent else accent.copy(alpha = 0.12f),
+            Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(14.dp))
+                .then(
+                  if (selected) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 3.dp,
+                      blurRadius = 6.dp,
+                      surfaceColor = accent,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicInset(
+                      shape = IosSharpButtonShape,
+                      depth = 2.dp,
+                      blurRadius = 4.dp,
+                      accentTint = accent,
+                      accentTintAlpha = 0.08f,
+                      neu = neu
+                    )
+                  }
+                )
                 .clickable {
                   selectedCat = cat
                   if (cat != LeaveCategory.CL) {
@@ -879,7 +948,7 @@ fun AddLeaveRecordDialog(
         Text(
           text = selectedCat.tnRuleSummary,
           style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          color = neu.textSecondary,
           fontSize = 11.sp
         )
 
@@ -907,11 +976,18 @@ fun AddLeaveRecordDialog(
 
         // Upgrade #8: "Auto-Skip Weekends & Public Holidays (GH)" Smart Range Splicer
         if (isMultiDayRange && rangeSplicePreview != null) {
-          Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = EmeraldOptimal.copy(alpha = 0.10f),
-            border = BorderStroke(1.dp, EmeraldOptimal.copy(alpha = 0.35f)),
-            modifier = Modifier.fillMaxWidth()
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = EmeraldOptimal,
+                accentTintAlpha = 0.08f,
+                borderColor = EmeraldOptimal.copy(alpha = 0.35f),
+                neu = neu
+              )
           ) {
             Column(
               modifier = Modifier.padding(10.dp),
@@ -938,7 +1014,7 @@ fun AddLeaveRecordDialog(
                     text = "Debits ${rangeSplicePreview.workingDaysToDebit.size} working day(s) • Skips ${rangeSplicePreview.skippedWeekendOrGhDays.size} Sat/Sun/GH day(s)",
                     fontFamily = JetBrainsMonoFontFamily,
                     fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = neu.textSecondary
                   )
                 }
               }
@@ -951,29 +1027,47 @@ fun AddLeaveRecordDialog(
           Text(
             text = "Casual Leave Session (Full Day vs Forenoon FN / Afternoon AN):",
             style = MaterialTheme.typography.labelMedium,
+            color = neu.textPrimary,
             fontWeight = FontWeight.Bold
           )
           Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
           ) {
             HalfDaySession.entries.forEach { sess ->
               val isSel = selectedSession == sess
-              Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = if (isSel) BadgeClGreen.copy(alpha = 0.20f) else MaterialTheme.colorScheme.surfaceVariant,
-                border = BorderStroke(
-                  width = if (isSel) 1.2.dp else 1.dp,
-                  color = if (isSel) BadgeClGreen else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                ),
+              Box(
                 modifier = Modifier
                   .weight(1f)
-                  .clip(RoundedCornerShape(10.dp))
+                  .then(
+                    if (isSel) {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpBadgeShape,
+                        elevation = 2.5.dp,
+                        blurRadius = 5.dp,
+                        accentTint = BadgeClGreen,
+                        accentTintAlpha = 0.16f,
+                        borderAlpha = 0.50f,
+                        neu = neu
+                      )
+                    } else {
+                      Modifier.neumorphicInset(
+                        shape = IosSharpBadgeShape,
+                        depth = 2.dp,
+                        blurRadius = 4.dp,
+                        neu = neu
+                      )
+                    }
+                  )
                   .clickable { selectedSession = sess }
                   .testTag("session_chip_${sess.code}")
               ) {
                 Box(
-                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 8.dp),
                   contentAlignment = Alignment.Center
                 ) {
                   Text(
@@ -982,7 +1076,7 @@ fun AddLeaveRecordDialog(
                     fontSize = 10.sp,
                     lineHeight = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isSel) BadgeClGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isSel) BadgeClGreen else neu.textSecondary,
                     maxLines = 1,
                     softWrap = false
                   )
@@ -994,15 +1088,21 @@ fun AddLeaveRecordDialog(
 
         // Upgrade #2: FIFO Auto-Select Oldest Unused GH Credit when logging COL
         if (selectedCat in listOf(LeaveCategory.COL, LeaveCategory.IN_LIEU, LeaveCategory.PL, LeaveCategory.GH_WORKED)) {
+          val cyanAccent = if (neu.isDark) Color(0xFF22D3EE) else BadgeColCyan
           if (selectedCat == LeaveCategory.COL && fifoUnusedGhList.isNotEmpty()) {
             val oldest = fifoUnusedGhList.first()
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = BadgeColCyan.copy(alpha = 0.12f),
-              border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.40f)),
+            Box(
               modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
+                .neumorphicExtruded(
+                  shape = IosSharpWellShape,
+                  elevation = 2.5.dp,
+                  blurRadius = 5.dp,
+                  accentTint = cyanAccent,
+                  accentTintAlpha = 0.10f,
+                  borderAlpha = 0.42f,
+                  neu = neu
+                )
                 .clickable {
                   pairedDateIso = oldest.dutyDateIso
                   if (notes.isBlank()) {
@@ -1022,18 +1122,18 @@ fun AddLeaveRecordDialog(
                     fontFamily = JetBrainsMonoFontFamily,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
-                    color = BadgeColCyan
+                    color = cyanAccent
                   )
                   Text(
                     text = "Tap to auto-fill (${oldest.holidayName} • Exp ${ClinicalDateFormatter.formatFriendlyDate(oldest.expiryDateIso)})",
                     fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = neu.textSecondary
                   )
                 }
                 Icon(
                   imageVector = Icons.Default.AutoFixHigh,
                   contentDescription = null,
-                  tint = BadgeColCyan,
+                  tint = cyanAccent,
                   modifier = Modifier.size(16.dp)
                 )
               }
@@ -1050,46 +1150,89 @@ fun AddLeaveRecordDialog(
 
         // Upgrade #5: Inline Order Ref & Certificate Scan Picker for On-Duty / GH Worked / ML
         if (selectedCat in listOf(LeaveCategory.ON_DUTY, LeaveCategory.GH_WORKED, LeaveCategory.ML)) {
-          OutlinedTextField(
-            value = orderRefNo,
-            onValueChange = { orderRefNo = it },
-            label = { Text("University / DME / Medical Board Order Ref. No.") },
-            singleLine = true,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.fillMaxWidth()
-          )
-          OutlinedButton(
-            onClick = {
-              photoPickerLauncher.launch(
-                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-              )
-            },
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth()
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(shape = IosSharpWellShape, depth = 3.dp, blurRadius = 6.dp, neu = neu)
           ) {
-            Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-              text = if (certificatePhotoUri.isBlank()) {
-                "Attach Attendance Certificate / Order Photo"
-              } else {
-                "✓ Certificate Photo Attached (Tap to Change)"
-              },
-              fontSize = 11.sp,
-              fontWeight = FontWeight.Bold
+            OutlinedTextField(
+              value = orderRefNo,
+              onValueChange = { orderRefNo = it },
+              label = { Text("University / DME / Medical Board Order Ref. No.") },
+              singleLine = true,
+              shape = IosSharpWellShape,
+              colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+                unfocusedBorderColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+              ),
+              modifier = Modifier.fillMaxWidth()
             )
+          }
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(40.dp)
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.08f,
+                borderAlpha = 0.35f,
+                neu = neu
+              )
+              .clickable {
+                photoPickerLauncher.launch(
+                  PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+              },
+            contentAlignment = Alignment.Center
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                Icons.Default.AddPhotoAlternate,
+                contentDescription = null,
+                tint = neu.primaryAccent,
+                modifier = Modifier.size(16.dp)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = if (certificatePhotoUri.isBlank()) {
+                  "Attach Attendance Certificate / Order Photo"
+                } else {
+                  "✓ Certificate Photo Attached (Tap to Change)"
+                },
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = neu.primaryAccent
+              )
+            }
           }
         }
 
-        OutlinedTextField(
-          value = notes,
-          onValueChange = { notes = it },
-          label = { Text("Reason / Remarks (e.g. DME Inspection, Pongal)") },
-          shape = RoundedCornerShape(14.dp),
+        Box(
           modifier = Modifier
             .fillMaxWidth()
-            .testTag("add_leave_notes_input")
-        )
+            .neumorphicInset(shape = IosSharpWellShape, depth = 3.dp, blurRadius = 6.dp, neu = neu)
+        ) {
+          OutlinedTextField(
+            value = notes,
+            onValueChange = { notes = it },
+            label = { Text("Reason / Remarks (e.g. DME Inspection, Pongal)") },
+            shape = IosSharpWellShape,
+            colors = OutlinedTextFieldDefaults.colors(
+              focusedBorderColor = neu.primaryAccent.copy(alpha = 0.55f),
+              unfocusedBorderColor = Color.Transparent,
+              focusedContainerColor = Color.Transparent,
+              unfocusedContainerColor = Color.Transparent
+            ),
+            modifier = Modifier
+              .fillMaxWidth()
+              .testTag("add_leave_notes_input")
+          )
+        }
 
         // Live TamilNaduLeaveRulesService Validation Preview
         val liveValidation = remember(selectedCat, startDate, endDate, pairedDateIso, isHalfDay) {
@@ -1108,12 +1251,18 @@ fun AddLeaveRecordDialog(
           com.example.domain.DuplicateCheckVerdict.BLOCKED_DUPLICATE_OR_CONFLICT -> StatusAlertRed
         }
 
-        Surface(
-          shape = RoundedCornerShape(12.dp),
-          color = dupAccentColor.copy(alpha = 0.13f),
-          border = BorderStroke(1.dp, dupAccentColor.copy(alpha = 0.45f)),
+        Box(
           modifier = Modifier
             .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = dupAccentColor,
+              accentTintAlpha = 0.10f,
+              borderColor = dupAccentColor.copy(alpha = 0.45f),
+              neu = neu
+            )
             .testTag("smart_duplicate_guard_banner")
         ) {
           Column(
@@ -1129,16 +1278,22 @@ fun AddLeaveRecordDialog(
             Text(
               text = duplicateGuardEval.detailedExplanation,
               fontSize = 10.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = neu.textSecondary
             )
             val suggestedGh = duplicateGuardEval.suggestedReplacementGhDutyIso
             if (suggestedGh != null) {
-              Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = BadgeColCyan.copy(alpha = 0.18f),
-                border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.55f)),
+              val cyanBtn = if (neu.isDark) Color(0xFF22D3EE) else BadgeColCyan
+              Box(
                 modifier = Modifier
-                  .clip(RoundedCornerShape(8.dp))
+                  .neumorphicExtruded(
+                    shape = IosSharpMicroShape,
+                    elevation = 2.dp,
+                    blurRadius = 4.dp,
+                    accentTint = cyanBtn,
+                    accentTintAlpha = 0.14f,
+                    borderAlpha = 0.50f,
+                    neu = neu
+                  )
                   .clickable {
                     pairedDateIso = suggestedGh
                     notes = "FIFO Auto-Switched to Unused GH Worked on $suggestedGh"
@@ -1150,7 +1305,7 @@ fun AddLeaveRecordDialog(
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 10.sp,
                   fontWeight = FontWeight.Bold,
-                  color = BadgeColCyan,
+                  color = cyanBtn,
                   modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
                 )
               }
@@ -1158,14 +1313,19 @@ fun AddLeaveRecordDialog(
           }
         }
 
-        Surface(
-          shape = RoundedCornerShape(12.dp),
-          color = if (liveValidation.isCompliant) {
-            StatusVerifiedGreen.copy(alpha = 0.12f)
-          } else {
-            StatusAlertRed.copy(alpha = 0.12f)
-          },
-          modifier = Modifier.fillMaxWidth()
+        val ruleCheckColor = if (liveValidation.isCompliant) StatusVerifiedGreen else StatusAlertRed
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = ruleCheckColor,
+              accentTintAlpha = 0.10f,
+              borderColor = ruleCheckColor.copy(alpha = 0.35f),
+              neu = neu
+            )
         ) {
           Column(modifier = Modifier.padding(10.dp)) {
             Text(
@@ -1176,13 +1336,13 @@ fun AddLeaveRecordDialog(
               },
               fontSize = 11.sp,
               fontWeight = FontWeight.Bold,
-              color = if (liveValidation.isCompliant) StatusVerifiedGreen else StatusAlertRed
+              color = ruleCheckColor
             )
             if (liveValidation.optimizationAdvice.isNotBlank()) {
               Text(
                 text = liveValidation.optimizationAdvice,
                 fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = neu.textSecondary
               )
             }
           }
@@ -1190,27 +1350,45 @@ fun AddLeaveRecordDialog(
 
         Text(
           text = "Leave Status:",
-          style = MaterialTheme.typography.labelLarge
+          style = MaterialTheme.typography.labelLarge,
+          color = neu.textPrimary
         )
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 4.dp),
+          horizontalArrangement = Arrangement.spacedBy(7.dp)
         ) {
           com.example.data.LeaveStatus.entries.forEach { st ->
             val sel = selectedStatus == st
-            Surface(
-              shape = RoundedCornerShape(10.dp),
-              color = if (sel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
+                .then(
+                  if (sel) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpBadgeShape,
+                      elevation = 2.5.dp,
+                      blurRadius = 5.dp,
+                      surfaceColor = neu.primaryAccent,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicInset(
+                      shape = IosSharpBadgeShape,
+                      depth = 2.dp,
+                      blurRadius = 4.dp,
+                      neu = neu
+                    )
+                  }
+                )
                 .clickable { selectedStatus = st }
             ) {
               Text(
                 text = st.displayLabel,
                 fontSize = 11.sp,
-                color = if (sel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium,
+                color = if (sel) Color.White else neu.textSecondary,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
               )
             }
@@ -1268,7 +1446,7 @@ fun AddLeaveRecordDialog(
             }
           }
         },
-        shape = RoundedCornerShape(14.dp),
+        shape = IosSharpButtonShape,
         modifier = Modifier.testTag("confirm_add_leave_button")
       ) {
         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))

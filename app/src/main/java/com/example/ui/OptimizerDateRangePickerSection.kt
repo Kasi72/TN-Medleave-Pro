@@ -662,10 +662,17 @@ fun OptimizerMaterial3CalendarSection(
                 )
               }
               Spacer(modifier = Modifier.width(8.dp))
-              Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = day.badgeColor.copy(alpha = 0.18f),
-                border = BorderStroke(1.dp, day.badgeColor.copy(alpha = 0.4f))
+              val neuBadge = com.example.ui.theme.LocalNeumorphicColors.current
+              Box(
+                modifier = Modifier.neumorphicInset(
+                  shape = com.example.ui.theme.IosSharpMicroShape,
+                  depth = 1.5.dp,
+                  blurRadius = 3.dp,
+                  accentTint = day.badgeColor,
+                  accentTintAlpha = 0.14f,
+                  borderColor = day.badgeColor.copy(alpha = 0.40f),
+                  neu = neuBadge
+                )
               ) {
                 Text(
                   text = day.badgeText,

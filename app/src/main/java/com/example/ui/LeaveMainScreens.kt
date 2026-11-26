@@ -34,13 +34,8 @@ import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -84,7 +79,9 @@ import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
 import com.example.ui.theme.StatusVerifiedGreen
@@ -529,12 +526,19 @@ fun OverviewTabScreen(
         // Top Recommended Optimization Spotlight Card
         state.smartBridges.firstOrNull { it.id == "bridge_dec_mega_year_end_2026" }?.let { megaBridge ->
           item {
-            Surface(
-              shape = RoundedCornerShape(26.dp),
-              color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
+            val neu = LocalNeumorphicColors.current
+            Box(
               modifier = Modifier
                 .fillMaxWidth()
-                .border(1.5.dp, EmeraldOptimal.copy(alpha = 0.4f), RoundedCornerShape(26.dp))
+                .neumorphicExtruded(
+                  shape = IosSharpCardShape,
+                  elevation = 5.dp,
+                  blurRadius = 10.dp,
+                  accentTint = EmeraldOptimal,
+                  accentTintAlpha = 0.06f,
+                  borderAlpha = 0.38f,
+                  neu = neu
+                )
             ) {
               Column(modifier = Modifier.padding(18.dp)) {
                 Row(
@@ -563,9 +567,14 @@ fun OverviewTabScreen(
                     )
                   }
                   Spacer(modifier = Modifier.width(8.dp))
-                  Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = EmeraldOptimal
+                  Box(
+                    modifier = Modifier.neumorphicExtruded(
+                      shape = IosSharpMicroShape,
+                      elevation = 2.dp,
+                      blurRadius = 4.dp,
+                      surfaceColor = EmeraldOptimal,
+                      neu = neu
+                    )
                   ) {
                     Text(
                       text = "${megaBridge.totalDaysOff} DAYS OFF",
@@ -582,19 +591,20 @@ fun OverviewTabScreen(
                 Text(
                   text = megaBridge.title,
                   style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.Bold
+                  fontWeight = FontWeight.Bold,
+                  color = neu.textPrimary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                   text = megaBridge.tnRuleComplianceNote,
                   style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                  color = neu.textSecondary
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                   Button(
                     onClick = { onNavigateToTab(3) },
-                    shape = RoundedCornerShape(14.dp),
+                    shape = IosSharpButtonShape,
                     colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
                     modifier = Modifier.weight(1f)
                   ) {
@@ -606,9 +616,9 @@ fun OverviewTabScreen(
                   }
                   Button(
                     onClick = { onApplyBridge(megaBridge) },
-                    shape = RoundedCornerShape(14.dp),
+                    shape = IosSharpButtonShape,
                     colors = ButtonDefaults.buttonColors(
-                      containerColor = MaterialTheme.colorScheme.primary
+                      containerColor = neu.primaryAccent
                     )
                   ) {
                     Text(
@@ -947,6 +957,7 @@ fun LedgerTabScreen(
   onScrubDuplicates: () -> Unit = {}
 ) {
   val context = LocalContext.current
+  val neu = LocalNeumorphicColors.current
   var metaVersion by remember { mutableStateOf(0) }
   var selectedSrFilter by remember { mutableStateOf<SrReconciliationState?>(null) }
   var activeVaultRecord by remember { mutableStateOf<Pair<LeaveRecord, RecordAttachmentMeta>?>(null) }
@@ -1079,21 +1090,18 @@ fun LedgerTabScreen(
             SmartDuplicateLeaveGuardEngine.scanLedgerForExistingDuplicates(state.allRecords)
           }
           val totalRedundantEntries = duplicateGroups.size
-          Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-              containerColor = if (totalRedundantEntries == 0) {
-                EmeraldOptimal.copy(alpha = 0.08f)
-              } else {
-                StatusAlertRed.copy(alpha = 0.12f)
-              }
-            ),
+          val shieldAccent = if (totalRedundantEntries == 0) EmeraldOptimal else StatusAlertRed
+          Box(
             modifier = Modifier
               .fillMaxWidth()
-              .border(
-                1.dp,
-                if (totalRedundantEntries == 0) EmeraldOptimal.copy(alpha = 0.3f) else StatusAlertRed.copy(alpha = 0.45f),
-                RoundedCornerShape(16.dp)
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.5.dp,
+                blurRadius = 5.dp,
+                accentTint = shieldAccent,
+                accentTintAlpha = 0.08f,
+                borderColor = shieldAccent.copy(alpha = 0.35f),
+                neu = neu
               )
               .testTag("smart_duplicate_shield_banner")
           ) {
@@ -1112,7 +1120,7 @@ fun LedgerTabScreen(
                 Icon(
                   imageVector = if (totalRedundantEntries == 0) Icons.Default.Verified else Icons.Default.Info,
                   contentDescription = "Duplicate Guard Shield",
-                  tint = if (totalRedundantEntries == 0) EmeraldOptimal else StatusAlertRed,
+                  tint = shieldAccent,
                   modifier = Modifier.size(18.dp)
                 )
                 Column {
@@ -1124,7 +1132,7 @@ fun LedgerTabScreen(
                     },
                     fontSize = 11.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = if (totalRedundantEntries == 0) EmeraldOptimal else StatusAlertRed,
+                    color = shieldAccent,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                   )
@@ -1136,22 +1144,36 @@ fun LedgerTabScreen(
                     },
                     fontSize = 11.sp,
                     lineHeight = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = neu.textSecondary
                   )
                 }
               }
 
               Spacer(modifier = Modifier.width(8.dp))
 
-              Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = if (totalRedundantEntries == 0) {
-                  EmeraldOptimal.copy(alpha = 0.16f)
-                } else {
-                  StatusAlertRed
-                },
+              Box(
                 modifier = Modifier
-                  .clip(RoundedCornerShape(10.dp))
+                  .then(
+                    if (totalRedundantEntries == 0) {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpMicroShape,
+                        elevation = 2.dp,
+                        blurRadius = 4.dp,
+                        accentTint = EmeraldOptimal,
+                        accentTintAlpha = 0.10f,
+                        borderAlpha = 0.35f,
+                        neu = neu
+                      )
+                    } else {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpMicroShape,
+                        elevation = 2.5.dp,
+                        blurRadius = 5.dp,
+                        surfaceColor = StatusAlertRed,
+                        neu = neu
+                      )
+                    }
+                  )
                   .clickable { onScrubDuplicates() }
                   .testTag("scrub_duplicates_button")
               ) {
@@ -1189,7 +1211,8 @@ fun LedgerTabScreen(
           Row(
             modifier = Modifier
               .fillMaxWidth()
-              .horizontalScroll(rememberScrollState()),
+              .horizontalScroll(rememberScrollState())
+              .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
@@ -1199,22 +1222,40 @@ fun LedgerTabScreen(
             } else {
               state.allRecords.count { it.year == state.selectedYear }
             }
-            Surface(
-              shape = RoundedCornerShape(14.dp),
-              color = if (allSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+            Box(
               modifier = Modifier
                 .height(38.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .then(
+                  if (allSelected) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 3.dp,
+                      blurRadius = 6.dp,
+                      surfaceColor = neu.primaryAccent,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 2.dp,
+                      blurRadius = 4.dp,
+                      borderAlpha = 0.22f,
+                      neu = neu
+                    )
+                  }
+                )
                 .clickable { onSelectCategory(null) }
                 .testTag("filter_chip_all")
             ) {
               Box(
-                modifier = Modifier.padding(horizontal = 14.dp),
+                modifier = Modifier
+                  .fillMaxHeight()
+                  .padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center
               ) {
                 Text(
                   text = "All ($scopeCount)",
-                  color = if (allSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                  color = if (allSelected) Color.White else neu.textPrimary,
                   fontWeight = FontWeight.SemiBold,
                   fontSize = 13.sp,
                   maxLines = 1,
@@ -1231,17 +1272,37 @@ fun LedgerTabScreen(
               }
               val isSelected = state.selectedCategory == cat
               val accent = cat.accentColor()
-              Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (isSelected) accent else accent.copy(alpha = 0.12f),
+              Box(
                 modifier = Modifier
                   .height(38.dp)
-                  .clip(RoundedCornerShape(14.dp))
+                  .then(
+                    if (isSelected) {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpButtonShape,
+                        elevation = 3.dp,
+                        blurRadius = 6.dp,
+                        surfaceColor = accent,
+                        neu = neu
+                      )
+                    } else {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpButtonShape,
+                        elevation = 2.dp,
+                        blurRadius = 4.dp,
+                        accentTint = accent,
+                        accentTintAlpha = 0.05f,
+                        borderAlpha = 0.25f,
+                        neu = neu
+                      )
+                    }
+                  )
                   .clickable { onSelectCategory(cat) }
                   .testTag("filter_chip_${cat.code}")
               ) {
                 Box(
-                  modifier = Modifier.padding(horizontal = 14.dp),
+                  modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(horizontal = 14.dp),
                   contentAlignment = Alignment.Center
                 ) {
                   Text(
@@ -1261,12 +1322,18 @@ fun LedgerTabScreen(
         // Category Rule Context Banner when a specific column is selected
         state.selectedCategory?.let { cat ->
           item {
-            Surface(
-              shape = RoundedCornerShape(18.dp),
-              color = cat.accentColor().copy(alpha = 0.1f),
+            Box(
               modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, cat.accentColor().copy(alpha = 0.3f), RoundedCornerShape(18.dp))
+                .neumorphicInset(
+                  shape = IosSharpWellShape,
+                  depth = 2.5.dp,
+                  blurRadius = 5.dp,
+                  accentTint = cat.accentColor(),
+                  accentTintAlpha = 0.08f,
+                  borderColor = cat.accentColor().copy(alpha = 0.32f),
+                  neu = neu
+                )
             ) {
               Row(
                 modifier = Modifier.padding(14.dp),
@@ -1289,7 +1356,7 @@ fun LedgerTabScreen(
                   Text(
                     text = cat.tnRuleSummary,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = neu.textSecondary
                   )
                 }
               }
@@ -1299,30 +1366,39 @@ fun LedgerTabScreen(
 
         if (displayedRecords.isEmpty()) {
           item {
-            Surface(
-              shape = RoundedCornerShape(24.dp),
-              color = MaterialTheme.colorScheme.surface,
-              modifier = Modifier.fillMaxWidth()
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .neumorphicExtruded(
+                  shape = IosSharpCardShape,
+                  elevation = 4.dp,
+                  blurRadius = 8.dp,
+                  borderAlpha = 0.28f,
+                  neu = neu
+                )
             ) {
               Column(
-                modifier = Modifier.padding(32.dp),
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
               ) {
                 Icon(
                   imageVector = Icons.Default.EventAvailable,
                   contentDescription = null,
-                  tint = MaterialTheme.colorScheme.primary,
+                  tint = neu.primaryAccent,
                   modifier = Modifier.size(44.dp)
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                   text = "No entries matching current filter",
-                  style = MaterialTheme.typography.titleMedium
+                  style = MaterialTheme.typography.titleMedium,
+                  color = neu.textPrimary
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Button(
                   onClick = onOpenAddDialog,
-                  shape = RoundedCornerShape(14.dp)
+                  shape = IosSharpButtonShape
                 ) {
                   Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                   Spacer(modifier = Modifier.width(6.dp))
@@ -1360,22 +1436,41 @@ fun LedgerTabScreen(
           Row(
             modifier = Modifier
               .fillMaxWidth()
-              .horizontalScroll(rememberScrollState()),
+              .horizontalScroll(rememberScrollState())
+              .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
             val allSrSelected = selectedSrFilter == null
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = if (allSrSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+            Box(
               modifier = Modifier
                 .height(32.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .then(
+                  if (allSrSelected) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpBadgeShape,
+                      elevation = 2.5.dp,
+                      blurRadius = 5.dp,
+                      surfaceColor = neu.primaryAccent,
+                      neu = neu
+                    )
+                  } else {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpBadgeShape,
+                      elevation = 1.5.dp,
+                      blurRadius = 3.dp,
+                      borderAlpha = 0.20f,
+                      neu = neu
+                    )
+                  }
+                )
                 .clickable { selectedSrFilter = null }
                 .testTag("sr_filter_all")
             ) {
               Box(
-                modifier = Modifier.padding(horizontal = 11.dp),
+                modifier = Modifier
+                  .fillMaxHeight()
+                  .padding(horizontal = 11.dp),
                 contentAlignment = Alignment.Center
               ) {
                 Text(
@@ -1383,7 +1478,7 @@ fun LedgerTabScreen(
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 10.sp,
                   fontWeight = FontWeight.Bold,
-                  color = if (allSrSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                  color = if (allSrSelected) Color.White else neu.textSecondary,
                   maxLines = 1,
                   softWrap = false
                 )
@@ -1400,16 +1495,29 @@ fun LedgerTabScreen(
               val count = state.filteredRecords.count {
                 LedgerEnrichmentStore.getMetaForRecord(it, allMetaMap).srState == srState
               }
-              Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = if (isSel) srColor.copy(alpha = 0.20f) else srColor.copy(alpha = 0.08f),
+              Box(
                 modifier = Modifier
                   .height(32.dp)
-                  .clip(RoundedCornerShape(12.dp))
-                  .border(
-                    width = 1.dp,
-                    color = if (isSel) srColor else srColor.copy(alpha = 0.25f),
-                    shape = RoundedCornerShape(12.dp)
+                  .then(
+                    if (isSel) {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpBadgeShape,
+                        elevation = 2.5.dp,
+                        blurRadius = 5.dp,
+                        surfaceColor = srColor,
+                        neu = neu
+                      )
+                    } else {
+                      Modifier.neumorphicInset(
+                        shape = IosSharpBadgeShape,
+                        depth = 1.5.dp,
+                        blurRadius = 3.dp,
+                        accentTint = srColor,
+                        accentTintAlpha = 0.08f,
+                        borderColor = srColor.copy(alpha = 0.25f),
+                        neu = neu
+                      )
+                    }
                   )
                   .clickable {
                     selectedSrFilter = if (isSel) null else srState
@@ -1417,7 +1525,9 @@ fun LedgerTabScreen(
                   .testTag("sr_filter_${srState.code}")
               ) {
                 Box(
-                  modifier = Modifier.padding(horizontal = 11.dp),
+                  modifier = Modifier
+                    .fillMaxHeight()
+                    .padding(horizontal = 11.dp),
                   contentAlignment = Alignment.Center
                 ) {
                   Text(
@@ -1425,7 +1535,7 @@ fun LedgerTabScreen(
                     fontFamily = JetBrainsMonoFontFamily,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = srColor,
+                    color = if (isSel) Color.White else srColor,
                     maxLines = 1,
                     softWrap = false
                   )
@@ -1531,11 +1641,28 @@ fun OptimizerTabScreen(
   onAddLocalHolidayToRoom: (TnHolidayItem) -> Unit = {},
   onQuickLogLeave: (leaveType: String, dateIso: String, notes: String) -> Unit = { _, _, _ -> },
   onCommitBurnDownSlots: (List<BurnDownSlotSuggestion>) -> Unit = {},
-  onCommitSimulatedWorkingDays: (category: LeaveCategory, workingDateIsos: List<String>, notes: String) -> Unit = { _, _, _ -> }
+  onCommitSimulatedWorkingDays: (category: LeaveCategory, workingDateIsos: List<String>, notes: String) -> Unit = { _, _, _ -> },
+  optimizerConstraints: com.example.domain.OptimizerConstraints = com.example.domain.OptimizerConstraints(),
+  onUpdateOptimizerConstraints: (com.example.domain.OptimizerConstraints) -> Unit = {},
+  tentativeHolds: Map<String, com.example.domain.TentativeHoldRecord> = emptyMap(),
+  deepLinkGoalHint: String? = null,
+  onConsumeDeepLink: () -> Unit = {},
+  onApplyPortfolio: (List<com.example.domain.AiLeaveRecommendation>) -> Unit = {},
+  onToggleTentativeHold: (com.example.domain.AiLeaveRecommendation) -> Unit = {},
+  onSimulateInBuilder: (com.example.domain.AiLeaveRecommendation) -> Unit = {},
+  pendingBuilderPreload: com.example.domain.BuilderPreloadRequest? = null,
+  onBuilderPreloadConsumed: () -> Unit = {}
 ) {
+  val neu = LocalNeumorphicColors.current
   var startInput by remember { mutableStateOf("2026-12-24") }
   var endInput by remember { mutableStateOf("2027-01-01") }
   var activeSubTab by remember { mutableStateOf(0) }
+
+  androidx.compose.runtime.LaunchedEffect(deepLinkGoalHint) {
+    if (!deepLinkGoalHint.isNullOrBlank()) {
+      activeSubTab = 0
+    }
+  }
 
   val optimizerSubTabs = remember(state.smartBridges.size) {
     listOf(
@@ -1598,19 +1725,18 @@ fun OptimizerTabScreen(
       0 -> {
         // Quick-Launch Squircle Banner to Open the Material 3 Visual DateRangePicker
         item {
-          Surface(
-            shape = com.example.ui.theme.IosSharpCardShape,
-            color = Color.Transparent,
-            tonalElevation = 0.dp,
+          Box(
             modifier = Modifier
               .fillMaxWidth()
-              .iosFrostedGlassCard(
-                accentColor = MaterialTheme.colorScheme.primary,
-                shape = com.example.ui.theme.IosSharpCardShape,
-                borderWidth = 1.15.dp,
-                borderAlpha = 0.45f
+              .neumorphicExtruded(
+                shape = IosSharpCardShape,
+                elevation = 4.dp,
+                blurRadius = 8.dp,
+                accentTint = neu.primaryAccent,
+                accentTintAlpha = 0.04f,
+                borderAlpha = 0.34f,
+                neu = neu
               )
-              .clip(com.example.ui.theme.IosSharpCardShape)
               .clickable { activeSubTab = 1 }
               .testTag("open_m3_calendar_banner_btn")
           ) {
@@ -1626,17 +1752,32 @@ fun OptimizerTabScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.weight(1f)
               ) {
-                Icon(
-                  imageVector = Icons.Default.CalendarMonth,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.size(20.dp)
-                )
+                Box(
+                  modifier = Modifier
+                    .size(34.dp)
+                    .neumorphicInset(
+                      shape = IosSharpButtonShape,
+                      depth = 2.dp,
+                      blurRadius = 4.dp,
+                      accentTint = neu.primaryAccent,
+                      accentTintAlpha = 0.12f,
+                      borderColor = neu.primaryAccent.copy(alpha = 0.28f),
+                      neu = neu
+                    ),
+                  contentAlignment = Alignment.Center
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.CalendarMonth,
+                    contentDescription = null,
+                    tint = neu.primaryAccent,
+                    modifier = Modifier.size(18.dp)
+                  )
+                }
                 Column(modifier = Modifier.weight(1f)) {
                   Text(
                     text = "VISUAL MATERIAL 3 HOLIDAY & BRIDGE RANGE PICKER",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = neu.primaryAccent,
                     fontWeight = FontWeight.ExtraBold,
                     maxLines = 1,
                     softWrap = false,
@@ -1645,24 +1786,31 @@ fun OptimizerTabScreen(
                   Text(
                     text = "Tap to highlight upcoming TN Govt Holidays & Long-Weekend Windows",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = neu.textSecondary,
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis
                   )
                 }
               }
-              Surface(
-                shape = com.example.ui.theme.IosSharpBadgeShape,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
-                modifier = Modifier.padding(start = 8.dp)
+              Spacer(modifier = Modifier.width(8.dp))
+              Box(
+                modifier = Modifier.neumorphicInset(
+                  shape = IosSharpBadgeShape,
+                  depth = 1.5.dp,
+                  blurRadius = 3.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.12f,
+                  borderColor = neu.primaryAccent.copy(alpha = 0.30f),
+                  neu = neu
+                )
               ) {
                 Text(
                   text = "OPEN M3 →",
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 10.sp,
                   fontWeight = FontWeight.ExtraBold,
-                  color = MaterialTheme.colorScheme.primary,
+                  color = neu.primaryAccent,
                   maxLines = 1,
                   softWrap = false,
                   modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
@@ -1677,8 +1825,19 @@ fun OptimizerTabScreen(
           AiLeaveRecommendationSection(
             state = state,
             aiState = aiRecommendationState,
+            constraints = optimizerConstraints,
+            onUpdateConstraints = onUpdateOptimizerConstraints,
+            tentativeHolds = tentativeHolds,
+            deepLinkGoalHint = deepLinkGoalHint,
+            onConsumeDeepLink = onConsumeDeepLink,
             onGenerateRecommendations = onGenerateAiRecommendations,
-            onApplyBridge = onApplyBridge
+            onApplyBridge = onApplyBridge,
+            onApplyPortfolio = onApplyPortfolio,
+            onToggleTentativeHold = onToggleTentativeHold,
+            onSimulateInBuilder = { rec ->
+              onSimulateInBuilder(rec)
+              activeSubTab = 4
+            }
           )
         }
       }
@@ -1736,11 +1895,17 @@ fun OptimizerTabScreen(
 
         // Interactive Tactical Range Calculator
         item {
-          Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth()
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicExtruded(
+                shape = IosSharpCardShape,
+                elevation = 5.dp,
+                blurRadius = 10.dp,
+                accentTint = neu.primaryAccent,
+                borderAlpha = 0.32f,
+                neu = neu
+              )
           ) {
             Column(modifier = Modifier.padding(18.dp)) {
               Row(
@@ -1752,21 +1917,29 @@ fun OptimizerTabScreen(
                   text = "Interactive Leave Stretch Calculator (TN 10-Day Rule)",
                   style = MaterialTheme.typography.titleMedium,
                   fontWeight = FontWeight.Bold,
+                  color = neu.textPrimary,
                   modifier = Modifier.weight(1f)
                 )
-                Surface(
-                  shape = com.example.ui.theme.IosSharpBadgeShape,
-                  color = MaterialTheme.colorScheme.primaryContainer,
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
                   modifier = Modifier
-                    .clip(com.example.ui.theme.IosSharpBadgeShape)
+                    .neumorphicExtruded(
+                      shape = IosSharpBadgeShape,
+                      elevation = 2.dp,
+                      blurRadius = 4.dp,
+                      accentTint = neu.primaryAccent,
+                      accentTintAlpha = 0.10f,
+                      borderAlpha = 0.32f,
+                      neu = neu
+                    )
                     .clickable { activeSubTab = 1 }
                 ) {
                   Text(
                     text = "M3 Picker",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                    color = neu.primaryAccent,
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
                   )
                 }
               }
@@ -1774,7 +1947,7 @@ fun OptimizerTabScreen(
               Text(
                 text = "Enter any 2026–2027 date range to auto-detect Weekends, TN Govt Holidays (GH), and Restricted Holidays (RH):",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = neu.textSecondary
               )
               Spacer(modifier = Modifier.height(12.dp))
               Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1794,7 +1967,7 @@ fun OptimizerTabScreen(
               Spacer(modifier = Modifier.height(10.dp))
               Button(
                 onClick = { onRunCustomRange(startInput, endInput) },
-                shape = RoundedCornerShape(14.dp),
+                shape = IosSharpButtonShape,
                 modifier = Modifier
                   .fillMaxWidth()
                   .testTag("analyze_range_button")
@@ -1813,28 +1986,38 @@ fun OptimizerTabScreen(
                     style = MaterialTheme.typography.bodyMedium
                   )
                 } else {
-                  Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = if (analysis.exceedsTenDayRule) StatusAlertRed.copy(alpha = 0.1f) else EmeraldOptimal.copy(alpha = 0.1f),
-                    modifier = Modifier.fillMaxWidth()
+                  val resAccent = if (analysis.exceedsTenDayRule) StatusAlertRed else EmeraldOptimal
+                  Box(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .neumorphicInset(
+                        shape = IosSharpWellShape,
+                        depth = 2.5.dp,
+                        blurRadius = 5.dp,
+                        accentTint = resAccent,
+                        accentTintAlpha = 0.08f,
+                        borderColor = resAccent.copy(alpha = 0.35f),
+                        neu = neu
+                      )
                   ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                       Text(
                         text = "${analysis.totalDays} Total Days Off • Only ${analysis.creditsNeeded} Leave Credits Required (${analysis.freeDays} Free Weekend/GH Days)",
                         style = MaterialTheme.typography.labelLarge,
-                        color = if (analysis.exceedsTenDayRule) StatusAlertRed else EmeraldOptimal
+                        color = resAccent
                       )
                       Spacer(modifier = Modifier.height(4.dp))
                       Text(
                         text = analysis.recommendationSummary,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = neu.textPrimary
                       )
                       if (analysis.elComparisonAdvice.isNotBlank()) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                           text = analysis.elComparisonAdvice,
                           style = MaterialTheme.typography.bodyMedium,
-                          color = MaterialTheme.colorScheme.primary,
+                          color = neu.primaryAccent,
                           fontSize = 12.sp
                         )
                       }
@@ -1852,7 +2035,9 @@ fun OptimizerTabScreen(
         item {
           InteractiveLeaveBuilderSection(
             state = state,
-            onCommitDraftLeaves = onCommitDraftLeaves
+            onCommitDraftLeaves = onCommitDraftLeaves,
+            pendingPreload = pendingBuilderPreload,
+            onPreloadConsumed = onBuilderPreloadConsumed
           )
         }
       }
@@ -1901,12 +2086,20 @@ fun OptimizerTabScreen(
                 .height(androidx.compose.foundation.layout.IntrinsicSize.Min),
               horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-              Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = BadgeElNeutral.copy(alpha = 0.12f),
+              val elLabelColor = if (neu.isDark) Color(0xFF94A3B8) else BadgeElNeutral
+              Box(
                 modifier = Modifier
                   .weight(1f)
                   .fillMaxHeight()
+                  .neumorphicInset(
+                    shape = IosSharpButtonShape,
+                    depth = 2.dp,
+                    blurRadius = 4.dp,
+                    accentTint = BadgeElNeutral,
+                    accentTintAlpha = 0.08f,
+                    borderColor = BadgeElNeutral.copy(alpha = 0.25f),
+                    neu = neu
+                  )
               ) {
                 Column(
                   modifier = Modifier
@@ -1918,7 +2111,7 @@ fun OptimizerTabScreen(
                     text = "Earned Leave (EL Rule 8)",
                     style = MaterialTheme.typography.labelLarge,
                     lineHeight = 15.sp,
-                    color = BadgeElNeutral,
+                    color = elLabelColor,
                     maxLines = 1,
                     softWrap = false,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -1928,6 +2121,7 @@ fun OptimizerTabScreen(
                     style = MaterialTheme.typography.titleMedium,
                     lineHeight = 19.sp,
                     fontWeight = FontWeight.Bold,
+                    color = neu.textPrimary,
                     maxLines = 1,
                     softWrap = false,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -1936,7 +2130,7 @@ fun OptimizerTabScreen(
                     text = "${serviceAccount.elTotalTaken2023To2026}d availed • Intervening GH debited",
                     fontSize = 11.sp,
                     lineHeight = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = neu.textSecondary,
                     maxLines = 1,
                     softWrap = false,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -1944,12 +2138,19 @@ fun OptimizerTabScreen(
                 }
               }
 
-              Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = BadgeMlOrange.copy(alpha = 0.12f),
+              Box(
                 modifier = Modifier
                   .weight(1f)
                   .fillMaxHeight()
+                  .neumorphicInset(
+                    shape = IosSharpButtonShape,
+                    depth = 2.dp,
+                    blurRadius = 4.dp,
+                    accentTint = BadgeMlOrange,
+                    accentTintAlpha = 0.08f,
+                    borderColor = BadgeMlOrange.copy(alpha = 0.28f),
+                    neu = neu
+                  )
               ) {
                 Column(
                   modifier = Modifier
@@ -1971,6 +2172,7 @@ fun OptimizerTabScreen(
                     style = MaterialTheme.typography.titleMedium,
                     lineHeight = 19.sp,
                     fontWeight = FontWeight.Bold,
+                    color = neu.textPrimary,
                     maxLines = 1,
                     softWrap = false,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -1979,7 +2181,7 @@ fun OptimizerTabScreen(
                     text = "${serviceAccount.mlTotalTaken2023To2026}d availed • >60d Med Board",
                     fontSize = 11.sp,
                     lineHeight = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = neu.textSecondary,
                     maxLines = 1,
                     softWrap = false,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -2003,8 +2205,12 @@ fun OptimizerTabScreen(
                 modifier = Modifier
                   .fillMaxWidth()
                   .padding(vertical = 5.dp)
-                  .clip(RoundedCornerShape(14.dp))
-                  .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                  .neumorphicInset(
+                    shape = IosSharpButtonShape,
+                    depth = 2.dp,
+                    blurRadius = 4.dp,
+                    neu = neu
+                  )
                   .padding(10.dp)
               ) {
                 Row(
@@ -2027,6 +2233,7 @@ fun OptimizerTabScreen(
                     text = "Max Stretch: ${spec.maxContinuousStretchDays}d",
                     style = MaterialTheme.typography.labelMedium,
                     fontSize = 11.sp,
+                    color = neu.textPrimary,
                     maxLines = 1,
                     softWrap = false
                   )
@@ -2034,14 +2241,14 @@ fun OptimizerTabScreen(
                 Text(
                   text = spec.statutoryCitation,
                   fontSize = 10.sp,
-                  color = MaterialTheme.colorScheme.primary,
+                  color = neu.primaryAccent,
                   fontWeight = FontWeight.SemiBold
                 )
                 Text(
                   text = spec.medicalOfficerSpecialClause,
                   style = MaterialTheme.typography.bodyMedium,
                   fontSize = 11.sp,
-                  color = MaterialTheme.colorScheme.onSurfaceVariant
+                  color = neu.textSecondary
                 )
               }
             }
@@ -2061,13 +2268,19 @@ private fun SmartBridgeCard(
   bridge: SmartLeaveBridge,
   onApply: () -> Unit
 ) {
-  Surface(
-    shape = RoundedCornerShape(24.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.dp, EmeraldOptimal.copy(alpha = 0.28f), RoundedCornerShape(24.dp))
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = EmeraldOptimal,
+        accentTintAlpha = 0.03f,
+        borderAlpha = 0.32f,
+        neu = neu
+      )
   ) {
     Column(modifier = Modifier.padding(18.dp)) {
       Row(
@@ -2075,12 +2288,19 @@ private fun SmartBridgeCard(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = EmeraldOptimal.copy(alpha = 0.14f),
+        Box(
           modifier = Modifier
             .weight(1f, fill = false)
             .padding(end = 8.dp)
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 1.5.dp,
+              blurRadius = 3.dp,
+              accentTint = EmeraldOptimal,
+              accentTintAlpha = 0.12f,
+              borderColor = EmeraldOptimal.copy(alpha = 0.30f),
+              neu = neu
+            )
         ) {
           Text(
             text = "${bridge.efficiencyRatio}x MULTIPLIER • ${bridge.totalDaysOff} DAYS OFF",
@@ -2095,7 +2315,7 @@ private fun SmartBridgeCard(
         Text(
           text = "Uses ${bridge.leaveCreditsRequired} credit(s)",
           style = MaterialTheme.typography.labelLarge,
-          color = MaterialTheme.colorScheme.primary,
+          color = neu.primaryAccent,
           maxLines = 1,
           softWrap = false
         )
@@ -2105,14 +2325,15 @@ private fun SmartBridgeCard(
       Text(
         text = bridge.title,
         style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.Bold
+        fontWeight = FontWeight.Bold,
+        color = neu.textPrimary
       )
       Spacer(modifier = Modifier.height(4.dp))
       Text(
         text = bridge.recommendedMix,
         style = MaterialTheme.typography.bodyMedium,
         fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.primary
+        color = neu.primaryAccent
       )
 
       Spacer(modifier = Modifier.height(12.dp))
@@ -2124,12 +2345,21 @@ private fun SmartBridgeCard(
           "WEEKEND" -> BadgeColCyan
           else -> BadgeClGreen
         }
-        Surface(
-          shape = RoundedCornerShape(12.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
+        val badgeTextColor = when {
+          step.badgeType == "GH" && !neu.isDark -> Color(0xFF4D7C0F)
+          step.badgeType == "RH" && neu.isDark -> Color(0xFF94A3B8)
+          else -> badgeColor
+        }
+        Box(
           modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp)
+            .neumorphicInset(
+              shape = IosSharpButtonShape,
+              depth = 1.8.dp,
+              blurRadius = 3.5.dp,
+              neu = neu
+            )
         ) {
           Row(
             modifier = Modifier
@@ -2138,17 +2368,23 @@ private fun SmartBridgeCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
-            Surface(
-              shape = RoundedCornerShape(7.dp),
-              color = badgeColor.copy(alpha = 0.18f),
-              border = androidx.compose.foundation.BorderStroke(1.dp, badgeColor.copy(alpha = 0.35f))
+            Box(
+              modifier = Modifier.neumorphicInset(
+                shape = IosSharpMicroShape,
+                depth = 1.5.dp,
+                blurRadius = 3.dp,
+                accentTint = badgeColor,
+                accentTintAlpha = 0.14f,
+                borderColor = badgeColor.copy(alpha = 0.35f),
+                neu = neu
+              )
             ) {
               Text(
                 text = step.badgeType.replace("_", " "),
                 fontFamily = JetBrainsMonoFontFamily,
                 fontSize = 9.5.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = badgeColor,
+                color = badgeTextColor,
                 maxLines = 1,
                 softWrap = false,
                 modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
@@ -2160,7 +2396,7 @@ private fun SmartBridgeCard(
                 fontFamily = JetBrainsMonoFontFamily,
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = neu.textPrimary,
                 maxLines = 1,
                 softWrap = false
               )
@@ -2168,7 +2404,7 @@ private fun SmartBridgeCard(
                 text = step.description,
                 style = MaterialTheme.typography.bodySmall,
                 fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = neu.textSecondary,
                 maxLines = 1,
                 softWrap = false,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -2182,14 +2418,14 @@ private fun SmartBridgeCard(
       Text(
         text = bridge.tnRuleComplianceNote,
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         fontSize = 11.sp
       )
 
       Spacer(modifier = Modifier.height(12.dp))
       Button(
         onClick = onApply,
-        shape = RoundedCornerShape(14.dp),
+        shape = IosSharpButtonShape,
         colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
         modifier = Modifier
           .fillMaxWidth()

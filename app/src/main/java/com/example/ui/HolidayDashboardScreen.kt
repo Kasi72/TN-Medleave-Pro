@@ -63,7 +63,12 @@ import com.example.ui.theme.BadgeGhLime
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -307,14 +312,19 @@ fun UpcomingHolidayDashboardSection(
     allDashboardItems.count { it.isUpcoming && it.bridgeTier.isLeaveBridgeOpportunity }
   }
 
-  Surface(
-    shape = RoundedCornerShape(26.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 3.dp,
-    shadowElevation = 4.dp,
-    border = BorderStroke(1.2.dp, EmeraldOptimal.copy(alpha = 0.28f)),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = EmeraldOptimal,
+        accentTintAlpha = 0.04f,
+        borderAlpha = 0.30f,
+        neu = neu
+      )
       .testTag("upcoming_holiday_dashboard_section")
   ) {
     Column(
@@ -369,7 +379,7 @@ fun UpcomingHolidayDashboardSection(
       // Open Full Holiday Dashboard Button
       Button(
         onClick = onOpenFullHolidayDashboard,
-        shape = RoundedCornerShape(16.dp),
+        shape = IosSharpButtonShape,
         colors = ButtonDefaults.buttonColors(
           containerColor = MaterialTheme.colorScheme.primary
         ),
@@ -580,11 +590,15 @@ fun EnterpriseHolidayDashboardScreen(
 
     // 3. Filter Chip Bar (Upcoming | Leave Bridges | Public GH | Restricted RH)
     item {
+      val neu = LocalNeumorphicColors.current
+      val ghFilterAccent = if (neu.isDark) BadgeGhLime else Color(0xFF4D7C0F)
+      val rhFilterAccent = if (neu.isDark) BadgeRhSlate else Color(0xFF0F766E)
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+          .horizontalScroll(rememberScrollState())
+          .padding(vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
       ) {
         HolidayFilterPill(
@@ -604,14 +618,14 @@ fun EnterpriseHolidayDashboardScreen(
         HolidayFilterPill(
           label = "Public GH (${liveGhList.size})",
           selected = selectedFilter == 2,
-          accent = BadgeGhLime,
+          accent = ghFilterAccent,
           onClick = { selectedFilter = 2 },
           testTag = "toggle_gh_list"
         )
         HolidayFilterPill(
           label = "Restricted RH (${liveRhList.size})",
           selected = selectedFilter == 3,
-          accent = BadgeRhSlate,
+          accent = rhFilterAccent,
           onClick = { selectedFilter = 3 },
           testTag = "toggle_rh_list"
         )
@@ -648,48 +662,33 @@ fun EnterpriseHolidayBridgeCard(
   onQuickLogHoliday: (leaveType: String, dateIso: String, notes: String) -> Unit,
   onApplySmartBridge: (SmartLeaveBridge) -> Unit = {}
 ) {
+  val neu = LocalNeumorphicColors.current
   val item = enriched.item
   val isBridge = enriched.bridgeTier.isLeaveBridgeOpportunity
-  val tierAccent = enriched.bridgeTier.accentColor
+  val tierAccent = if (enriched.bridgeTier == HolidayBridgeTier.DUTY_COL_OPPORTUNITY && !neu.isDark) {
+    Color(0xFF4D7C0F)
+  } else {
+    enriched.bridgeTier.accentColor
+  }
   val categoryAccent = if (item.isRestrictedHoliday) BadgeColCyan else BadgePlGold
 
-  Surface(
-    shape = RoundedCornerShape(22.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = if (isBridge) 3.dp else 1.dp,
-    shadowElevation = if (isBridge) 3.dp else 1.dp,
-    border = BorderStroke(
-      width = if (isBridge) 1.3.dp else 1.dp,
-      brush = Brush.linearGradient(
-        colors = if (isBridge) {
-          listOf(tierAccent.copy(alpha = 0.55f), categoryAccent.copy(alpha = 0.25f))
-        } else {
-          listOf(
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
-          )
-        }
-      )
-    ),
+  Box(
     modifier = Modifier
       .fillMaxWidth()
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = if (isBridge) 5.dp else 3.5.dp,
+        blurRadius = if (isBridge) 10.dp else 7.dp,
+        accentTint = if (isBridge) tierAccent else categoryAccent,
+        accentTintAlpha = if (isBridge) 0.045f else 0.02f,
+        borderAlpha = if (isBridge) 0.36f else 0.20f,
+        neu = neu
+      )
       .testTag("holiday_dashboard_card_${item.dateIso}")
   ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()
-        .background(
-          if (isBridge) {
-            Brush.horizontalGradient(
-              colors = listOf(
-                tierAccent.copy(alpha = 0.06f),
-                Color.Transparent
-              )
-            )
-          } else {
-            Brush.horizontalGradient(listOf(Color.Transparent, Color.Transparent))
-          }
-        )
         .padding(16.dp),
       verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -702,10 +701,17 @@ fun EnterpriseHolidayBridgeCard(
         verticalAlignment = Alignment.CenterVertically
       ) {
         // 1. Leave Bridge Opportunity Status Chip
-        Surface(
-          shape = RoundedCornerShape(9.dp),
-          color = tierAccent.copy(alpha = 0.15f),
-          border = BorderStroke(1.dp, tierAccent.copy(alpha = 0.40f))
+        Box(
+          modifier = Modifier
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = tierAccent,
+              accentTintAlpha = 0.12f,
+              borderColor = tierAccent.copy(alpha = 0.35f),
+              neu = neu
+            )
         ) {
           Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -734,9 +740,16 @@ fun EnterpriseHolidayBridgeCard(
         }
 
         // 2. Public GH vs Restricted RH Chip
-        Surface(
-          shape = RoundedCornerShape(9.dp),
-          color = categoryAccent.copy(alpha = 0.14f)
+        Box(
+          modifier = Modifier
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = categoryAccent,
+              accentTintAlpha = 0.10f,
+              neu = neu
+            )
         ) {
           Text(
             text = if (item.isRestrictedHoliday) "RESTRICTED (RH)" else "GOVT HOLIDAY (GH)",
@@ -753,9 +766,16 @@ fun EnterpriseHolidayBridgeCard(
 
         // 3. Countdown or Logged Status Chip
         if (enriched.existingLedgerType != null) {
-          Surface(
-            shape = RoundedCornerShape(9.dp),
-            color = EmeraldOptimal.copy(alpha = 0.16f)
+          Box(
+            modifier = Modifier
+              .neumorphicInset(
+                shape = IosSharpBadgeShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = EmeraldOptimal,
+                accentTintAlpha = 0.12f,
+                neu = neu
+              )
           ) {
             Text(
               text = "✓ LOGGED: ${enriched.existingLedgerType}",
@@ -775,9 +795,14 @@ fun EnterpriseHolidayBridgeCard(
             1L -> "TOMORROW"
             else -> "IN ${enriched.daysFromToday} DAYS"
           }
-          Surface(
-            shape = RoundedCornerShape(9.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
+          Box(
+            modifier = Modifier
+              .neumorphicInset(
+                shape = IosSharpBadgeShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                neu = neu
+              )
           ) {
             Text(
               text = countdownLabel,
@@ -785,7 +810,7 @@ fun EnterpriseHolidayBridgeCard(
               fontSize = 10.sp,
               lineHeight = 13.sp,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false,
               modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -799,15 +824,24 @@ fun EnterpriseHolidayBridgeCard(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
       ) {
-        // Left Monospace Date Squircle Emblem
-        Surface(
-          shape = RoundedCornerShape(16.dp),
-          color = tierAccent.copy(alpha = 0.12f),
-          border = BorderStroke(1.dp, tierAccent.copy(alpha = 0.30f)),
-          modifier = Modifier.width(66.dp)
+        // Left Monospace Date Squircle Emblem (Concave Neumorphic Well)
+        Box(
+          modifier = Modifier
+            .width(66.dp)
+            .neumorphicInset(
+              shape = IosSharpButtonShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = tierAccent,
+              accentTintAlpha = 0.10f,
+              borderColor = tierAccent.copy(alpha = 0.32f),
+              neu = neu
+            )
         ) {
           Column(
-            modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(vertical = 8.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(1.dp)
           ) {
@@ -827,7 +861,7 @@ fun EnterpriseHolidayBridgeCard(
               fontSize = 20.sp,
               lineHeight = 23.sp,
               fontWeight = FontWeight.Bold,
-              color = MaterialTheme.colorScheme.onSurface,
+              color = neu.textPrimary,
               maxLines = 1,
               softWrap = false
             )
@@ -837,7 +871,7 @@ fun EnterpriseHolidayBridgeCard(
               fontSize = 10.sp,
               lineHeight = 12.sp,
               fontWeight = FontWeight.SemiBold,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false
             )
@@ -857,7 +891,7 @@ fun EnterpriseHolidayBridgeCard(
             fontSize = 16.sp,
             lineHeight = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = neu.textPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
           )
@@ -866,7 +900,7 @@ fun EnterpriseHolidayBridgeCard(
             style = MaterialTheme.typography.bodyMedium,
             fontSize = 12.sp,
             lineHeight = 16.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = neu.textSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
           )
@@ -894,11 +928,16 @@ fun EnterpriseHolidayBridgeCard(
         }
       }
 
-      // Tactical Bridge Recipe Box + Action Button
-      Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-        modifier = Modifier.fillMaxWidth()
+      // Tactical Bridge Recipe Box + Action Button (Concave Well)
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .neumorphicInset(
+            shape = IosSharpWellShape,
+            depth = 2.5.dp,
+            blurRadius = 5.dp,
+            neu = neu
+          )
       ) {
         Row(
           modifier = Modifier
@@ -913,18 +952,23 @@ fun EnterpriseHolidayBridgeCard(
               style = MaterialTheme.typography.bodyMedium,
               fontSize = 11.sp,
               lineHeight = 15.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
+              color = neu.textSecondary
             )
           }
 
           Spacer(modifier = Modifier.width(10.dp))
 
           if (enriched.matchingSmartBridge != null && enriched.existingLedgerType == null) {
-            Surface(
-              shape = RoundedCornerShape(11.dp),
-              color = EmeraldOptimal,
+            Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(11.dp))
+                .neumorphicExtruded(
+                  shape = IosSharpBadgeShape,
+                  elevation = 2.5.dp,
+                  blurRadius = 5.dp,
+                  surfaceColor = EmeraldOptimal,
+                  borderAlpha = 0.35f,
+                  neu = neu
+                )
                 .clickable { onApplySmartBridge(enriched.matchingSmartBridge) }
                 .testTag("apply_holiday_bridge_${item.dateIso}")
             ) {
@@ -951,12 +995,17 @@ fun EnterpriseHolidayBridgeCard(
               }
             }
           } else if (enriched.existingLedgerType == null) {
-            Surface(
-              shape = RoundedCornerShape(11.dp),
-              color = categoryAccent.copy(alpha = 0.16f),
-              border = BorderStroke(1.dp, categoryAccent.copy(alpha = 0.40f)),
+            Box(
               modifier = Modifier
-                .clip(RoundedCornerShape(11.dp))
+                .neumorphicExtruded(
+                  shape = IosSharpBadgeShape,
+                  elevation = 2.5.dp,
+                  blurRadius = 5.dp,
+                  accentTint = categoryAccent,
+                  accentTintAlpha = 0.12f,
+                  borderAlpha = 0.38f,
+                  neu = neu
+                )
                 .clickable {
                   if (item.isRestrictedHoliday) {
                     onQuickLogHoliday(
@@ -1000,11 +1049,17 @@ private fun HolidayDashboardMiniStatPill(
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(16.dp),
-    color = accent.copy(alpha = 0.09f),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.28f)),
-    modifier = modifier
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier.neumorphicInset(
+      shape = IosSharpButtonShape,
+      depth = 2.5.dp,
+      blurRadius = 5.dp,
+      accentTint = accent,
+      accentTintAlpha = 0.06f,
+      borderColor = accent.copy(alpha = 0.25f),
+      neu = neu
+    )
   ) {
     Column(
       modifier = Modifier
@@ -1018,7 +1073,7 @@ private fun HolidayDashboardMiniStatPill(
         fontSize = 9.sp,
         lineHeight = 11.sp,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -1039,7 +1094,7 @@ private fun HolidayDashboardMiniStatPill(
         style = MaterialTheme.typography.bodyMedium,
         fontSize = 10.sp,
         lineHeight = 12.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -1115,32 +1170,45 @@ private fun HolidayFilterPill(
   onClick: () -> Unit,
   testTag: String
 ) {
-  Surface(
-    shape = RoundedCornerShape(14.dp),
-    color = if (selected) accent else accent.copy(alpha = 0.12f),
-    border = BorderStroke(
-      width = 1.dp,
-      color = if (selected) Color.White.copy(alpha = 0.25f) else accent.copy(alpha = 0.30f)
-    ),
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = Modifier
       .height(38.dp)
-      .clip(RoundedCornerShape(14.dp))
-      .clickable { onClick() }
-      .testTag(testTag)
-  ) {
-    Box(
-      modifier = Modifier.padding(horizontal = 14.dp),
-      contentAlignment = Alignment.Center
-    ) {
-      Text(
-        text = label,
-        color = if (selected) Color.White else accent,
-        fontWeight = FontWeight.Bold,
-        fontSize = 12.sp,
-        lineHeight = 15.sp,
-        maxLines = 1,
-        softWrap = false
+      .then(
+        if (selected) {
+          Modifier.neumorphicExtruded(
+            shape = IosSharpButtonShape,
+            elevation = 3.dp,
+            blurRadius = 6.dp,
+            surfaceColor = accent,
+            borderAlpha = 0.45f,
+            neu = neu
+          )
+        } else {
+          Modifier.neumorphicExtruded(
+            shape = IosSharpButtonShape,
+            elevation = 2.5.dp,
+            blurRadius = 5.dp,
+            accentTint = accent,
+            accentTintAlpha = 0.04f,
+            borderAlpha = 0.24f,
+            neu = neu
+          )
+        }
       )
-    }
+      .clickable { onClick() }
+      .padding(horizontal = 14.dp)
+      .testTag(testTag),
+    contentAlignment = Alignment.Center
+  ) {
+    Text(
+      text = label,
+      color = if (selected) Color.White else accent,
+      fontWeight = FontWeight.Bold,
+      fontSize = 12.sp,
+      lineHeight = 15.sp,
+      maxLines = 1,
+      softWrap = false
+    )
   }
 }

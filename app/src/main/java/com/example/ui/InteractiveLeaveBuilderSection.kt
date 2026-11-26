@@ -42,10 +42,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -75,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.data.InitialLeaveSeedData
 import com.example.data.LeaveCategory
+import com.example.domain.BuilderPreloadRequest
 import com.example.domain.LeaveBuilderAnalyzer
 import com.example.domain.TnHolidays2027Catalog
 import com.example.ui.theme.BadgeClGreen
@@ -83,7 +83,13 @@ import com.example.ui.theme.BadgeElNeutral
 import com.example.ui.theme.BadgeMlOrange
 import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.EmeraldOptimal
+import com.example.ui.theme.IosSharpBadgeShape
+import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpMicroShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusVerifiedGreen
 import java.time.DayOfWeek
@@ -148,27 +154,36 @@ enum class BuilderBlockBrush(
 fun InteractiveLeaveBuilderSection(
   state: LeaveUiState.Success,
   onCommitDraftLeaves: (Map<String, LeaveCategory>) -> Unit,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  pendingPreload: BuilderPreloadRequest? = null,
+  onPreloadConsumed: () -> Unit = {}
 ) {
-  val builderYear = remember(state.selectedYear) {
-    if (state.selectedYear in 2026L..2027L) state.selectedYear.toInt() else 2026
+  var builderYear by rememberSaveable(state.selectedYear) {
+    mutableIntStateOf(if (state.selectedYear in 2026L..2027L) state.selectedYear.toInt() else 2026)
   }
   var builderMonth by rememberSaveable { mutableIntStateOf(11) } // Default Nov
   val currentYearMonth = remember(builderYear, builderMonth) {
-    YearMonth.of(builderYear, builderMonth.coerceIn(1, 12))
+    YearMonth.of(builderYear.coerceIn(2026, 2027), builderMonth.coerceIn(1, 12))
   }
 
   // User's interactive draft blocks (dateIso -> LeaveCategory)
   val draftBlocks = remember {
     mutableStateMapOf<String, LeaveCategory>().apply {
-      // Pre-populate with an optimal Mon–Fri Earned Leave (EL) demonstration in Nov 2026
-      // so the user immediately sees real-time EL balance & free weekend prefix/suffix feedback!
       put("2026-11-16", LeaveCategory.EL)
       put("2026-11-17", LeaveCategory.EL)
       put("2026-11-18", LeaveCategory.EL)
       put("2026-11-19", LeaveCategory.EL)
       put("2026-11-20", LeaveCategory.EL)
     }
+  }
+
+  LaunchedEffect(pendingPreload?.requestId) {
+    val req = pendingPreload ?: return@LaunchedEffect
+    builderYear = req.targetYear.coerceIn(2026, 2027)
+    builderMonth = req.targetMonth.coerceIn(1, 12)
+    draftBlocks.clear()
+    draftBlocks.putAll(req.draftBlocks)
+    onPreloadConsumed()
   }
 
   var activeBrush by remember { mutableStateOf(BuilderBlockBrush.EL) }
@@ -215,6 +230,9 @@ fun InteractiveLeaveBuilderSection(
     }
   }
 
+  val neu = LocalNeumorphicColors.current
+  val elAccent = if (neu.isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
+
   Box(
     modifier = modifier
       .fillMaxWidth()
@@ -223,15 +241,19 @@ fun InteractiveLeaveBuilderSection(
       }
       .testTag("interactive_leave_builder_section")
   ) {
-    Surface(
-      shape = RoundedCornerShape(26.dp),
-      color = MaterialTheme.colorScheme.surface,
-      tonalElevation = 2.dp,
-      border = BorderStroke(
-        1.2.dp,
-        if (analysis.isFullyCompliant) EmeraldOptimal.copy(alpha = 0.35f) else StatusAlertRed.copy(alpha = 0.5f)
-      ),
-      modifier = Modifier.fillMaxWidth()
+    val cardAccent = if (analysis.isFullyCompliant) EmeraldOptimal else StatusAlertRed
+    Box(
+      modifier = Modifier
+        .fillMaxWidth()
+        .neumorphicExtruded(
+          shape = IosSharpCardShape,
+          elevation = 6.dp,
+          blurRadius = 12.dp,
+          accentTint = cardAccent,
+          accentTintAlpha = 0.04f,
+          borderAlpha = 0.36f,
+          neu = neu
+        )
     ) {
       Column(
         modifier = Modifier.padding(18.dp),
@@ -250,14 +272,21 @@ fun InteractiveLeaveBuilderSection(
             Box(
               modifier = Modifier
                 .size(38.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF6366F1).copy(alpha = 0.16f)),
+                .neumorphicInset(
+                  shape = IosSharpButtonShape,
+                  depth = 2.dp,
+                  blurRadius = 4.dp,
+                  accentTint = elAccent,
+                  accentTintAlpha = 0.14f,
+                  borderColor = elAccent.copy(alpha = 0.30f),
+                  neu = neu
+                ),
               contentAlignment = Alignment.Center
             ) {
               Icon(
                 imageVector = Icons.Default.PanToolAlt,
                 contentDescription = null,
-                tint = Color(0xFF6366F1),
+                tint = elAccent,
                 modifier = Modifier.size(20.dp)
               )
             }
@@ -266,7 +295,7 @@ fun InteractiveLeaveBuilderSection(
               Text(
                 text = "DRAG & DROP • TN GOVT RULE SIMULATOR",
                 style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFF6366F1),
+                color = elAccent,
                 fontSize = 10.sp,
                 lineHeight = 13.sp,
                 maxLines = 1,
@@ -277,7 +306,7 @@ fun InteractiveLeaveBuilderSection(
                 text = "Interactive Leave Builder (EL, CL, RH, COL)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = neu.textPrimary,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis
@@ -287,13 +316,17 @@ fun InteractiveLeaveBuilderSection(
 
           Spacer(modifier = Modifier.width(8.dp))
 
-          Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = if (analysis.isFullyCompliant) {
-              EmeraldOptimal.copy(alpha = 0.14f)
-            } else {
-              StatusAlertRed.copy(alpha = 0.14f)
-            }
+          val ruleBadgeColor = if (analysis.isFullyCompliant) EmeraldOptimal else StatusAlertRed
+          Box(
+            modifier = Modifier.neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 1.5.dp,
+              blurRadius = 3.dp,
+              accentTint = ruleBadgeColor,
+              accentTintAlpha = 0.14f,
+              borderColor = ruleBadgeColor.copy(alpha = 0.32f),
+              neu = neu
+            )
           ) {
             Text(
               text = if (analysis.isFullyCompliant) "TN RULE OK" else "RULE ALERT",
@@ -302,7 +335,7 @@ fun InteractiveLeaveBuilderSection(
               lineHeight = 14.sp,
               fontWeight = FontWeight.Bold,
               fontFamily = JetBrainsMonoFontFamily,
-              color = if (analysis.isFullyCompliant) EmeraldOptimal else StatusAlertRed,
+              color = ruleBadgeColor,
               maxLines = 1,
               softWrap = false
             )
@@ -381,22 +414,26 @@ fun InteractiveLeaveBuilderSection(
               modifier = Modifier.weight(1f)
             )
             if (draftBlocks.isNotEmpty()) {
-              Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
+              Box(
                 modifier = Modifier
-                  .clip(RoundedCornerShape(8.dp))
+                  .neumorphicExtruded(
+                    shape = IosSharpMicroShape,
+                    elevation = 2.dp,
+                    blurRadius = 4.dp,
+                    borderAlpha = 0.25f,
+                    neu = neu
+                  )
                   .clickable { draftBlocks.clear() }
                   .testTag("clear_leave_builder_button")
               ) {
                 Row(
-                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                  modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                   verticalAlignment = Alignment.CenterVertically
                 ) {
                   Icon(
                     imageVector = Icons.Default.DeleteSweep,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = neu.textSecondary,
                     modifier = Modifier.size(13.dp)
                   )
                   Spacer(modifier = Modifier.width(4.dp))
@@ -404,7 +441,7 @@ fun InteractiveLeaveBuilderSection(
                     text = "Clear (${draftBlocks.size})",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = neu.textSecondary
                   )
                 }
               }
@@ -415,22 +452,18 @@ fun InteractiveLeaveBuilderSection(
             modifier = Modifier
               .fillMaxWidth()
               .horizontalScroll(rememberScrollState())
+              .padding(vertical = 4.dp)
               .height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
           ) {
             BuilderBlockBrush.entries.forEach { brush ->
               val isSelected = activeBrush == brush
               var chipCenterInRoot by remember { mutableStateOf(Offset.Zero) }
+              val brushDisplayColor = if (brush == BuilderBlockBrush.EL) elAccent else brush.color
 
-              Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (isSelected) brush.color else brush.color.copy(alpha = 0.12f),
-                border = BorderStroke(
-                  width = if (isSelected) 2.dp else 1.dp,
-                  color = brush.color
-                ),
+              Box(
                 modifier = Modifier
-                  .width(108.dp)
+                  .width(110.dp)
                   .fillMaxHeight()
                   .onGloballyPositioned { coords ->
                     val pos = coords.positionInRoot()
@@ -439,7 +472,27 @@ fun InteractiveLeaveBuilderSection(
                       pos.y + coords.size.height / 2f
                     )
                   }
-                  .clip(RoundedCornerShape(14.dp))
+                  .then(
+                    if (isSelected) {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpButtonShape,
+                        elevation = 3.dp,
+                        blurRadius = 6.dp,
+                        surfaceColor = brush.color,
+                        neu = neu
+                      )
+                    } else {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpButtonShape,
+                        elevation = 2.5.dp,
+                        blurRadius = 5.dp,
+                        accentTint = brush.color,
+                        accentTintAlpha = 0.06f,
+                        borderAlpha = 0.34f,
+                        neu = neu
+                      )
+                    }
+                  )
                   .clickable { activeBrush = brush }
                   .pointerInput(brush) {
                     detectDragGestures(
@@ -494,7 +547,7 @@ fun InteractiveLeaveBuilderSection(
                       fontWeight = FontWeight.Bold,
                       fontSize = 12.sp,
                       lineHeight = 15.sp,
-                      color = if (isSelected) Color.White else brush.color,
+                      color = if (isSelected) Color.White else if (brush == BuilderBlockBrush.EL) elAccent else brush.color,
                       maxLines = 1,
                       softWrap = false,
                       overflow = TextOverflow.Ellipsis,
@@ -507,7 +560,7 @@ fun InteractiveLeaveBuilderSection(
                         Icons.Default.DragIndicator
                       },
                       contentDescription = null,
-                      tint = if (isSelected) Color.White else brush.color,
+                      tint = if (isSelected) Color.White else if (brush == BuilderBlockBrush.EL) elAccent else brush.color,
                       modifier = Modifier.size(14.dp)
                     )
                   }
@@ -516,7 +569,7 @@ fun InteractiveLeaveBuilderSection(
                     text = brush.ruleSubtitle,
                     fontSize = 10.sp,
                     lineHeight = 12.sp,
-                    color = if (isSelected) Color.White.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isSelected) Color.White.copy(alpha = 0.9f) else neu.textSecondary,
                     maxLines = 1,
                     softWrap = false,
                     overflow = TextOverflow.Ellipsis
@@ -531,7 +584,8 @@ fun InteractiveLeaveBuilderSection(
         Row(
           modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 4.dp),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
           PresetScenarioChip(
@@ -569,10 +623,15 @@ fun InteractiveLeaveBuilderSection(
         }
 
         // 5. Month Navigator & Drop-Target Calendar Grid
-        Surface(
-          shape = RoundedCornerShape(20.dp),
-          color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-          modifier = Modifier.fillMaxWidth()
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 3.dp,
+              blurRadius = 6.dp,
+              neu = neu
+            )
         ) {
           Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -729,22 +788,23 @@ fun InteractiveLeaveBuilderSection(
         }
 
         // 6. Real-Time TN Govt Compliance & Earned Leave Optimization Feedback Box
-        Surface(
-          shape = RoundedCornerShape(18.dp),
-          color = when {
-            !analysis.isFullyCompliant -> StatusAlertRed.copy(alpha = 0.1f)
-            analysis.elTrappedInterveningHolidayDays > 0 -> BadgePlGold.copy(alpha = 0.12f)
-            else -> EmeraldOptimal.copy(alpha = 0.1f)
-          },
-          border = BorderStroke(
-            1.dp,
-            when {
-              !analysis.isFullyCompliant -> StatusAlertRed.copy(alpha = 0.4f)
-              analysis.elTrappedInterveningHolidayDays > 0 -> BadgePlGold.copy(alpha = 0.4f)
-              else -> EmeraldOptimal.copy(alpha = 0.35f)
-            }
-          ),
-          modifier = Modifier.fillMaxWidth()
+        val feedbackAccent = when {
+          !analysis.isFullyCompliant -> StatusAlertRed
+          analysis.elTrappedInterveningHolidayDays > 0 -> BadgePlGold
+          else -> EmeraldOptimal
+        }
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = feedbackAccent,
+              accentTintAlpha = 0.08f,
+              borderColor = feedbackAccent.copy(alpha = 0.35f),
+              neu = neu
+            )
         ) {
           Column(
             modifier = Modifier.padding(14.dp),
@@ -758,11 +818,7 @@ fun InteractiveLeaveBuilderSection(
                   else -> Icons.Default.Verified
                 },
                 contentDescription = null,
-                tint = when {
-                  !analysis.isFullyCompliant -> StatusAlertRed
-                  analysis.elTrappedInterveningHolidayDays > 0 -> BadgePlGold
-                  else -> EmeraldOptimal
-                },
+                tint = feedbackAccent,
                 modifier = Modifier.size(18.dp)
               )
               Spacer(modifier = Modifier.width(8.dp))
@@ -771,11 +827,7 @@ fun InteractiveLeaveBuilderSection(
                 style = MaterialTheme.typography.titleMedium,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = when {
-                  !analysis.isFullyCompliant -> StatusAlertRed
-                  analysis.elTrappedInterveningHolidayDays > 0 -> BadgePlGold
-                  else -> EmeraldOptimal
-                }
+                color = feedbackAccent
               )
             }
 
@@ -794,7 +846,7 @@ fun InteractiveLeaveBuilderSection(
               Text(
                 text = "• $warning",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = neu.textPrimary,
                 fontSize = 12.sp,
                 lineHeight = 16.sp
               )
@@ -810,10 +862,10 @@ fun InteractiveLeaveBuilderSection(
             }
           },
           enabled = draftBlocks.isNotEmpty() && analysis.isFullyCompliant,
-          shape = RoundedCornerShape(14.dp),
+          shape = IosSharpButtonShape,
           colors = ButtonDefaults.buttonColors(
             containerColor = EmeraldOptimal,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
+            disabledContainerColor = neu.surfaceInset
           ),
           modifier = Modifier
             .fillMaxWidth()
@@ -845,11 +897,7 @@ fun InteractiveLeaveBuilderSection(
     if (isDraggingBlock && draggedBrush != null) {
       val brush = draggedBrush!!
       val localOffset = dragPointerInRoot - containerOriginInRoot
-      Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = brush.color,
-        shadowElevation = 10.dp,
-        border = BorderStroke(2.dp, Color.White),
+      Box(
         modifier = Modifier
           .offset {
             IntOffset(
@@ -858,6 +906,13 @@ fun InteractiveLeaveBuilderSection(
             )
           }
           .zIndex(20f)
+          .neumorphicExtruded(
+            shape = IosSharpButtonShape,
+            elevation = 6.dp,
+            blurRadius = 10.dp,
+            surfaceColor = brush.color,
+            neu = neu
+          )
       ) {
         Row(
           modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -895,25 +950,15 @@ private fun BuilderCalendarDayCell(
   onClickCell: () -> Unit,
   modifier: Modifier = Modifier
 ) {
-  val bgColor = when {
-    isHoveredDropTarget -> EmeraldOptimal.copy(alpha = 0.35f)
-    draftedCat != null -> categoryBuilderColor(draftedCat)
-    isTrappedEl -> StatusAlertRed.copy(alpha = 0.22f)
-    isFreeAttached -> EmeraldOptimal.copy(alpha = 0.18f)
-    ghName != null -> BadgePlGold.copy(alpha = 0.18f)
-    rhName != null -> Color(0xFF0D9488).copy(alpha = 0.15f)
-    isWeekend -> MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
-    else -> MaterialTheme.colorScheme.surface
-  }
-
-  val borderColor = when {
+  val neu = LocalNeumorphicColors.current
+  val cellAccent = when {
     isHoveredDropTarget -> EmeraldOptimal
     draftedCat != null -> categoryBuilderColor(draftedCat)
     isTrappedEl -> StatusAlertRed
     isFreeAttached -> EmeraldOptimal
     ghName != null -> BadgePlGold
     rhName != null -> Color(0xFF0D9488)
-    else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+    else -> null
   }
 
   val badgeLabel = when {
@@ -927,16 +972,39 @@ private fun BuilderCalendarDayCell(
     else -> ""
   }
 
-  Surface(
-    shape = RoundedCornerShape(10.dp),
-    color = bgColor,
-    border = BorderStroke(if (isHoveredDropTarget || draftedCat != null || isTrappedEl) 1.5.dp else 0.8.dp, borderColor),
+  Box(
     modifier = modifier
       .aspectRatio(0.95f)
       .onGloballyPositioned { coords ->
         onRegisterBounds(coords.boundsInRoot())
       }
-      .clip(RoundedCornerShape(10.dp))
+      .then(
+        when {
+          draftedCat != null -> Modifier.neumorphicExtruded(
+            shape = IosSharpMicroShape,
+            elevation = 2.dp,
+            blurRadius = 4.dp,
+            surfaceColor = categoryBuilderColor(draftedCat),
+            neu = neu
+          )
+          cellAccent != null -> Modifier.neumorphicInset(
+            shape = IosSharpMicroShape,
+            depth = 1.5.dp,
+            blurRadius = 3.dp,
+            accentTint = cellAccent,
+            accentTintAlpha = if (isHoveredDropTarget) 0.25f else 0.12f,
+            borderColor = cellAccent.copy(alpha = 0.50f),
+            neu = neu
+          )
+          else -> Modifier.neumorphicExtruded(
+            shape = IosSharpMicroShape,
+            elevation = 1.5.dp,
+            blurRadius = 3.dp,
+            borderAlpha = 0.18f,
+            neu = neu
+          )
+        }
+      )
       .clickable { onClickCell() }
       .testTag("builder_day_$dateIso")
   ) {
@@ -957,7 +1025,7 @@ private fun BuilderCalendarDayCell(
         } else if (isTrappedEl) {
           StatusAlertRed
         } else {
-          MaterialTheme.colorScheme.onSurface
+          neu.textPrimary
         }
       )
 
@@ -974,7 +1042,7 @@ private fun BuilderCalendarDayCell(
             isFreeAttached -> EmeraldOptimal
             ghName != null -> BadgePlGold
             rhName != null -> Color(0xFF0D9488)
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
+            else -> neu.textSecondary
           },
           maxLines = 1,
           softWrap = false,
@@ -993,11 +1061,17 @@ private fun BuilderTelemetryPill(
   accent: Color,
   modifier: Modifier = Modifier
 ) {
-  Surface(
-    shape = RoundedCornerShape(14.dp),
-    color = accent.copy(alpha = 0.1f),
-    border = BorderStroke(1.dp, accent.copy(alpha = 0.3f)),
-    modifier = modifier
+  val neu = LocalNeumorphicColors.current
+  Box(
+    modifier = modifier.neumorphicInset(
+      shape = IosSharpButtonShape,
+      depth = 2.dp,
+      blurRadius = 4.dp,
+      accentTint = accent,
+      accentTintAlpha = 0.08f,
+      borderColor = accent.copy(alpha = 0.28f),
+      neu = neu
+    )
   ) {
     Column(
       modifier = Modifier
@@ -1009,7 +1083,7 @@ private fun BuilderTelemetryPill(
         text = label,
         fontSize = 9.sp,
         lineHeight = 11.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -1029,7 +1103,7 @@ private fun BuilderTelemetryPill(
         text = sub,
         fontSize = 9.sp,
         lineHeight = 11.sp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = neu.textSecondary,
         maxLines = 1,
         softWrap = false,
         overflow = TextOverflow.Ellipsis
@@ -1043,24 +1117,31 @@ private fun PresetScenarioChip(
   label: String,
   onClick: () -> Unit
 ) {
-  Surface(
-    shape = RoundedCornerShape(10.dp),
-    color = MaterialTheme.colorScheme.surfaceVariant,
+  val neu = LocalNeumorphicColors.current
+  Box(
     modifier = Modifier
-      .height(30.dp)
-      .clip(RoundedCornerShape(10.dp))
+      .height(32.dp)
+      .neumorphicExtruded(
+        shape = IosSharpBadgeShape,
+        elevation = 2.dp,
+        blurRadius = 4.dp,
+        borderAlpha = 0.24f,
+        neu = neu
+      )
       .clickable { onClick() }
   ) {
     Box(
-      modifier = Modifier.padding(horizontal = 10.dp),
+      modifier = Modifier
+        .fillMaxHeight()
+        .padding(horizontal = 10.dp),
       contentAlignment = Alignment.Center
     ) {
       Text(
         text = label,
         fontSize = 11.sp,
         lineHeight = 14.sp,
-        fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.SemiBold,
+        color = neu.primaryAccent,
         maxLines = 1,
         softWrap = false
       )

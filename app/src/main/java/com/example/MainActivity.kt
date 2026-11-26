@@ -192,6 +192,10 @@ fun MainFeatureHost(
   val aiRecommendationState by viewModel.aiRecommendationState.collectAsStateWithLifecycle()
   val holidaySyncStatus by viewModel.holidaySyncStatus.collectAsStateWithLifecycle()
   val lastDeletedRecord by viewModel.lastDeletedRecord.collectAsStateWithLifecycle()
+  val optimizerConstraints by viewModel.optimizerConstraints.collectAsStateWithLifecycle()
+  val tentativeHolds by viewModel.tentativeHolds.collectAsStateWithLifecycle()
+  val builderPreloadRequest by viewModel.builderPreloadRequest.collectAsStateWithLifecycle()
+  val optimizerDeepLinkGoal by viewModel.optimizerDeepLinkGoal.collectAsStateWithLifecycle()
   var currentTab by rememberSaveable { mutableIntStateOf(0) }
   var calendarInitialSubMode by rememberSaveable { mutableIntStateOf(0) }
   var showAddDialog by rememberSaveable { mutableStateOf(false) }
@@ -429,8 +433,14 @@ fun MainFeatureHost(
                 )
               },
               onShowStatusBanner = { msg -> viewModel.showBannerMessage(msg) },
-              onProfileUpdated = { profileRefreshTick++ },
-              onClose = { showEnterpriseSettingsDialog = false }
+              onProfileUpdated = {
+                profileRefreshTick++
+                viewModel.syncOptimizerSettingsFromStore()
+              },
+              onClose = {
+                viewModel.syncOptimizerSettingsFromStore()
+                showEnterpriseSettingsDialog = false
+              }
             )
           } else when (currentTab) {
             0 -> OverviewTabScreen(
@@ -540,7 +550,17 @@ fun MainFeatureHost(
                   notes = notes,
                   isHalfDay = false
                 )
-              }
+              },
+              optimizerConstraints = optimizerConstraints,
+              onUpdateOptimizerConstraints = { updated -> viewModel.updateOptimizerConstraints(updated) },
+              tentativeHolds = tentativeHolds,
+              deepLinkGoalHint = optimizerDeepLinkGoal,
+              onConsumeDeepLink = { viewModel.consumeOptimizerDeepLink() },
+              onApplyPortfolio = { recs -> viewModel.applyPortfolioToLedger(recs) },
+              onToggleTentativeHold = { rec -> viewModel.toggleTentativeHoldForBridge(rec) },
+              onSimulateInBuilder = { rec -> viewModel.simulateRecInBuilder(rec) },
+              pendingBuilderPreload = builderPreloadRequest,
+              onBuilderPreloadConsumed = { viewModel.consumeBuilderPreload() }
             )
             4 -> IosCalendarTabScreen(
               state = state,
@@ -559,7 +579,12 @@ fun MainFeatureHost(
               onTriggerHolidaySync = { customUrl -> viewModel.triggerHolidaySync(customUrl) },
               onAddLocalHolidayToRoom = { item -> viewModel.addLocalHolidayToRoom(item) },
               initialSubMode = calendarInitialSubMode,
-              onApplyBridge = { viewModel.applySmartBridgeToLedger(it) }
+              onApplyBridge = { viewModel.applySmartBridgeToLedger(it) },
+              tentativeHolds = tentativeHolds,
+              onPromoteTentativeHold = { hold -> viewModel.promoteTentativeHoldToLedger(hold) },
+              onClearTentativeHold = { dateIso -> viewModel.clearTentativeHold(dateIso) },
+              pendingBuilderPreload = builderPreloadRequest,
+              onBuilderPreloadConsumed = { viewModel.consumeBuilderPreload() }
             )
             5 -> AiAdvisorChatTabScreen(
               leaveState = state,
@@ -612,7 +637,12 @@ fun MainFeatureHost(
               aiState = aiRecommendationState,
               onDismiss = { showNotificationCenterDialog = false },
               onApplyBridge = { viewModel.applySmartBridgeToLedger(it) },
-              onShowStatusBanner = { msg -> viewModel.showBannerMessage(msg) }
+              onShowStatusBanner = { msg -> viewModel.showBannerMessage(msg) },
+              onOptimizeInAi = { goalHint ->
+                showEnterpriseSettingsDialog = false
+                currentTab = 3
+                viewModel.triggerOptimizerDeepLink(goalHint)
+              }
             )
           }
           if (showBiometricSettingsDialog) {
