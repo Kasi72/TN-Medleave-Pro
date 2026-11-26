@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddLink
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -51,6 +53,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.ColAuditStatus
@@ -65,11 +68,15 @@ import com.example.ui.theme.BadgePlGold
 import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.IosSharpCardShape
+import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
 import com.example.ui.theme.StatusVerifiedGreen
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 @Composable
 fun ColGhAuditTabScreen(
@@ -346,106 +353,144 @@ fun ColGhAuditTabScreen(
           }
         }
 
-        // Filter Pills by Audit Status (Uniform 38.dp Height)
+        // Filter Pills by Audit Status (Neumorphic Soft-UI Pills)
         item {
+          val filterNeu = LocalNeumorphicColors.current
           Row(
             modifier = Modifier
               .fillMaxWidth()
-              .horizontalScroll(rememberScrollState()),
+              .horizontalScroll(rememberScrollState())
+              .padding(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
             val allSel = selectedStatusFilter == null
-            Surface(
-              shape = RoundedCornerShape(14.dp),
-              color = if (allSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+            Box(
               modifier = Modifier
-                .height(38.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .clickable { selectedStatusFilter = null }
-            ) {
-              Box(
-                modifier = Modifier.padding(horizontal = 14.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Text(
-                  text = "All (${audit.items.size})",
-                  color = if (allSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                  fontWeight = FontWeight.Bold,
-                  fontSize = 12.sp,
-                  maxLines = 1,
-                  softWrap = false
+                .height(36.dp)
+                .then(
+                  if (allSel) {
+                    Modifier.neumorphicExtruded(
+                      shape = IosSharpBadgeShape,
+                      elevation = 2.5.dp,
+                      blurRadius = 5.dp,
+                      surfaceColor = filterNeu.primaryAccent,
+                      neu = filterNeu
+                    )
+                  } else {
+                    Modifier.neumorphicInset(
+                      shape = IosSharpBadgeShape,
+                      depth = 2.dp,
+                      blurRadius = 4.dp,
+                      neu = filterNeu
+                    )
+                  }
                 )
-              }
+                .clickable { selectedStatusFilter = null },
+              contentAlignment = Alignment.Center
+            ) {
+              Text(
+                text = "All (${audit.items.size})",
+                color = if (allSel) Color.White else filterNeu.textPrimary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(horizontal = 14.dp)
+              )
             }
 
             val statusFilters = listOf(
-              Triple(ColAuditStatus.VERIFIED_MATCH, "Verified (${audit.fullyAccountedColCount})", StatusVerifiedGreen),
-              Triple(ColAuditStatus.UNPAIRED_COL, "Unpaired COL", StatusAlertRed),
-              Triple(ColAuditStatus.DOUBLE_CLAIMED_ALERT, "Double-Claimed (${audit.doubleClaimedCount})", StatusAlertRed),
-              Triple(ColAuditStatus.MISSING_IN_GH_COLUMN, "Missing in GH Col", StatusPendingOrange),
-              Triple(ColAuditStatus.AVAILABLE_GH_CREDIT, "Unused GH (${audit.availableUnusedGhCount})", BadgeGhLime)
+              Triple(ColAuditStatus.VERIFIED_MATCH, "Verified (${audit.fullyAccountedColCount})", if (filterNeu.isDark) Color(0xFF4ADE80) else Color(0xFF15803D)),
+              Triple(ColAuditStatus.UNPAIRED_COL, "Unpaired COL", if (filterNeu.isDark) Color(0xFFF87171) else Color(0xFFB91C1C)),
+              Triple(ColAuditStatus.DOUBLE_CLAIMED_ALERT, "Double-Claimed (${audit.doubleClaimedCount})", if (filterNeu.isDark) Color(0xFFF87171) else Color(0xFFB91C1C)),
+              Triple(ColAuditStatus.MISSING_IN_GH_COLUMN, "Missing GH", if (filterNeu.isDark) Color(0xFFFBBF24) else Color(0xFFB45309)),
+              Triple(ColAuditStatus.AVAILABLE_GH_CREDIT, "Unused GH (${audit.availableUnusedGhCount})", if (filterNeu.isDark) Color(0xFF34D399) else Color(0xFF047857))
             )
 
             statusFilters.forEach { (st, label, color) ->
               val sel = selectedStatusFilter == st
-              Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (sel) color else color.copy(alpha = 0.13f),
+              Box(
                 modifier = Modifier
-                  .height(38.dp)
-                  .clip(RoundedCornerShape(14.dp))
-                  .clickable { selectedStatusFilter = if (sel) null else st }
-              ) {
-                Box(
-                  modifier = Modifier.padding(horizontal = 14.dp),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Text(
-                    text = label,
-                    color = if (sel) Color.White else color,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    softWrap = false
+                  .height(36.dp)
+                  .then(
+                    if (sel) {
+                      Modifier.neumorphicExtruded(
+                        shape = IosSharpBadgeShape,
+                        elevation = 2.5.dp,
+                        blurRadius = 5.dp,
+                        surfaceColor = color,
+                        neu = filterNeu
+                      )
+                    } else {
+                      Modifier.neumorphicInset(
+                        shape = IosSharpBadgeShape,
+                        depth = 2.dp,
+                        blurRadius = 4.dp,
+                        accentTint = color,
+                        accentTintAlpha = 0.08f,
+                        borderColor = color.copy(alpha = 0.28f),
+                        neu = filterNeu
+                      )
+                    }
                   )
-                }
+                  .clickable { selectedStatusFilter = if (sel) null else st },
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = label,
+                  color = if (sel) Color.White else color,
+                  fontWeight = FontWeight.Bold,
+                  fontSize = 12.sp,
+                  maxLines = 1,
+                  softWrap = false,
+                  modifier = Modifier.padding(horizontal = 14.dp)
+                )
               }
             }
           }
         }
 
-        // Column Header Legend (COL Date <-> In Lieu Date <-> GH Worked Date)
+        // Column Header Legend
         item {
-          Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-            modifier = Modifier.fillMaxWidth()
+          val legendNeu = LocalNeumorphicColors.current
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpButtonShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                neu = legendNeu
+              )
           ) {
             Row(
               modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = 14.dp, vertical = 9.dp),
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically
             ) {
               Text(
-                text = "COL TAKEN",
+                text = "COL AVAILED",
                 style = MaterialTheme.typography.labelMedium,
-                color = BadgeColCyan,
-                modifier = Modifier.weight(1f)
+                fontFamily = JetBrainsMonoFontFamily,
+                fontSize = 10.sp,
+                color = if (legendNeu.isDark) Color(0xFF22D3EE) else Color(0xFF0E7490),
+                fontWeight = FontWeight.ExtraBold
               )
               Text(
-                text = "IN LIEU CITED",
+                text = "↔",
                 style = MaterialTheme.typography.labelMedium,
-                color = BadgeInLieuLavender,
-                modifier = Modifier.weight(1f)
+                color = legendNeu.textSecondary
               )
               Text(
-                text = "GH WORKED",
+                text = "GH DUTY / IN LIEU",
                 style = MaterialTheme.typography.labelMedium,
-                color = BadgeGhLime,
-                modifier = Modifier.weight(1f)
+                fontFamily = JetBrainsMonoFontFamily,
+                fontSize = 10.sp,
+                color = legendNeu.primaryAccent,
+                fontWeight = FontWeight.ExtraBold
               )
             }
           }
@@ -771,311 +816,589 @@ private fun ColGhAuditSquircleCard(
   onSyncInLieuToGhColumn: () -> Unit,
   onClaimUnusedGhCredit: () -> Unit
 ) {
-  val (borderColor, badgeBg, statusIcon) = when (item.status) {
-    ColAuditStatus.VERIFIED_MATCH -> Triple(StatusVerifiedGreen, StatusVerifiedGreen, Icons.Default.CheckCircle)
-    ColAuditStatus.DOUBLE_CLAIMED_ALERT -> Triple(StatusAlertRed, StatusAlertRed, Icons.Default.ErrorOutline)
-    ColAuditStatus.UNPAIRED_COL -> Triple(StatusAlertRed, StatusAlertRed, Icons.Default.ErrorOutline)
-    ColAuditStatus.MISSING_IN_GH_COLUMN -> Triple(StatusPendingOrange, StatusPendingOrange, Icons.Default.WarningAmber)
-    ColAuditStatus.AVAILABLE_GH_CREDIT -> Triple(BadgeGhLime, BadgeGhLime, Icons.Default.EventAvailable)
+  val neu = LocalNeumorphicColors.current
+  val greenContrast = if (neu.isDark) Color(0xFF4ADE80) else Color(0xFF047857)
+  val cyanContrast = if (neu.isDark) Color(0xFF22D3EE) else Color(0xFF0E7490)
+  val amberContrast = if (neu.isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
+  val redContrast = if (neu.isDark) Color(0xFFF87171) else Color(0xFFB91C1C)
+
+  val (statusAccent, statusShortTitle, statusIcon) = when (item.status) {
+    ColAuditStatus.VERIFIED_MATCH -> Triple(greenContrast, "VERIFIED 1:1 MATCH", Icons.Default.CheckCircle)
+    ColAuditStatus.DOUBLE_CLAIMED_ALERT -> Triple(redContrast, "DOUBLE-CLAIMED DUTY", Icons.Default.ErrorOutline)
+    ColAuditStatus.UNPAIRED_COL -> Triple(redContrast, "UNPAIRED COL LEAVE", Icons.Default.ErrorOutline)
+    ColAuditStatus.MISSING_IN_GH_COLUMN -> Triple(amberContrast, "MISSING IN GH LOG", Icons.Default.WarningAmber)
+    ColAuditStatus.AVAILABLE_GH_CREDIT -> Triple(greenContrast, "UNCLAIMED GH CREDIT", Icons.Default.EventAvailable)
   }
 
-  Surface(
-    shape = RoundedCornerShape(22.dp),
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 2.dp,
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .border(1.2.dp, borderColor.copy(alpha = 0.45f), RoundedCornerShape(22.dp))
+      .neumorphicExtruded(
+        shape = IosSharpCardShape,
+        elevation = 5.dp,
+        blurRadius = 10.dp,
+        accentTint = statusAccent,
+        accentTintAlpha = 0.03f,
+        borderAlpha = 0.30f,
+        neu = neu
+      )
   ) {
-    Column(modifier = Modifier.padding(16.dp)) {
-      // Status Badge Row
+    Column(
+      modifier = Modifier.padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+      // Top Status Header Row
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Surface(
-          shape = RoundedCornerShape(10.dp),
-          color = badgeBg.copy(alpha = 0.14f),
-          modifier = Modifier.weight(1f, fill = false)
+        Box(
+          modifier = Modifier
+            .weight(1f, fill = false)
+            .neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = statusAccent,
+              accentTintAlpha = 0.12f,
+              borderColor = statusAccent.copy(alpha = 0.40f),
+              neu = neu
+            )
         ) {
           Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
           ) {
             Icon(
               imageVector = statusIcon,
               contentDescription = null,
-              tint = badgeBg,
+              tint = statusAccent,
               modifier = Modifier.size(14.dp)
             )
-            Spacer(modifier = Modifier.width(6.dp))
             Text(
-              text = item.status.label,
-              style = MaterialTheme.typography.labelLarge,
-              color = badgeBg,
-              fontSize = 11.sp,
-              lineHeight = 14.sp,
+              text = statusShortTitle,
+              fontFamily = JetBrainsMonoFontFamily,
+              color = statusAccent,
+              fontSize = 10.5.sp,
+              lineHeight = 13.sp,
+              fontWeight = FontWeight.ExtraBold,
               maxLines = 1,
               softWrap = false,
-              overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+              overflow = TextOverflow.Ellipsis
             )
           }
         }
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Text(
-          text = "Year ${item.year}",
-          style = MaterialTheme.typography.labelMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant,
-          maxLines = 1,
-          softWrap = false
-        )
-      }
-
-      Spacer(modifier = Modifier.height(12.dp))
-
-      // 3-Column Visual Alignment: COL Date <-> In Lieu Date <-> GH Worked Date
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .clip(RoundedCornerShape(14.dp))
-          .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-          .padding(12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = "COL Leave",
-            fontSize = 10.sp,
-            color = BadgeColCyan,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            softWrap = false
-          )
-          Text(
-            text = ClinicalDateFormatter.formatFriendlyDate(item.colDateIso),
-            fontFamily = JetBrainsMonoFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            softWrap = false,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-          )
-          ClinicalDateFormatter.dayOfWeekShort(item.colDateIso)?.let { dow ->
-            Text(
-              text = "$dow • COL Availed",
-              fontFamily = JetBrainsMonoFontFamily,
-              fontSize = 9.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              maxLines = 1,
-              softWrap = false
-            )
+        if (item.status == ColAuditStatus.AVAILABLE_GH_CREDIT) {
+          val parsedDutyDate = runCatching { LocalDate.parse(item.ghWorkedDateIso.trim()) }.getOrNull()
+          val expiryDate = parsedDutyDate?.plusMonths(6)
+          val daysLeft = expiryDate?.let { ChronoUnit.DAYS.between(LocalDate.now(), it) }
+          val (countdownLabel, countdownColor) = when {
+            daysLeft == null -> "FY ${item.year}" to neu.textSecondary
+            daysLeft < 0 -> "EXPIRED" to redContrast
+            daysLeft <= 30 -> "${daysLeft}d LEFT" to amberContrast
+            else -> "${daysLeft}d LEFT" to greenContrast
           }
-        }
-
-        Icon(
-          imageVector = Icons.Default.Link,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.onSurfaceVariant,
-          modifier = Modifier
-            .padding(horizontal = 4.dp)
-            .size(16.dp)
-        )
-
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = "In Lieu Of",
-            fontSize = 10.sp,
-            color = BadgeInLieuLavender,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            softWrap = false
-          )
-          Text(
-            text = ClinicalDateFormatter.formatFriendlyDate(item.inLieuDateIso),
-            fontFamily = JetBrainsMonoFontFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            softWrap = false,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-          )
-          ClinicalDateFormatter.dayOfWeekShort(item.inLieuDateIso)?.let { dow ->
-            Text(
-              text = "$dow • Cited Duty",
-              fontFamily = JetBrainsMonoFontFamily,
-              fontSize = 9.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              maxLines = 1,
-              softWrap = false
-            )
-          }
-        }
-
-        Icon(
-          imageVector = Icons.Default.Link,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.onSurfaceVariant,
-          modifier = Modifier
-            .padding(horizontal = 4.dp)
-            .size(16.dp)
-        )
-
-        Column(modifier = Modifier.weight(1f)) {
-          Text(
-            text = "GH Worked",
-            fontSize = 10.sp,
-            color = BadgeGhLime,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            softWrap = false
-          )
-          Text(
-            text = ClinicalDateFormatter.formatFriendlyDate(item.ghWorkedDateIso),
-            fontFamily = JetBrainsMonoFontFamily,
-            fontWeight = FontWeight.Bold,
-            fontSize = 12.sp,
-            color = if (item.status == ColAuditStatus.VERIFIED_MATCH || item.status == ColAuditStatus.AVAILABLE_GH_CREDIT) {
-              BadgeGhLime
-            } else {
-              StatusAlertRed
-            },
-            maxLines = 1,
-            softWrap = false,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-          )
-          ClinicalDateFormatter.dayOfWeekShort(item.ghWorkedDateIso)?.let { dow ->
-            Text(
-              text = "$dow • Hospital Duty",
-              fontFamily = JetBrainsMonoFontFamily,
-              fontSize = 9.sp,
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              maxLines = 1,
-              softWrap = false
-            )
-          }
-        }
-      }
-
-      Spacer(modifier = Modifier.height(8.dp))
-
-      Text(
-        text = item.auditExplanation,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontSize = 12.sp
-      )
-
-      // Action Buttons for Unaccounted / Missing / Unused GH items
-      when (item.status) {
-        ColAuditStatus.UNPAIRED_COL,
-        ColAuditStatus.DOUBLE_CLAIMED_ALERT -> {
-          Spacer(modifier = Modifier.height(10.dp))
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (item.suggestedFixGhDateIso.isNotEmpty()) {
-              Button(
-                onClick = onQuickPairSuggested,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
-                modifier = Modifier.weight(1f)
-              ) {
-                Icon(Icons.Default.AddLink, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                  text = "Pair w/ GH (${ClinicalDateFormatter.formatFriendlyDate(item.suggestedFixGhDateIso)})",
-                  fontSize = 11.sp,
-                  fontWeight = FontWeight.Bold,
-                  maxLines = 1,
-                  softWrap = false
-                )
-              }
-            }
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = MaterialTheme.colorScheme.primaryContainer,
-              modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .clickable { onOpenCustomPairModal() }
-            ) {
-              Text(
-                text = "Choose GH",
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
-              )
-            }
-          }
-        }
-
-        ColAuditStatus.MISSING_IN_GH_COLUMN -> {
-          Spacer(modifier = Modifier.height(10.dp))
-          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (item.suggestedFixGhDateIso.isNotEmpty()) {
-              Button(
-                onClick = onQuickPairSuggested,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
-                modifier = Modifier.weight(1f)
-              ) {
-                Text(
-                  text = "Pair w/ GH (${ClinicalDateFormatter.formatFriendlyDate(item.suggestedFixGhDateIso)})",
-                  fontSize = 11.sp,
-                  fontWeight = FontWeight.Bold,
-                  maxLines = 1,
-                  softWrap = false
-                )
-              }
-            }
-            Surface(
-              shape = RoundedCornerShape(12.dp),
-              color = BadgeGhLime.copy(alpha = 0.16f),
-              modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .clickable { onSyncInLieuToGhColumn() }
-            ) {
-              Text(
-                text = "+ Add ${ClinicalDateFormatter.formatFriendlyDate(item.inLieuDateIso)} to GH Col",
-                color = BadgeGhLime,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
-              )
-            }
-          }
-        }
-
-        ColAuditStatus.AVAILABLE_GH_CREDIT -> {
-          Spacer(modifier = Modifier.height(10.dp))
-          Button(
-            onClick = onClaimUnusedGhCredit,
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = BadgeColCyan),
-            modifier = Modifier.fillMaxWidth()
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
           ) {
-            Icon(Icons.Default.EventAvailable, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
+            Box(
+              modifier = Modifier
+                .neumorphicInset(
+                  shape = IosSharpBadgeShape,
+                  depth = 2.dp,
+                  blurRadius = 4.dp,
+                  accentTint = countdownColor,
+                  accentTintAlpha = 0.12f,
+                  borderColor = countdownColor.copy(alpha = 0.35f),
+                  neu = neu
+                )
+            ) {
+              Text(
+                text = countdownLabel,
+                fontFamily = JetBrainsMonoFontFamily,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = countdownColor,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+              )
+            }
             Text(
-              text = "Avail New COL Leave Against GH (${ClinicalDateFormatter.formatFriendlyDate(item.ghWorkedDateIso)})",
-              fontSize = 12.sp,
+              text = "FY ${item.year}",
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 11.sp,
               fontWeight = FontWeight.Bold,
+              color = neu.textSecondary,
               maxLines = 1,
               softWrap = false
             )
           }
+        } else {
+          Text(
+            text = "FY ${item.year}",
+            fontFamily = JetBrainsMonoFontFamily,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = neu.textSecondary,
+            maxLines = 1,
+            softWrap = false
+          )
+        }
+      }
+
+      if (item.status == ColAuditStatus.AVAILABLE_GH_CREDIT) {
+        // ================================================================
+        // CRISP LAYOUT FOR UNUSED GH WORKED CREDIT (Zero Truncation)
+        // ================================================================
+        val parsedDutyDate = runCatching { LocalDate.parse(item.ghWorkedDateIso.trim()) }.getOrNull()
+        val dutyDateFriendly = ClinicalDateFormatter.formatFriendlyDate(item.ghWorkedDateIso)
+        val dutyDow = parsedDutyDate?.dayOfWeek?.getDisplayName(
+          java.time.format.TextStyle.FULL,
+          java.util.Locale.ENGLISH
+        ) ?: "Govt. Holiday"
+        val expiryFriendly = parsedDutyDate?.plusMonths(6)?.let {
+          ClinicalDateFormatter.formatFriendlyDate(it.toString())
+        } ?: "6 Months"
+        val dutySourceNote = item.ghDutyNotes.ifBlank {
+          item.auditExplanation
+            .substringAfter("(", "")
+            .substringBefore(")", "")
+            .ifBlank { "Hospital GH Duty" }
         }
 
-        ColAuditStatus.VERIFIED_MATCH -> {
-          // Already 100% accounted
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = statusAccent,
+              accentTintAlpha = 0.04f,
+              borderColor = neu.hairlineDivider,
+              neu = neu
+            )
+        ) {
+          Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+          ) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.Top
+            ) {
+              Column(
+                modifier = Modifier.weight(1.15f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+              ) {
+                Text(
+                  text = "GH DUTY PERFORMED",
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 9.5.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = statusAccent,
+                  letterSpacing = 0.4.sp,
+                  maxLines = 1,
+                  softWrap = false
+                )
+                Text(
+                  text = dutyDateFriendly,
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 16.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = neu.textPrimary,
+                  maxLines = 1,
+                  softWrap = false
+                )
+                Text(
+                  text = "$dutyDow • Hospital Duty",
+                  fontSize = 11.5.sp,
+                  color = neu.textSecondary,
+                  fontWeight = FontWeight.Medium,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
+                )
+              }
+
+              Spacer(modifier = Modifier.width(10.dp))
+
+              Column(
+                modifier = Modifier.weight(0.95f),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+              ) {
+                Text(
+                  text = "AVAIL BEFORE (180D)",
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 9.5.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = cyanContrast,
+                  letterSpacing = 0.4.sp,
+                  maxLines = 1,
+                  softWrap = false
+                )
+                Text(
+                  text = expiryFriendly,
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 14.5.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = neu.textPrimary,
+                  maxLines = 1,
+                  softWrap = false
+                )
+                Text(
+                  text = "Balance: 1.0 COL Day",
+                  fontSize = 11.sp,
+                  color = statusAccent,
+                  fontWeight = FontWeight.Bold,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
+            }
+
+            HorizontalDivider(color = neu.hairlineDivider)
+
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(6.dp)
+                  .clip(CircleShape)
+                  .background(statusAccent)
+              )
+              Text(
+                text = "$dutySourceNote • Ready to claim as 1-day COL off",
+                style = MaterialTheme.typography.bodySmall,
+                color = neu.textSecondary,
+                fontSize = 12.sp,
+                lineHeight = 16.sp
+              )
+            }
+          }
+        }
+
+        // Crisp, Zero-Truncation Action Button
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(46.dp)
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = 3.dp,
+              blurRadius = 6.dp,
+              surfaceColor = cyanContrast,
+              neu = neu
+            )
+            .clickable { onClaimUnusedGhCredit() },
+          contentAlignment = Alignment.Center
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 14.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Default.EventAvailable,
+              contentDescription = null,
+              tint = Color.White,
+              modifier = Modifier.size(17.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+              text = "Claim COL Leave ($dutyDateFriendly)",
+              fontSize = 13.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = Color.White,
+              maxLines = 1,
+              softWrap = false,
+              overflow = TextOverflow.Ellipsis
+            )
+          }
+        }
+      } else {
+        // ================================================================
+        // 2-COLUMN RECONCILIATION LAYOUT (Verified / Unpaired / Duplicate)
+        // ================================================================
+        val colFriendly = ClinicalDateFormatter.formatFriendlyDate(item.colDateIso)
+        val colDow = ClinicalDateFormatter.dayOfWeekShort(item.colDateIso) ?: "COL"
+        val ghHeadline = when (item.status) {
+          ColAuditStatus.VERIFIED_MATCH -> ClinicalDateFormatter.formatFriendlyDate(item.ghWorkedDateIso)
+          ColAuditStatus.DOUBLE_CLAIMED_ALERT -> "Duplicate Duty"
+          ColAuditStatus.MISSING_IN_GH_COLUMN -> "Not in GH Log"
+          ColAuditStatus.UNPAIRED_COL -> "Not Linked"
+          else -> item.ghWorkedDateIso
+        }
+        val ghSubline = when {
+          item.status == ColAuditStatus.VERIFIED_MATCH -> {
+            val dow = ClinicalDateFormatter.dayOfWeekShort(item.ghWorkedDateIso) ?: "GH"
+            "$dow • Hospital Duty"
+          }
+          item.inLieuDateIso.isNotBlank() && item.inLieuDateIso != "MISSING" && item.inLieuDateIso != "—" -> {
+            "In Lieu: ${ClinicalDateFormatter.formatFriendlyDate(item.inLieuDateIso)}"
+          }
+          else -> "No duty date cited"
+        }
+
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 2.5.dp,
+              blurRadius = 5.dp,
+              accentTint = statusAccent,
+              accentTintAlpha = 0.04f,
+              borderColor = neu.hairlineDivider,
+              neu = neu
+            )
+        ) {
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Column(
+              modifier = Modifier.weight(1f),
+              verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+              Text(
+                text = "COL AVAILED",
+                fontFamily = JetBrainsMonoFontFamily,
+                fontSize = 9.5.sp,
+                color = cyanContrast,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                softWrap = false
+              )
+              Text(
+                text = colFriendly,
+                fontFamily = JetBrainsMonoFontFamily,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 14.sp,
+                color = neu.textPrimary,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+              )
+              Text(
+                text = "$colDow • Leave Taken",
+                fontSize = 11.sp,
+                color = neu.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+
+            Box(
+              modifier = Modifier
+                .padding(horizontal = 8.dp)
+                .size(28.dp)
+                .neumorphicExtruded(
+                  shape = CircleShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  neu = neu
+                ),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                imageVector = Icons.Default.Link,
+                contentDescription = null,
+                tint = statusAccent,
+                modifier = Modifier.size(14.dp)
+              )
+            }
+
+            Column(
+              modifier = Modifier.weight(1f),
+              horizontalAlignment = Alignment.End,
+              verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+              Text(
+                text = "GH DUTY LINK",
+                fontFamily = JetBrainsMonoFontFamily,
+                fontSize = 9.5.sp,
+                color = statusAccent,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 1,
+                softWrap = false
+              )
+              Text(
+                text = ghHeadline,
+                fontFamily = JetBrainsMonoFontFamily,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 14.sp,
+                color = if (item.status == ColAuditStatus.VERIFIED_MATCH) greenContrast else statusAccent,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+              )
+              Text(
+                text = ghSubline,
+                fontSize = 11.sp,
+                color = neu.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+          }
+        }
+
+        Text(
+          text = item.auditExplanation,
+          style = MaterialTheme.typography.bodySmall,
+          color = neu.textSecondary,
+          fontSize = 12.sp,
+          lineHeight = 16.sp
+        )
+
+        // Action Buttons for Unaccounted / Missing items
+        when (item.status) {
+          ColAuditStatus.UNPAIRED_COL,
+          ColAuditStatus.DOUBLE_CLAIMED_ALERT -> {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              if (item.suggestedFixGhDateIso.isNotEmpty()) {
+                Box(
+                  modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 3.dp,
+                      blurRadius = 6.dp,
+                      surfaceColor = neu.primaryAccent,
+                      neu = neu
+                    )
+                    .clickable { onQuickPairSuggested() },
+                  contentAlignment = Alignment.Center
+                ) {
+                  Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(horizontal = 10.dp)
+                  ) {
+                    Icon(Icons.Default.AddLink, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                      text = "Pair (${ClinicalDateFormatter.formatFriendlyDate(item.suggestedFixGhDateIso)})",
+                      fontSize = 11.5.sp,
+                      fontWeight = FontWeight.ExtraBold,
+                      color = Color.White,
+                      maxLines = 1,
+                      softWrap = false,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                  }
+                }
+              }
+              Box(
+                modifier = Modifier
+                  .height(40.dp)
+                  .neumorphicExtruded(
+                    shape = IosSharpButtonShape,
+                    elevation = 2.5.dp,
+                    blurRadius = 5.dp,
+                    accentTint = cyanContrast,
+                    accentTintAlpha = 0.12f,
+                    borderAlpha = 0.35f,
+                    neu = neu
+                  )
+                  .clickable { onOpenCustomPairModal() },
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = "Choose GH",
+                  color = cyanContrast,
+                  fontWeight = FontWeight.ExtraBold,
+                  fontSize = 11.5.sp,
+                  maxLines = 1,
+                  softWrap = false,
+                  modifier = Modifier.padding(horizontal = 14.dp)
+                )
+              }
+            }
+          }
+
+          ColAuditStatus.MISSING_IN_GH_COLUMN -> {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              if (item.suggestedFixGhDateIso.isNotEmpty()) {
+                Box(
+                  modifier = Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .neumorphicExtruded(
+                      shape = IosSharpButtonShape,
+                      elevation = 3.dp,
+                      blurRadius = 6.dp,
+                      surfaceColor = neu.primaryAccent,
+                      neu = neu
+                    )
+                    .clickable { onQuickPairSuggested() },
+                  contentAlignment = Alignment.Center
+                ) {
+                  Text(
+                    text = "Pair (${ClinicalDateFormatter.formatFriendlyDate(item.suggestedFixGhDateIso)})",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 10.dp)
+                  )
+                }
+              }
+              Box(
+                modifier = Modifier
+                  .weight(1f)
+                  .height(40.dp)
+                  .neumorphicExtruded(
+                    shape = IosSharpButtonShape,
+                    elevation = 2.5.dp,
+                    blurRadius = 5.dp,
+                    accentTint = greenContrast,
+                    accentTintAlpha = 0.12f,
+                    borderAlpha = 0.35f,
+                    neu = neu
+                  )
+                  .clickable { onSyncInLieuToGhColumn() },
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = "+ Log ${ClinicalDateFormatter.formatFriendlyDate(item.inLieuDateIso)}",
+                  color = greenContrast,
+                  fontWeight = FontWeight.ExtraBold,
+                  fontSize = 11.5.sp,
+                  maxLines = 1,
+                  softWrap = false,
+                  overflow = TextOverflow.Ellipsis,
+                  modifier = Modifier.padding(horizontal = 10.dp)
+                )
+              }
+            }
+          }
+
+          ColAuditStatus.VERIFIED_MATCH,
+          ColAuditStatus.AVAILABLE_GH_CREDIT -> Unit
         }
       }
     }

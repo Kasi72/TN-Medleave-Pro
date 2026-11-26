@@ -262,7 +262,8 @@ data class ColGhAuditItem(
   val status: ColAuditStatus,
   val auditExplanation: String,
   val suggestedFixGhDateIso: String = "",
-  val suggestedFixGhRecordId: String = ""
+  val suggestedFixGhRecordId: String = "",
+  val ghDutyNotes: String = ""
 )
 
 data class ColGhAuditSummary(

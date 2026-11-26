@@ -169,7 +169,8 @@ object LeaveOptimizerEngine {
               ghWorkedRecordId = availableGh.id,
               ghWorkedDateIso = availableGh.dateIso,
               status = ColAuditStatus.VERIFIED_MATCH,
-              auditExplanation = "100% Accounted: COL (${col.dateIso}) ↔ In Lieu ($dutyDate) ↔ GH Worked (${availableGh.dateIso})."
+              auditExplanation = "100% Accounted: COL (${col.dateIso}) ↔ In Lieu ($dutyDate) ↔ GH Worked (${availableGh.dateIso}).",
+              ghDutyNotes = availableGh.notes
             )
           )
         }
@@ -226,6 +227,7 @@ object LeaveOptimizerEngine {
     // Now list all unused GH_WORKED credits that have NOT been consumed by any COL
     val unusedGhRecords = allGhWorked.filter { it.id !in consumedGhRecordIds }
     unusedGhRecords.forEach { gh ->
+      val cleanDuty = gh.notes.ifBlank { "Hospital GH Duty" }
       auditItems.add(
         ColGhAuditItem(
           id = "audit_gh_${gh.id}",
@@ -236,7 +238,8 @@ object LeaveOptimizerEngine {
           ghWorkedRecordId = gh.id,
           ghWorkedDateIso = gh.dateIso,
           status = ColAuditStatus.AVAILABLE_GH_CREDIT,
-          auditExplanation = "Unclaimed GH Worked on ${gh.dateIso} (${gh.notes.ifBlank { "Hospital Duty" }}) — Ready to pair with an unaccounted COL or future COL!"
+          auditExplanation = "$cleanDuty — Eligible for 1-day COL pairing or new COL leave within 6 months.",
+          ghDutyNotes = cleanDuty
         )
       )
     }
