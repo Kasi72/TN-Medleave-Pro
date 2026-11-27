@@ -25,6 +25,14 @@ data class ExpiredGhClearResult(
   val deletedCount: Int,
   val failedCount: Int,
   val skippedInvalidCount: Int,
+  val queuedOffline: Boolean,
+  val deletedRecordIds: Set<String> = emptySet()
+)
+
+data class ExpiredGhRestoreResult(
+  val restoredCount: Int,
+  val failedCount: Int,
+  val skippedInvalidCount: Int,
   val queuedOffline: Boolean
 )
 
@@ -41,7 +49,51 @@ class LeaveRepository(private val db: FirebaseFirestore) {
   companion object {
     const val BIOMETRIC_HOD_USER_ID = "biometric_hod_drkasi"
     private val VALID_FIRESTORE_DOC_ID_REGEX = Regex("^[a-zA-Z0-9_\\-]{1,128}$")
+    private val VALID_ISO_DATE_REGEX = Regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+    private val ALLOWED_LEAVE_TYPES = setOf("CL", "COL", "IN_LIEU", "PL", "GH_WORKED", "ML", "RH", "EL", "ON_DUTY", "WEEK_OFF")
+    private val ALLOWED_HIGHLIGHT_STATUSES = setOf("NORMAL", "ALERT_RED", "VERIFIED_GREEN", "PENDING_ORANGE")
+    private val ALLOWED_WORKFLOW_STAGES = setOf("PLANNED", "SUBMITTED", "SANCTIONED", "JOINING_FILED")
+    private val ALLOWED_JOINING_SESSIONS = setOf("FN", "AN")
     internal fun isValidFirestoreDocId(id: String): Boolean = VALID_FIRESTORE_DOC_ID_REGEX.matches(id.trim())
+    internal fun buildRestorableLeaveRecordPayload(record: LeaveRecord, uid: String): Map<String, Any>? {
+      val cleanDate = record.dateIso.trim()
+      if (!VALID_ISO_DATE_REGEX.matches(cleanDate)) return null
+      val safeLeaveType = record.leaveType.trim().takeIf { it in ALLOWED_LEAVE_TYPES } ?: "GH_WORKED"
+      val parsedYear = cleanDate.take(4).toLongOrNull() ?: record.year
+      val safeYear = (if (record.year in 2020L..2035L) record.year else parsedYear).coerceIn(2020L, 2035L)
+      val safeHighlight = record.highlightStatus.trim().takeIf { it in ALLOWED_HIGHLIGHT_STATUSES } ?: "NORMAL"
+      return mapOf(
+        "userId" to uid,
+        "leaveType" to safeLeaveType,
+        "dateIso" to cleanDate,
+        "year" to safeYear,
+        "pairedDateIso" to record.pairedDateIso.trim().take(20),
+        "notes" to record.notes.take(500),
+        "highlightStatus" to safeHighlight,
+        "isHalfDay" to record.isHalfDay,
+        "createdAt" to FieldValue.serverTimestamp(),
+        "updatedAt" to FieldValue.serverTimestamp()
+      )
+    }
+    internal fun buildRestorableWorkflowPayload(meta: LeaveWorkflowMeta, uid: String, cleanRecordId: String): Map<String, Any> {
+      val safeStage = meta.stage.trim().takeIf { it in ALLOWED_WORKFLOW_STAGES } ?: "PLANNED"
+      val safeJoiningDate = meta.joiningDateIso.trim().takeIf { it.isEmpty() || VALID_ISO_DATE_REGEX.matches(it) } ?: ""
+      val safeJoiningSession = meta.joiningSession.trim().takeIf { it in ALLOWED_JOINING_SESSIONS } ?: "FN"
+      return mapOf(
+        "userId" to uid,
+        "recordId" to cleanRecordId,
+        "stage" to safeStage,
+        "sanctionOrderNo" to meta.sanctionOrderNo.trim().take(80),
+        "relievingOfficer" to meta.relievingOfficer.trim().take(100),
+        "relievingContact" to meta.relievingContact.trim().take(40),
+        "joiningDateIso" to safeJoiningDate,
+        "joiningSession" to safeJoiningSession,
+        "slipLocalFileName" to meta.slipLocalFileName.trim().take(160),
+        "workflowNotes" to meta.workflowNotes.take(500),
+        "createdAt" to FieldValue.serverTimestamp(),
+        "updatedAt" to FieldValue.serverTimestamp()
+      )
+    }
     private const val BATCH_DELETE_CHUNK_SIZE = 200
     private const val BATCH_COMMIT_TIMEOUT_MS = 12_000L
     private const val SINGLE_DELETE_TIMEOUT_MS = 4_000L
@@ -583,6 +635,7 @@ class LeaveRepository(private val db: FirebaseFirestore) {
     if (auth.currentUser == null || uid == BIOMETRIC_HOD_USER_ID) {
       val idSet = validIds.toSet()
       val before = biometricSessionRecordsFlow.value
+      val actuallyRemovedIds = before.filter { it.id in idSet }.map { it.id }.toSet()
       val after = before.filterNot { it.id in idSet }
       biometricSessionRecordsFlow.value = after
       if (workflowIdsToCleanup.isNotEmpty()) {
@@ -590,10 +643,11 @@ class LeaveRepository(private val db: FirebaseFirestore) {
       }
       return Result.success(
         ExpiredGhClearResult(
-          deletedCount = (before.size - after.size).coerceAtLeast(0),
+          deletedCount = actuallyRemovedIds.size,
           failedCount = 0,
           skippedInvalidCount = skippedInvalidCount,
-          queuedOffline = false
+          queuedOffline = false,
+          deletedRecordIds = actuallyRemovedIds
         )
       )
     }
@@ -607,7 +661,7 @@ class LeaveRepository(private val db: FirebaseFirestore) {
     val workflowsCol = userDoc.collection("leave_workflows")
     val recordsPath = "users/$uid/leave_records"
 
-    var deletedCount = 0
+    val deletedRecordIds = linkedSetOf<String>()
     var failedCount = 0
     var queuedOffline = false
     var lastError: Exception? = null
@@ -630,7 +684,7 @@ class LeaveRepository(private val db: FirebaseFirestore) {
           // Offline / slow network: Firestore local persistence already removed the docs and queued sync
           queuedOffline = true
         }
-        deletedCount += chunk.size
+        deletedRecordIds.addAll(chunk)
         true
       } catch (e: CancellationException) {
         throw e
@@ -663,7 +717,7 @@ class LeaveRepository(private val db: FirebaseFirestore) {
                 // Best-effort workflow metadata cleanup; primary record deletion already succeeded
               }
             }
-            deletedCount++
+            deletedRecordIds.add(recId)
           } catch (e: CancellationException) {
             throw e
           } catch (e: Exception) {
@@ -675,14 +729,200 @@ class LeaveRepository(private val db: FirebaseFirestore) {
       }
     }
 
-    return if (deletedCount == 0 && failedCount > 0 && lastError != null) {
+    return if (deletedRecordIds.isEmpty() && failedCount > 0 && lastError != null) {
       Result.failure(lastError)
     } else {
       Result.success(
         ExpiredGhClearResult(
-          deletedCount = deletedCount,
+          deletedCount = deletedRecordIds.size,
           failedCount = failedCount,
           skippedInvalidCount = skippedInvalidCount,
+          queuedOffline = queuedOffline,
+          deletedRecordIds = deletedRecordIds
+        )
+      )
+    }
+  }
+
+  /**
+   * Restores previously deleted expired GH_WORKED records (and any associated workflow metadata)
+   * from an in-memory Undo backup cache back to Firestore using their exact original document IDs.
+   *
+   * Uses the same chunked batching, security-rule payload sanitization, bounded timeouts, and
+   * per-document fallback guarantees as [deleteExpiredGhWorkedRecords] so undo never hangs.
+   */
+  suspend fun restoreDeletedGhWorkedRecords(
+    records: Collection<LeaveRecord>,
+    workflows: Collection<LeaveWorkflowMeta> = emptyList()
+  ): Result<ExpiredGhRestoreResult> {
+    val uid = requireUserId()
+    val distinctRecords = records
+      .map { it.copy(id = it.id.trim()) }
+      .distinctBy { it.id }
+    val validRecords = distinctRecords.filter { VALID_FIRESTORE_DOC_ID_REGEX.matches(it.id) }
+    val skippedInvalidCount = distinctRecords.size - validRecords.size
+
+    if (validRecords.isEmpty()) {
+      return Result.success(
+        ExpiredGhRestoreResult(
+          restoredCount = 0,
+          failedCount = 0,
+          skippedInvalidCount = skippedInvalidCount,
+          queuedOffline = false
+        )
+      )
+    }
+
+    val workflowByRecordId = workflows
+      .associateBy { it.recordId.ifBlank { it.id }.trim() }
+      .filterKeys { VALID_FIRESTORE_DOC_ID_REGEX.matches(it) }
+
+    if (auth.currentUser == null || uid == BIOMETRIC_HOD_USER_ID) {
+      val now = Timestamp.now()
+      val existingById = biometricSessionRecordsFlow.value.associateBy { it.id }.toMutableMap()
+      var restored = 0
+      validRecords.forEach { rec ->
+        existingById[rec.id] = rec.copy(
+          userId = uid,
+          createdAt = rec.createdAt ?: now,
+          updatedAt = now
+        )
+        restored++
+      }
+      biometricSessionRecordsFlow.value = existingById.values.sortedByDescending { it.dateIso }
+      if (workflowByRecordId.isNotEmpty()) {
+        val updatedWorkflows = biometricWorkflowsFlow.value.toMutableMap()
+        workflowByRecordId.forEach { (recId, meta) ->
+          updatedWorkflows[recId] = meta.copy(
+            id = recId,
+            userId = uid,
+            recordId = recId,
+            createdAt = meta.createdAt ?: now,
+            updatedAt = now
+          )
+        }
+        biometricWorkflowsFlow.value = updatedWorkflows
+      }
+      return Result.success(
+        ExpiredGhRestoreResult(
+          restoredCount = restored,
+          failedCount = 0,
+          skippedInvalidCount = skippedInvalidCount,
+          queuedOffline = false
+        )
+      )
+    }
+
+    if (!VALID_FIRESTORE_DOC_ID_REGEX.matches(uid)) {
+      return Result.failure(IllegalStateException("Invalid authenticated user ID for Firestore restore"))
+    }
+
+    val userDoc = db.collection("users").document(uid)
+    val recordsCol = userDoc.collection("leave_records")
+    val workflowsCol = userDoc.collection("leave_workflows")
+    val recordsPath = "users/$uid/leave_records"
+
+    val prepared = mutableListOf<Pair<String, Map<String, Any>>>()
+    var invalidPayloadCount = skippedInvalidCount
+    validRecords.forEach { rec ->
+      val payload = buildRestorableLeaveRecordPayload(rec, uid)
+      if (payload != null) {
+        prepared.add(rec.id to payload)
+      } else {
+        invalidPayloadCount++
+      }
+    }
+
+    if (prepared.isEmpty()) {
+      return Result.success(
+        ExpiredGhRestoreResult(
+          restoredCount = 0,
+          failedCount = 0,
+          skippedInvalidCount = invalidPayloadCount,
+          queuedOffline = false
+        )
+      )
+    }
+
+    var restoredCount = 0
+    var failedCount = 0
+    var queuedOffline = false
+    var lastError: Exception? = null
+
+    for (chunk in prepared.chunked(BATCH_DELETE_CHUNK_SIZE)) {
+      val batch = db.batch()
+      chunk.forEach { (recId, payload) ->
+        batch.set(recordsCol.document(recId), payload)
+        workflowByRecordId[recId]?.let { wf ->
+          batch.set(
+            workflowsCol.document(recId),
+            buildRestorableWorkflowPayload(wf, uid, recId)
+          )
+        }
+      }
+
+      val batchSucceeded = try {
+        val committed = withTimeoutOrNull(BATCH_COMMIT_TIMEOUT_MS) {
+          batch.commit().await()
+          true
+        }
+        if (committed == null) {
+          queuedOffline = true
+        }
+        restoredCount += chunk.size
+        true
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        lastError = e
+        handleFirestoreError(e, OperationType.CREATE, recordsPath)
+        false
+      }
+
+      if (!batchSucceeded) {
+        for ((recId, payload) in chunk) {
+          val docRef = recordsCol.document(recId)
+          try {
+            val done = withTimeoutOrNull(SINGLE_DELETE_TIMEOUT_MS) {
+              docRef.set(payload).await()
+              true
+            }
+            if (done == null) {
+              queuedOffline = true
+            }
+            workflowByRecordId[recId]?.let { wf ->
+              try {
+                withTimeoutOrNull(SINGLE_DELETE_TIMEOUT_MS) {
+                  workflowsCol.document(recId)
+                    .set(buildRestorableWorkflowPayload(wf, uid, recId))
+                    .await()
+                }
+              } catch (e: CancellationException) {
+                throw e
+              } catch (_: Exception) {
+                // Best-effort workflow metadata restore
+              }
+            }
+            restoredCount++
+          } catch (e: CancellationException) {
+            throw e
+          } catch (e: Exception) {
+            lastError = e
+            failedCount++
+            handleFirestoreError(e, OperationType.CREATE, docRef.path)
+          }
+        }
+      }
+    }
+
+    return if (restoredCount == 0 && failedCount > 0 && lastError != null) {
+      Result.failure(lastError)
+    } else {
+      Result.success(
+        ExpiredGhRestoreResult(
+          restoredCount = restoredCount,
+          failedCount = failedCount,
+          skippedInvalidCount = invalidPayloadCount,
           queuedOffline = queuedOffline
         )
       )

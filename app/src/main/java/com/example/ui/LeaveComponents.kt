@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -62,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -399,30 +401,11 @@ fun LeaveRecordSquircleRow(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
       ) {
-        // Inset Neumorphic Category Badge
-        Box(
-          modifier = Modifier
-            .size(46.dp)
-            .neumorphicInset(
-              shape = IosSharpButtonShape,
-              depth = 2.5.dp,
-              blurRadius = 5.dp,
-              accentTint = accent,
-              accentTintAlpha = 0.14f,
-              neu = neu
-            ),
-          contentAlignment = Alignment.Center
-        ) {
-          Text(
-            text = cat.shortLabel,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.ExtraBold,
-            color = accent,
-            fontSize = if (cat.shortLabel.length > 4) 10.sp else 13.sp,
-            maxLines = 1,
-            softWrap = false
-          )
-        }
+        // Inset Neumorphic Category Badge (stacked micro-typography prevents edge-clipping on multi-word labels)
+        LedgerCategoryInsetBadge(
+          cat = cat,
+          accent = accent
+        )
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -466,7 +449,7 @@ fun LeaveRecordSquircleRow(
                   color = neu.textSecondary,
                   maxLines = 1,
                   softWrap = false,
-                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                  modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                 )
               }
             }
@@ -490,7 +473,7 @@ fun LeaveRecordSquircleRow(
                   color = accent,
                   maxLines = 1,
                   softWrap = false,
-                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                  modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                 )
               }
             }
@@ -513,7 +496,7 @@ fun LeaveRecordSquircleRow(
                 )
               ) {
                 Row(
-                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                  modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                   verticalAlignment = Alignment.CenterVertically
                 ) {
                   Icon(
@@ -574,121 +557,124 @@ fun LeaveRecordSquircleRow(
         }
       }
 
-      // Neumorphic Horizontal Action & SR Verification Footer
+      // Band 1: Full-width scrollable SR Verification, Workflow & Ref Pills (never squeezed by action buttons)
       Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
           .fillMaxWidth()
-          .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+          .horizontalScroll(rememberScrollState())
+          .padding(vertical = 2.dp)
       ) {
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp),
+        Box(
           modifier = Modifier
-            .weight(1f)
-            .horizontalScroll(rememberScrollState())
-            .padding(vertical = 3.dp)
+            .defaultMinSize(minHeight = 32.dp)
+            .neumorphicExtruded(
+              shape = IosSharpBadgeShape,
+              elevation = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = srAccent,
+              accentTintAlpha = 0.09f,
+              borderAlpha = 0.35f,
+              neu = neu
+            )
+            .clickable {
+              if (onToggleSrState != null) {
+                onToggleSrState(resolvedMeta.copy(srState = resolvedMeta.srState.nextToggleState()))
+              } else if (onOpenCertificateVault != null) {
+                onOpenCertificateVault(record, resolvedMeta)
+              }
+            }
+            .testTag("sr_toggle_${record.id}"),
+          contentAlignment = Alignment.Center
         ) {
+          Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Default.Verified,
+              contentDescription = null,
+              tint = srAccent,
+              modifier = Modifier.size(12.dp)
+            )
+            Text(
+              text = resolvedMeta.srState.shortBadge,
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 9.5.sp,
+              lineHeight = 12.sp,
+              fontWeight = FontWeight.Bold,
+              color = srAccent,
+              maxLines = 1,
+              softWrap = false
+            )
+          }
+        }
+
+        if (onOpenPaperworkSheet != null) {
+          LeaveStageChip(
+            workflow = workflow,
+            onClick = { onOpenPaperworkSheet(record) }
+          )
+        }
+
+        if (resolvedMeta.orderRefNo.isNotBlank() || resolvedMeta.certificatePhotoUri.isNotBlank()) {
           Box(
             modifier = Modifier
+              .defaultMinSize(minHeight = 32.dp)
               .neumorphicExtruded(
                 shape = IosSharpBadgeShape,
                 elevation = 2.dp,
                 blurRadius = 4.dp,
-                accentTint = srAccent,
+                accentTint = BadgeOnDutyBlue,
                 accentTintAlpha = 0.09f,
                 borderAlpha = 0.35f,
                 neu = neu
               )
               .clickable {
-                if (onToggleSrState != null) {
-                  onToggleSrState(resolvedMeta.copy(srState = resolvedMeta.srState.nextToggleState()))
-                } else if (onOpenCertificateVault != null) {
-                  onOpenCertificateVault(record, resolvedMeta)
-                }
-              }
-              .testTag("sr_toggle_${record.id}")
+                onOpenCertificateVault?.invoke(record, resolvedMeta)
+              },
+            contentAlignment = Alignment.Center
           ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-              verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-              Icon(
-                imageVector = Icons.Default.Verified,
-                contentDescription = null,
-                tint = srAccent,
-                modifier = Modifier.size(12.dp)
-              )
-              Text(
-                text = resolvedMeta.srState.shortBadge,
-                fontFamily = JetBrainsMonoFontFamily,
-                fontSize = 9.sp,
-                lineHeight = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = srAccent,
-                maxLines = 1,
-                softWrap = false
-              )
-            }
-          }
-
-          if (onOpenPaperworkSheet != null) {
-            LeaveStageChip(
-              workflow = workflow,
-              onClick = { onOpenPaperworkSheet(record) }
+            Text(
+              text = buildString {
+                if (resolvedMeta.orderRefNo.isNotBlank()) append("Ref: ${resolvedMeta.orderRefNo}")
+                if (resolvedMeta.certificatePhotoUri.isNotBlank()) {
+                  if (isNotEmpty()) append(" • ")
+                  append("Cert Photo")
+                }
+              },
+              fontFamily = JetBrainsMonoFontFamily,
+              fontSize = 9.5.sp,
+              lineHeight = 12.sp,
+              fontWeight = FontWeight.Bold,
+              color = BadgeOnDutyBlue,
+              maxLines = 1,
+              softWrap = false,
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
             )
           }
-
-          if (resolvedMeta.orderRefNo.isNotBlank() || resolvedMeta.certificatePhotoUri.isNotBlank()) {
-            Box(
-              modifier = Modifier
-                .neumorphicExtruded(
-                  shape = IosSharpBadgeShape,
-                  elevation = 2.dp,
-                  blurRadius = 4.dp,
-                  accentTint = BadgeOnDutyBlue,
-                  accentTintAlpha = 0.09f,
-                  borderAlpha = 0.35f,
-                  neu = neu
-                )
-                .clickable {
-                  onOpenCertificateVault?.invoke(record, resolvedMeta)
-                }
-            ) {
-              Text(
-                text = buildString {
-                  if (resolvedMeta.orderRefNo.isNotBlank()) append("Ref: ${resolvedMeta.orderRefNo}")
-                  if (resolvedMeta.certificatePhotoUri.isNotBlank()) {
-                    if (isNotEmpty()) append(" • ")
-                    append("Cert Photo")
-                  }
-                },
-                fontFamily = JetBrainsMonoFontFamily,
-                fontSize = 9.sp,
-                lineHeight = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = BadgeOnDutyBlue,
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
-              )
-            }
-          }
         }
+      }
 
-        Spacer(modifier = Modifier.width(8.dp))
-
+      // Band 2: Clean right-aligned Action Buttons (Edit, Vault, Delete) with generous spacing & zero overlap
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(top = 1.dp),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
         Row(
           verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp),
-          modifier = Modifier.padding(vertical = 3.dp)
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
           if (onEditRecord != null) {
             val editAccent = if (neu.isDark) Color(0xFF22D3EE) else BadgeColCyan
             Box(
               modifier = Modifier
+                .defaultMinSize(minHeight = 34.dp)
                 .neumorphicExtruded(
                   shape = IosSharpBadgeShape,
                   elevation = 2.dp,
@@ -699,12 +685,13 @@ fun LeaveRecordSquircleRow(
                   neu = neu
                 )
                 .clickable { onEditRecord(record) }
-                .testTag("edit_leave_${record.id}")
+                .testTag("edit_leave_${record.id}"),
+              contentAlignment = Alignment.Center
             ) {
               Row(
-                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
               ) {
                 Icon(
                   imageVector = Icons.Default.Edit,
@@ -714,7 +701,8 @@ fun LeaveRecordSquircleRow(
                 )
                 Text(
                   text = "Edit",
-                  fontSize = 10.sp,
+                  fontSize = 10.5.sp,
+                  lineHeight = 13.sp,
                   fontWeight = FontWeight.Bold,
                   color = editAccent,
                   maxLines = 1,
@@ -729,6 +717,7 @@ fun LeaveRecordSquircleRow(
             val vaultTint = if (hasVaultData) EmeraldOptimal else neu.textSecondary
             Box(
               modifier = Modifier
+                .defaultMinSize(minHeight = 34.dp)
                 .neumorphicExtruded(
                   shape = IosSharpBadgeShape,
                   elevation = 2.dp,
@@ -739,12 +728,13 @@ fun LeaveRecordSquircleRow(
                   neu = neu
                 )
                 .clickable { onOpenCertificateVault(record, resolvedMeta) }
-                .testTag("vault_btn_${record.id}")
+                .testTag("vault_btn_${record.id}"),
+              contentAlignment = Alignment.Center
             ) {
               Row(
-                modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
               ) {
                 Icon(
                   imageVector = Icons.Default.Description,
@@ -754,7 +744,8 @@ fun LeaveRecordSquircleRow(
                 )
                 Text(
                   text = "Vault",
-                  fontSize = 10.sp,
+                  fontSize = 10.5.sp,
+                  lineHeight = 13.sp,
                   fontWeight = FontWeight.Bold,
                   color = vaultTint,
                   maxLines = 1,
@@ -766,6 +757,7 @@ fun LeaveRecordSquircleRow(
 
           Box(
             modifier = Modifier
+              .defaultMinSize(minWidth = 36.dp, minHeight = 34.dp)
               .neumorphicExtruded(
                 shape = IosSharpBadgeShape,
                 elevation = 2.dp,
@@ -776,22 +768,99 @@ fun LeaveRecordSquircleRow(
                 neu = neu
               )
               .clickable { onDelete(record.id) }
-              .testTag("delete_leave_${record.id}")
+              .testTag("delete_leave_${record.id}"),
+            contentAlignment = Alignment.Center
           ) {
             Row(
-              modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
               verticalAlignment = Alignment.CenterVertically
             ) {
               Icon(
                 imageVector = Icons.Default.DeleteOutline,
                 contentDescription = "Delete Leave Record",
                 tint = StatusAlertRed,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(15.dp)
               )
             }
           }
         }
       }
+    }
+  }
+}
+
+@Composable
+private fun LedgerCategoryInsetBadge(
+  cat: LeaveCategory,
+  accent: Color
+) {
+  val neu = com.example.ui.theme.LocalNeumorphicColors.current
+  val stackedLines: Pair<String, String>? = when (cat) {
+    LeaveCategory.GH_WORKED -> "GH" to "WORKED"
+    LeaveCategory.ON_DUTY -> "ON" to "DUTY"
+    LeaveCategory.IN_LIEU -> "IN" to "LIEU"
+    LeaveCategory.WEEK_OFF -> "WEEK" to "OFF"
+    else -> null
+  }
+
+  Box(
+    modifier = Modifier
+      .defaultMinSize(minWidth = 58.dp, minHeight = 52.dp)
+      .neumorphicInset(
+        shape = IosSharpButtonShape,
+        depth = 2.5.dp,
+        blurRadius = 5.dp,
+        accentTint = accent,
+        accentTintAlpha = 0.14f,
+        borderColor = accent.copy(alpha = 0.24f),
+        neu = neu
+      )
+      .padding(horizontal = 7.dp, vertical = 5.dp),
+    contentAlignment = Alignment.Center
+  ) {
+    if (stackedLines != null) {
+      val (topLine, bottomLine) = stackedLines
+      Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+      ) {
+        Text(
+          text = topLine,
+          style = MaterialTheme.typography.labelLarge,
+          fontWeight = FontWeight.ExtraBold,
+          color = accent,
+          fontSize = if (topLine.length <= 2) 12.sp else 9.5.sp,
+          lineHeight = 13.sp,
+          letterSpacing = 0.2.sp,
+          textAlign = TextAlign.Center,
+          maxLines = 1,
+          softWrap = false
+        )
+        Text(
+          text = bottomLine,
+          style = MaterialTheme.typography.labelSmall,
+          fontWeight = FontWeight.Bold,
+          color = accent.copy(alpha = 0.90f),
+          fontSize = if (bottomLine.length >= 6) 8.5.sp else 10.sp,
+          lineHeight = 11.sp,
+          letterSpacing = 0.15.sp,
+          textAlign = TextAlign.Center,
+          maxLines = 1,
+          softWrap = false
+        )
+      }
+    } else {
+      Text(
+        text = cat.shortLabel,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.ExtraBold,
+        color = accent,
+        fontSize = 13.sp,
+        lineHeight = 15.sp,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        softWrap = false
+      )
     }
   }
 }
@@ -1077,18 +1146,20 @@ fun AddLeaveRecordDialog(
                 Box(
                   modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 8.dp),
+                    .defaultMinSize(minHeight = 36.dp)
+                    .padding(horizontal = 5.dp, vertical = 8.dp),
                   contentAlignment = Alignment.Center
                 ) {
                   Text(
                     text = sess.badgeLabel,
                     fontFamily = JetBrainsMonoFontFamily,
-                    fontSize = 10.sp,
+                    fontSize = 9.5.sp,
                     lineHeight = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (isSel) BadgeClGreen else neu.textSecondary,
                     maxLines = 1,
-                    softWrap = false
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
                   )
                 }
               }

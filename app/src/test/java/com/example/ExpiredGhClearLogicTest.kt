@@ -95,4 +95,76 @@ class ExpiredGhClearLogicTest {
     assertFalse(LeaveRepository.isValidFirestoreDocId("has spaces"))
     assertFalse(LeaveRepository.isValidFirestoreDocId("a".repeat(129)))
   }
+
+  @Test
+  fun restorableLeaveRecordPayloadMatchesFirestoreSecurityRulesSchema() {
+    val record = LeaveRecord(
+      id = "seed_2024_gh_worked_2024-04-11_1",
+      userId = "stale_uid",
+      leaveType = "GH_WORKED",
+      dateIso = "2024-04-11",
+      year = 2024L,
+      pairedDateIso = "",
+      notes = "A".repeat(650),
+      highlightStatus = "UNKNOWN_STATUS",
+      isHalfDay = false
+    )
+
+    val payload = LeaveRepository.buildRestorableLeaveRecordPayload(record, uid = "auth_uid_123")
+    assertTrue(payload != null)
+    val map = payload!!
+    assertEquals(
+      setOf(
+        "userId", "leaveType", "dateIso", "year", "pairedDateIso",
+        "notes", "highlightStatus", "isHalfDay", "createdAt", "updatedAt"
+      ),
+      map.keys
+    )
+    assertEquals("auth_uid_123", map["userId"])
+    assertEquals("GH_WORKED", map["leaveType"])
+    assertEquals("2024-04-11", map["dateIso"])
+    assertEquals(2024L, map["year"])
+    assertEquals(500, (map["notes"] as String).length)
+    assertEquals("NORMAL", map["highlightStatus"])
+
+    // Malformed ISO date must be rejected before touching Firestore
+    val invalidDateRecord = record.copy(dateIso = "11-04-2024")
+    assertEquals(null, LeaveRepository.buildRestorableLeaveRecordPayload(invalidDateRecord, "auth_uid_123"))
+  }
+
+  @Test
+  fun restorableWorkflowPayloadMatchesFirestoreSecurityRulesSchema() {
+    val wf = com.example.data.LeaveWorkflowMeta(
+      id = "seed_2024_gh_worked_2024-04-11_1",
+      userId = "stale_uid",
+      recordId = "seed_2024_gh_worked_2024-04-11_1",
+      stage = "INVALID_STAGE",
+      sanctionOrderNo = "ORD-" + "9".repeat(120),
+      relievingOfficer = "Dr. Sharma",
+      relievingContact = "9876543210",
+      joiningDateIso = "bad-date",
+      joiningSession = "INVALID",
+      slipLocalFileName = "slip.jpg",
+      workflowNotes = "Restored workflow"
+    )
+
+    val map = LeaveRepository.buildRestorableWorkflowPayload(
+      meta = wf,
+      uid = "auth_uid_123",
+      cleanRecordId = "seed_2024_gh_worked_2024-04-11_1"
+    )
+    assertEquals(
+      setOf(
+        "userId", "recordId", "stage", "sanctionOrderNo", "relievingOfficer",
+        "relievingContact", "joiningDateIso", "joiningSession", "slipLocalFileName",
+        "workflowNotes", "createdAt", "updatedAt"
+      ),
+      map.keys
+    )
+    assertEquals("auth_uid_123", map["userId"])
+    assertEquals("PLANNED", map["stage"])
+    assertEquals(80, (map["sanctionOrderNo"] as String).length)
+    assertEquals("", map["joiningDateIso"])
+    assertEquals("FN", map["joiningSession"])
+  }
 }

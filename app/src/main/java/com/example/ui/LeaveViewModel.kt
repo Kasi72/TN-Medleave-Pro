@@ -147,6 +147,9 @@ class LeaveViewModel(
   private val _isClearingExpiredGh = MutableStateFlow(false)
   val isClearingExpiredGh: StateFlow<Boolean> = _isClearingExpiredGh.asStateFlow()
 
+  private val _expiredGhUndoBackup = MutableStateFlow<ExpiredGhUndoBackup?>(null)
+  val expiredGhUndoBackup: StateFlow<ExpiredGhUndoBackup?> = _expiredGhUndoBackup.asStateFlow()
+
   val leaveWorkflowsByRecordId: StateFlow<Map<String, LeaveWorkflowMeta>> =
     repository.observeLeaveWorkflows(currentUserId)
       .stateIn(
@@ -1487,12 +1490,30 @@ class LeaveViewModel(
     viewModelScope.launch {
       _isClearingExpiredGh.value = true
       try {
-        val workflowIds = leaveWorkflowsByRecordId.value.keys
+        val liveRecords = (uiState.value as? LeaveUiState.Success)?.allRecords.orEmpty()
+        val liveWorkflows = leaveWorkflowsByRecordId.value
+        val recordBackup = liveRecords.filter { it.id == item.recordId }
+        val workflowBackup = liveWorkflows[item.recordId]?.let { listOf(it) }.orEmpty()
+
         val res = repository.deleteExpiredGhWorkedRecords(
           recordIds = listOf(item.recordId),
-          workflowIdsToCleanup = workflowIds
+          workflowIdsToCleanup = liveWorkflows.keys
         )
         res.onSuccess { summary ->
+          if (summary.deletedCount > 0 && recordBackup.isNotEmpty()) {
+            val actuallyDeleted = recordBackup.filter { it.id in summary.deletedRecordIds }
+            val actuallyDeletedWfs = workflowBackup.filter {
+              it.recordId.ifBlank { it.id } in summary.deletedRecordIds
+            }
+            if (actuallyDeleted.isNotEmpty()) {
+              _expiredGhUndoBackup.value = ExpiredGhUndoBackup(
+                eventId = System.nanoTime(),
+                deletedRecords = actuallyDeleted,
+                deletedWorkflows = actuallyDeletedWfs,
+                snackbarMessage = "Deleted expired GH Worked (${item.ghDateIso})."
+              )
+            }
+          }
           _statusBanner.value = when {
             summary.deletedCount > 0 && summary.queuedOffline ->
               "Cleared expired GH Worked (${item.ghDateIso}) locally — queued to sync with Firestore."
@@ -1538,6 +1559,13 @@ class LeaveViewModel(
           return@launch
         }
 
+        val expiredIdSet = allExpiredIds.toSet()
+        val recordsBackupSnapshot = liveRecords.filter { it.id in expiredIdSet }
+        val workflowsBackupSnapshot = liveWorkflows
+          .filterKeys { it in expiredIdSet }
+          .values
+          .toList()
+
         val res = repository.deleteExpiredGhWorkedRecords(
           recordIds = allExpiredIds,
           workflowIdsToCleanup = liveWorkflows.keys
@@ -1545,6 +1573,21 @@ class LeaveViewModel(
         res.onSuccess { summary ->
           if (summary.failedCount == 0) {
             _clearedLapsedColKeys.value = LapsedColArchiveStore.restoreAll(appContext, currentUserId)
+          }
+          if (summary.deletedCount > 0 && recordsBackupSnapshot.isNotEmpty()) {
+            val actuallyDeleted = recordsBackupSnapshot.filter { it.id in summary.deletedRecordIds }
+            val actuallyDeletedWfs = workflowsBackupSnapshot.filter {
+              it.recordId.ifBlank { it.id } in summary.deletedRecordIds
+            }
+            if (actuallyDeleted.isNotEmpty()) {
+              val count = actuallyDeleted.size
+              _expiredGhUndoBackup.value = ExpiredGhUndoBackup(
+                eventId = System.nanoTime(),
+                deletedRecords = actuallyDeleted,
+                deletedWorkflows = actuallyDeletedWfs,
+                snackbarMessage = "Cleared $count expired GH-Worked record${if (count != 1) "s" else ""}."
+              )
+            }
           }
           _statusBanner.value = when {
             summary.failedCount > 0 ->
@@ -1566,6 +1609,44 @@ class LeaveViewModel(
     }
   }
 
+  fun undoClearExpiredGhRecords() {
+    if (_isClearingExpiredGh.value) return
+    val backup = _expiredGhUndoBackup.value ?: return
+    _expiredGhUndoBackup.value = null
+    viewModelScope.launch {
+      _isClearingExpiredGh.value = true
+      try {
+        val res = repository.restoreDeletedGhWorkedRecords(
+          records = backup.deletedRecords,
+          workflows = backup.deletedWorkflows
+        )
+        res.onSuccess { summary ->
+          _statusBanner.value = when {
+            summary.failedCount > 0 ->
+              "Restored ${summary.restoredCount} expired GH-Worked record(s); ${summary.failedCount} could not be restored."
+            summary.queuedOffline ->
+              "Restored ${summary.restoredCount} expired GH-Worked record(s) — queued to sync with Firestore."
+            summary.restoredCount > 0 ->
+              "Restored ${summary.restoredCount} expired GH-Worked record${if (summary.restoredCount != 1) "s" else ""} from backup."
+            else ->
+              "No records needed restoration."
+          }
+        }.onFailure { err ->
+          _statusBanner.value =
+            "Could not restore deleted GH-Worked records: ${err.localizedMessage ?: "Please retry."}"
+        }
+      } finally {
+        _isClearingExpiredGh.value = false
+      }
+    }
+  }
+
+  fun dismissExpiredGhUndoBackup(eventId: Long) {
+    if (_expiredGhUndoBackup.value?.eventId == eventId) {
+      _expiredGhUndoBackup.value = null
+    }
+  }
+
   fun restoreArchivedLapsedCols() {
     _clearedLapsedColKeys.value = LapsedColArchiveStore.restoreAll(
       context = appContext,
@@ -1574,3 +1655,10 @@ class LeaveViewModel(
     _statusBanner.value = "Restored previously hidden lapsed GH-Worked credits."
   }
 }
+
+data class ExpiredGhUndoBackup(
+  val eventId: Long,
+  val deletedRecords: List<LeaveRecord>,
+  val deletedWorkflows: List<LeaveWorkflowMeta>,
+  val snackbarMessage: String
+)

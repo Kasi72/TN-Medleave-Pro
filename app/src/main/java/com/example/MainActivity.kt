@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
@@ -44,10 +45,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -203,7 +211,24 @@ fun MainFeatureHost(
   val unclaimedGhColCandidates by viewModel.unclaimedGhColCandidates.collectAsStateWithLifecycle()
   val clearedLapsedColKeys by viewModel.clearedLapsedColKeys.collectAsStateWithLifecycle()
   val isClearingExpiredGh by viewModel.isClearingExpiredGh.collectAsStateWithLifecycle()
+  val expiredGhUndoBackup by viewModel.expiredGhUndoBackup.collectAsStateWithLifecycle()
   val pendingWorkflowRecordId by viewModel.pendingWorkflowRecordId.collectAsStateWithLifecycle()
+  val snackbarHostState = remember { SnackbarHostState() }
+
+  LaunchedEffect(expiredGhUndoBackup?.eventId) {
+    val backup = expiredGhUndoBackup ?: return@LaunchedEffect
+    snackbarHostState.currentSnackbarData?.dismiss()
+    val result = snackbarHostState.showSnackbar(
+      message = backup.snackbarMessage,
+      actionLabel = "Undo",
+      withDismissAction = true,
+      duration = SnackbarDuration.Long
+    )
+    when (result) {
+      SnackbarResult.ActionPerformed -> viewModel.undoClearExpiredGhRecords()
+      SnackbarResult.Dismissed -> viewModel.dismissExpiredGhUndoBackup(backup.eventId)
+    }
+  }
   val protectLoggedDutyShifts by viewModel.protectLoggedDutyShifts.collectAsStateWithLifecycle()
   var currentTab by rememberSaveable { mutableIntStateOf(0) }
   var calendarInitialSubMode by rememberSaveable { mutableIntStateOf(0) }
@@ -261,6 +286,63 @@ fun MainFeatureHost(
 
   Scaffold(
     contentWindowInsets = WindowInsets.safeDrawing,
+    snackbarHost = {
+      SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+      ) { data ->
+        Snackbar(
+          shape = IosSharpButtonShape,
+          containerColor = MaterialTheme.colorScheme.inverseSurface,
+          contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+          action = data.visuals.actionLabel?.let { actionLabel ->
+            {
+              TextButton(
+                onClick = { data.performAction() },
+                modifier = Modifier.testTag("undo_expired_gh_snackbar_button")
+              ) {
+                Icon(
+                  imageVector = Icons.Default.Restore,
+                  contentDescription = actionLabel,
+                  tint = MaterialTheme.colorScheme.inversePrimary,
+                  modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                  text = actionLabel,
+                  color = MaterialTheme.colorScheme.inversePrimary,
+                  fontWeight = FontWeight.ExtraBold
+                )
+              }
+            }
+          },
+          dismissAction = if (data.visuals.withDismissAction) {
+            {
+              IconButton(
+                onClick = { data.dismiss() },
+                modifier = Modifier.testTag("dismiss_expired_gh_snackbar_button")
+              ) {
+                Icon(
+                  imageVector = Icons.Default.Close,
+                  contentDescription = "Dismiss",
+                  tint = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.8f),
+                  modifier = Modifier.size(18.dp)
+                )
+              }
+            }
+          } else {
+            null
+          }
+        ) {
+          Text(
+            text = data.visuals.message,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.inverseOnSurface
+          )
+        }
+      }
+    },
     topBar = {
       IosExecutiveTopBar(
         currentTab = currentTab,

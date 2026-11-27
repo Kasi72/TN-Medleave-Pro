@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -196,7 +197,7 @@ fun ColGhAuditTabScreen(
 
             Box(
               modifier = Modifier
-                .height(32.dp)
+                .defaultMinSize(minHeight = 34.dp)
                 .neumorphicExtruded(
                   shape = IosSharpBadgeShape,
                   elevation = 2.5.dp,
@@ -207,7 +208,7 @@ fun ColGhAuditTabScreen(
                   neu = neu
                 )
                 .clickable { showAllYears = !showAllYears }
-                .padding(horizontal = 12.dp)
+                .padding(horizontal = 12.dp, vertical = 6.dp)
                 .testTag("toggle_audit_all_years"),
               contentAlignment = Alignment.Center
             ) {
@@ -399,7 +400,7 @@ fun ColGhAuditTabScreen(
             val allSel = selectedStatusFilter == null
             Box(
               modifier = Modifier
-                .height(36.dp)
+                .defaultMinSize(minHeight = 36.dp)
                 .then(
                   if (allSel) {
                     Modifier.neumorphicExtruded(
@@ -428,7 +429,7 @@ fun ColGhAuditTabScreen(
                 fontSize = 12.sp,
                 maxLines = 1,
                 softWrap = false,
-                modifier = Modifier.padding(horizontal = 14.dp)
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
               )
             }
 
@@ -444,7 +445,7 @@ fun ColGhAuditTabScreen(
               val sel = selectedStatusFilter == st
               Box(
                 modifier = Modifier
-                  .height(36.dp)
+                  .defaultMinSize(minHeight = 36.dp)
                   .then(
                     if (sel) {
                       Modifier.neumorphicExtruded(
@@ -476,7 +477,7 @@ fun ColGhAuditTabScreen(
                   fontSize = 12.sp,
                   maxLines = 1,
                   softWrap = false,
-                  modifier = Modifier.padding(horizontal = 14.dp)
+                  modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
                 )
               }
             }

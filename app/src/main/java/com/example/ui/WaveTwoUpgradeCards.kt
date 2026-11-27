@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -155,7 +156,7 @@ fun EnterpriseSubTabSwitcher(
 
         Box(
           modifier = Modifier
-            .height(36.dp)
+            .defaultMinSize(minHeight = 38.dp)
             .then(
               if (isSelected) {
                 Modifier.neumorphicExtruded(
@@ -176,7 +177,7 @@ fun EnterpriseSubTabSwitcher(
           contentAlignment = Alignment.Center
         ) {
           Row(
-            modifier = Modifier.padding(horizontal = 11.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
           ) {
@@ -271,7 +272,8 @@ fun UndoDeleteBannerCard(
           fontWeight = FontWeight.Bold,
           color = StatusPendingOrange,
           maxLines = 1,
-          softWrap = false
+          softWrap = false,
+          overflow = TextOverflow.Ellipsis
         )
         Text(
           text = deletedRecord.notes.ifBlank { deletedRecord.category.fullTitle },
@@ -291,7 +293,7 @@ fun UndoDeleteBannerCard(
       ) {
         Box(
           modifier = Modifier
-            .height(32.dp)
+            .defaultMinSize(minHeight = 34.dp)
             .neumorphicExtruded(
               shape = IosSharpBadgeShape,
               elevation = 2.5.dp,
@@ -301,7 +303,7 @@ fun UndoDeleteBannerCard(
               neu = neu
             )
             .clickable { onUndoDelete() }
-            .padding(horizontal = 10.dp)
+            .padding(horizontal = 11.dp, vertical = 6.dp)
             .testTag("undo_delete_restore_btn"),
           contentAlignment = Alignment.Center
         ) {
@@ -453,6 +455,7 @@ fun EditLeaveRecordDialog(
               Box(
                 modifier = Modifier
                   .weight(1f)
+                  .defaultMinSize(minHeight = 36.dp)
                   .then(
                     if (isSel) {
                       Modifier.neumorphicInset(
@@ -480,12 +483,13 @@ fun EditLeaveRecordDialog(
                 Text(
                   text = sess.badgeLabel,
                   fontFamily = JetBrainsMonoFontFamily,
-                  fontSize = 10.sp,
+                  fontSize = 9.5.sp,
                   fontWeight = FontWeight.Bold,
                   color = if (isSel) BadgeClGreen else neu.textSecondary,
                   maxLines = 1,
                   softWrap = false,
-                  modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp)
+                  overflow = TextOverflow.Ellipsis,
+                  modifier = Modifier.padding(horizontal = 5.dp, vertical = 8.dp)
                 )
               }
             }
@@ -913,7 +917,9 @@ fun AcademicOdSubQuotaCard(
                       fontSize = 9.sp,
                       fontWeight = FontWeight.Bold,
                       color = subAccent,
-                      modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                      maxLines = 1,
+                      softWrap = false,
+                      modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                     )
                   }
                   Text(
@@ -949,10 +955,13 @@ fun AcademicOdSubQuotaCard(
                   fontFamily = JetBrainsMonoFontFamily,
                   fontSize = 12.sp,
                   fontWeight = FontWeight.Bold,
-                  color = subAccent
+                  color = subAccent,
+                  maxLines = 1,
+                  softWrap = false
                 )
                 Box(
                   modifier = Modifier
+                    .defaultMinSize(minHeight = 32.dp)
                     .neumorphicExtruded(
                       shape = IosSharpMicroShape,
                       elevation = 2.dp,
@@ -962,7 +971,8 @@ fun AcademicOdSubQuotaCard(
                       borderAlpha = 0.35f,
                       neu = neu
                     )
-                    .clickable { activeSubOdDialog = item.subCategory }
+                    .clickable { activeSubOdDialog = item.subCategory },
+                  contentAlignment = Alignment.Center
                 ) {
                   Text(
                     text = "+ Log",
@@ -970,7 +980,9 @@ fun AcademicOdSubQuotaCard(
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = subAccent,
-                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                   )
                 }
               }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -1205,6 +1206,7 @@ fun LedgerTabScreen(
 
               Box(
                 modifier = Modifier
+                  .defaultMinSize(minHeight = 34.dp)
                   .then(
                     if (totalRedundantEntries == 0) {
                       Modifier.neumorphicExtruded(
@@ -1227,7 +1229,8 @@ fun LedgerTabScreen(
                     }
                   )
                   .clickable { onScrubDuplicates() }
-                  .testTag("scrub_duplicates_button")
+                  .testTag("scrub_duplicates_button"),
+                contentAlignment = Alignment.Center
               ) {
                 Text(
                   text = if (totalRedundantEntries == 0) "Audit Clean" else "Scrub ($totalRedundantEntries)",
@@ -1236,7 +1239,7 @@ fun LedgerTabScreen(
                   color = if (totalRedundantEntries == 0) EmeraldOptimal else Color.White,
                   maxLines = 1,
                   softWrap = false,
-                  modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                  modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp)
                 )
               }
             }
@@ -1276,7 +1279,7 @@ fun LedgerTabScreen(
             }
             Box(
               modifier = Modifier
-                .height(38.dp)
+                .defaultMinSize(minHeight = 38.dp)
                 .then(
                   if (allSelected) {
                     Modifier.neumorphicExtruded(
@@ -1297,23 +1300,18 @@ fun LedgerTabScreen(
                   }
                 )
                 .clickable { onSelectCategory(null) }
-                .testTag("filter_chip_all")
+                .testTag("filter_chip_all"),
+              contentAlignment = Alignment.Center
             ) {
-              Box(
-                modifier = Modifier
-                  .fillMaxHeight()
-                  .padding(horizontal = 14.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Text(
-                  text = "All ($scopeCount)",
-                  color = if (allSelected) Color.White else neu.textPrimary,
-                  fontWeight = FontWeight.SemiBold,
-                  fontSize = 13.sp,
-                  maxLines = 1,
-                  softWrap = false
-                )
-              }
+              Text(
+                text = "All ($scopeCount)",
+                color = if (allSelected) Color.White else neu.textPrimary,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+              )
             }
 
             LeaveCategory.entries.forEach { cat ->
@@ -1326,7 +1324,7 @@ fun LedgerTabScreen(
               val accent = cat.accentColor()
               Box(
                 modifier = Modifier
-                  .height(38.dp)
+                  .defaultMinSize(minHeight = 38.dp)
                   .then(
                     if (isSelected) {
                       Modifier.neumorphicExtruded(
@@ -1349,23 +1347,18 @@ fun LedgerTabScreen(
                     }
                   )
                   .clickable { onSelectCategory(cat) }
-                  .testTag("filter_chip_${cat.code}")
+                  .testTag("filter_chip_${cat.code}"),
+                contentAlignment = Alignment.Center
               ) {
-                Box(
-                  modifier = Modifier
-                    .fillMaxHeight()
-                    .padding(horizontal = 14.dp),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Text(
-                    text = "${cat.shortLabel} ($count)",
-                    color = if (isSelected) Color.White else accent,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    maxLines = 1,
-                    softWrap = false
-                  )
-                }
+                Text(
+                  text = "${cat.shortLabel} ($count)",
+                  color = if (isSelected) Color.White else accent,
+                  fontWeight = FontWeight.Bold,
+                  fontSize = 13.sp,
+                  maxLines = 1,
+                  softWrap = false,
+                  modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                )
               }
             }
           }
@@ -1505,7 +1498,7 @@ fun LedgerTabScreen(
             val allSrSelected = selectedSrFilter == null
             Box(
               modifier = Modifier
-                .height(32.dp)
+                .defaultMinSize(minHeight = 34.dp)
                 .then(
                   if (allSrSelected) {
                     Modifier.neumorphicExtruded(
@@ -1526,24 +1519,19 @@ fun LedgerTabScreen(
                   }
                 )
                 .clickable { selectedSrFilter = null }
-                .testTag("sr_filter_all")
+                .testTag("sr_filter_all"),
+              contentAlignment = Alignment.Center
             ) {
-              Box(
-                modifier = Modifier
-                  .fillMaxHeight()
-                  .padding(horizontal = 11.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Text(
-                  text = "All SR Status",
-                  fontFamily = JetBrainsMonoFontFamily,
-                  fontSize = 10.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = if (allSrSelected) Color.White else neu.textSecondary,
-                  maxLines = 1,
-                  softWrap = false
-                )
-              }
+              Text(
+                text = "All SR Status",
+                fontFamily = JetBrainsMonoFontFamily,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (allSrSelected) Color.White else neu.textSecondary,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+              )
             }
 
             SrReconciliationState.entries.forEach { srState ->
@@ -1558,7 +1546,7 @@ fun LedgerTabScreen(
               }
               Box(
                 modifier = Modifier
-                  .height(32.dp)
+                  .defaultMinSize(minHeight = 34.dp)
                   .then(
                     if (isSel) {
                       Modifier.neumorphicExtruded(
@@ -1583,24 +1571,19 @@ fun LedgerTabScreen(
                   .clickable {
                     selectedSrFilter = if (isSel) null else srState
                   }
-                  .testTag("sr_filter_${srState.code}")
+                  .testTag("sr_filter_${srState.code}"),
+                contentAlignment = Alignment.Center
               ) {
-                Box(
-                  modifier = Modifier
-                    .fillMaxHeight()
-                    .padding(horizontal = 11.dp),
-                  contentAlignment = Alignment.Center
-                ) {
-                  Text(
-                    text = "${srState.shortBadge} ($count)",
-                    fontFamily = JetBrainsMonoFontFamily,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isSel) Color.White else srColor,
-                    maxLines = 1,
-                    softWrap = false
-                  )
-                }
+                Text(
+                  text = "${srState.shortBadge} ($count)",
+                  fontFamily = JetBrainsMonoFontFamily,
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = if (isSel) Color.White else srColor,
+                  maxLines = 1,
+                  softWrap = false,
+                  modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+                )
               }
             }
           }

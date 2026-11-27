@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -104,6 +105,7 @@ fun LeaveStageChip(
 
   Box(
     modifier = modifier
+      .defaultMinSize(minHeight = 32.dp)
       .neumorphicInset(
         shape = IosSharpBadgeShape,
         depth = 1.8.dp,
@@ -114,8 +116,9 @@ fun LeaveStageChip(
         neu = neu
       )
       .clickable { onClick() }
-      .padding(horizontal = 8.dp, vertical = 4.dp)
-      .testTag("leave_stage_chip_${stage.code.lowercase()}")
+      .padding(horizontal = 10.dp, vertical = 6.dp)
+      .testTag("leave_stage_chip_${stage.code.lowercase()}"),
+    contentAlignment = Alignment.Center
   ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       Icon(
