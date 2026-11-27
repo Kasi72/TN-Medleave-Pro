@@ -109,7 +109,8 @@ fun OverviewTabScreen(
   onClaimGhColCandidate: (com.example.domain.GhColCaptureCandidate) -> Unit = {},
   onClearLapsedCol: (com.example.domain.ColExpiryItem) -> Unit = {},
   onClearAllLapsedCols: (List<com.example.domain.ColExpiryItem>) -> Unit = {},
-  onRestoreArchivedLapsedCols: () -> Unit = {}
+  onRestoreArchivedLapsedCols: () -> Unit = {},
+  isClearingLapsedCols: Boolean = false
 ) {
   val context = LocalContext.current
   val summary = state.yearSummary
@@ -340,7 +341,8 @@ fun OverviewTabScreen(
           onClaimGhColCandidate = onClaimGhColCandidate,
           onClearLapsedCol = onClearLapsedCol,
           onClearAllLapsedCols = onClearAllLapsedCols,
-          onRestoreArchivedLapsedCols = onRestoreArchivedLapsedCols
+          onRestoreArchivedLapsedCols = onRestoreArchivedLapsedCols,
+          isClearingLapsedCols = isClearingLapsedCols
         )
       }
     }

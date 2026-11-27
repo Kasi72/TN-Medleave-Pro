@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -98,6 +99,7 @@ fun ExpiryWatchdogAndActionCard(
   onClearLapsedCol: (ColExpiryItem) -> Unit = {},
   onClearAllLapsedCols: (List<ColExpiryItem>) -> Unit = {},
   onRestoreArchivedLapsedCols: () -> Unit = {},
+  isClearingLapsedCols: Boolean = false,
   compactColMode: Boolean = false,
   modifier: Modifier = Modifier
 ) {
@@ -184,7 +186,7 @@ fun ExpiryWatchdogAndActionCard(
 
         val badgeCount = watchdog.totalUrgentAlerts + unclaimedGhCandidates.size
         if (lapsedItems.isNotEmpty()) {
-          // Interactive 1-Tap Crimson Extruded Button to Clear All Lapsed GH Credits
+          // Interactive 1-Tap Crimson Extruded Button to Clear All Lapsed GH Credits from Firestore
           Box(
             modifier = Modifier
               .neumorphicExtruded(
@@ -194,20 +196,28 @@ fun ExpiryWatchdogAndActionCard(
                 surfaceColor = actions.destructiveAlert,
                 neu = neu
               )
-              .clickable { onClearAllLapsedCols(lapsedItems) }
+              .clickable(enabled = !isClearingLapsedCols) { onClearAllLapsedCols(lapsedItems) }
               .padding(horizontal = 10.dp, vertical = 7.dp)
               .testTag("clear_all_lapsed_cols_button")
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(
-                imageVector = Icons.Default.DeleteSweep,
-                contentDescription = "Clear all lapsed credits",
-                tint = Color.White,
-                modifier = Modifier.size(13.dp)
-              )
+              if (isClearingLapsedCols) {
+                CircularProgressIndicator(
+                  modifier = Modifier.size(12.dp),
+                  strokeWidth = 2.dp,
+                  color = Color.White
+                )
+              } else {
+                Icon(
+                  imageVector = Icons.Default.DeleteSweep,
+                  contentDescription = "Clear all lapsed credits",
+                  tint = Color.White,
+                  modifier = Modifier.size(13.dp)
+                )
+              }
               Spacer(modifier = Modifier.width(4.dp))
               Text(
-                text = "Clear ${lapsedItems.size} Lapsed",
+                text = if (isClearingLapsedCols) "Clearing..." else "Clear ${lapsedItems.size} Lapsed",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -404,7 +414,7 @@ fun ExpiryWatchdogAndActionCard(
                         surfaceColor = actions.destructiveAlert,
                         neu = neu
                       )
-                      .clickable { onClearLapsedCol(item) }
+                      .clickable(enabled = !isClearingLapsedCols) { onClearLapsedCol(item) }
                       .padding(horizontal = 10.dp, vertical = 7.dp)
                       .testTag("clear_lapsed_col_${item.ghDateIso}")
                   ) {

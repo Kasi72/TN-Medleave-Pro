@@ -144,6 +144,9 @@ class LeaveViewModel(
   )
   val clearedLapsedColKeys: StateFlow<Set<String>> = _clearedLapsedColKeys.asStateFlow()
 
+  private val _isClearingExpiredGh = MutableStateFlow(false)
+  val isClearingExpiredGh: StateFlow<Boolean> = _isClearingExpiredGh.asStateFlow()
+
   val leaveWorkflowsByRecordId: StateFlow<Map<String, LeaveWorkflowMeta>> =
     repository.observeLeaveWorkflows(currentUserId)
       .stateIn(
@@ -1476,22 +1479,91 @@ class LeaveViewModel(
   }
 
   fun clearLapsedColItem(item: ColExpiryItem) {
-    _clearedLapsedColKeys.value = LapsedColArchiveStore.clearItems(
-      context = appContext,
-      userId = currentUserId,
-      items = listOf(item)
-    )
-    _statusBanner.value = "Cleared lapsed GH Worked (${item.ghDateIso}) from Watchdog. Historical record remains archived in Ledger."
+    if (_isClearingExpiredGh.value) return
+    if (item.urgency != com.example.domain.WatchdogColUrgency.EXPIRED) {
+      _statusBanner.value = "Only lapsed (>6-month) GH-Worked credits can be cleared."
+      return
+    }
+    viewModelScope.launch {
+      _isClearingExpiredGh.value = true
+      try {
+        val workflowIds = leaveWorkflowsByRecordId.value.keys
+        val res = repository.deleteExpiredGhWorkedRecords(
+          recordIds = listOf(item.recordId),
+          workflowIdsToCleanup = workflowIds
+        )
+        res.onSuccess { summary ->
+          _statusBanner.value = when {
+            summary.deletedCount > 0 && summary.queuedOffline ->
+              "Cleared expired GH Worked (${item.ghDateIso}) locally — queued to sync with Firestore."
+            summary.deletedCount > 0 ->
+              "Deleted expired GH Worked (${item.ghDateIso}) from Firestore."
+            else ->
+              "Expired GH Worked (${item.ghDateIso}) was already removed."
+          }
+        }.onFailure { err ->
+          _statusBanner.value =
+            "Could not delete expired GH Worked (${item.ghDateIso}): ${err.localizedMessage ?: "Please retry."}"
+        }
+      } finally {
+        _isClearingExpiredGh.value = false
+      }
+    }
   }
 
   fun clearAllLapsedColItems(items: List<ColExpiryItem>) {
-    if (items.isEmpty()) return
-    _clearedLapsedColKeys.value = LapsedColArchiveStore.clearItems(
-      context = appContext,
-      userId = currentUserId,
-      items = items
-    )
-    _statusBanner.value = "Cleared ${items.size} lapsed GH-Worked credit${if (items.size > 1) "s" else ""} from Watchdog. Historical duty records remain safely archived in Ledger."
+    if (_isClearingExpiredGh.value) return
+    viewModelScope.launch {
+      _isClearingExpiredGh.value = true
+      try {
+        // Combine passed items + live watchdog expired items + any previously archived expired records still in Firestore
+        val liveRecords = (uiState.value as? LeaveUiState.Success)?.allRecords.orEmpty()
+        val liveWorkflows = leaveWorkflowsByRecordId.value
+        val fullUnfilteredWatchdog = ExpiryWatchdogEngine.evaluate(
+          records = liveRecords,
+          workflowsByRecordId = liveWorkflows,
+          clearedLapsedRecordKeys = emptySet()
+        )
+        val allExpiredIds = buildList {
+          items.filter { it.urgency == com.example.domain.WatchdogColUrgency.EXPIRED }
+            .forEach { if (it.recordId.isNotBlank()) add(it.recordId) }
+          fullUnfilteredWatchdog.expiringCols
+            .filter { it.urgency == com.example.domain.WatchdogColUrgency.EXPIRED }
+            .forEach { if (it.recordId.isNotBlank()) add(it.recordId) }
+        }.distinct()
+
+        if (allExpiredIds.isEmpty()) {
+          _clearedLapsedColKeys.value = LapsedColArchiveStore.restoreAll(appContext, currentUserId)
+          _statusBanner.value = "All clear — no expired GH-Worked credits remaining in Firestore."
+          return@launch
+        }
+
+        val res = repository.deleteExpiredGhWorkedRecords(
+          recordIds = allExpiredIds,
+          workflowIdsToCleanup = liveWorkflows.keys
+        )
+        res.onSuccess { summary ->
+          if (summary.failedCount == 0) {
+            _clearedLapsedColKeys.value = LapsedColArchiveStore.restoreAll(appContext, currentUserId)
+          }
+          _statusBanner.value = when {
+            summary.failedCount > 0 ->
+              "Deleted ${summary.deletedCount} expired GH-Worked record(s); ${summary.failedCount} could not be removed — tap again to retry."
+            summary.deletedCount == 0 && summary.skippedInvalidCount > 0 ->
+              "Skipped ${summary.skippedInvalidCount} malformed expired GH-Worked record ID(s)."
+            summary.queuedOffline ->
+              "Cleared ${summary.deletedCount} expired GH-Worked record(s) — queued to sync with Firestore."
+            else ->
+              "Deleted ${summary.deletedCount} expired GH-Worked record${if (summary.deletedCount != 1) "s" else ""} from Firestore."
+          }
+        }.onFailure { err ->
+          _statusBanner.value =
+            "Could not clear expired GH-Worked records: ${err.localizedMessage ?: "Please check connection and retry."}"
+        }
+      } finally {
+        _isClearingExpiredGh.value = false
+      }
+    }
   }
 
   fun restoreArchivedLapsedCols() {
@@ -1499,6 +1571,6 @@ class LeaveViewModel(
       context = appContext,
       userId = currentUserId
     )
-    _statusBanner.value = "Restored previously cleared lapsed GH-Worked credits in Watchdog."
+    _statusBanner.value = "Restored previously hidden lapsed GH-Worked credits."
   }
 }

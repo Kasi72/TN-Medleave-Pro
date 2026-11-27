@@ -202,6 +202,7 @@ fun MainFeatureHost(
   val expiryWatchdogSummary by viewModel.expiryWatchdogSummary.collectAsStateWithLifecycle()
   val unclaimedGhColCandidates by viewModel.unclaimedGhColCandidates.collectAsStateWithLifecycle()
   val clearedLapsedColKeys by viewModel.clearedLapsedColKeys.collectAsStateWithLifecycle()
+  val isClearingExpiredGh by viewModel.isClearingExpiredGh.collectAsStateWithLifecycle()
   val pendingWorkflowRecordId by viewModel.pendingWorkflowRecordId.collectAsStateWithLifecycle()
   val protectLoggedDutyShifts by viewModel.protectLoggedDutyShifts.collectAsStateWithLifecycle()
   var currentTab by rememberSaveable { mutableIntStateOf(0) }
@@ -502,7 +503,8 @@ fun MainFeatureHost(
               },
               onRestoreArchivedLapsedCols = {
                 viewModel.restoreArchivedLapsedCols()
-              }
+              },
+              isClearingLapsedCols = isClearingExpiredGh
             )
             1 -> LedgerTabScreen(
               state = state,
@@ -574,7 +576,8 @@ fun MainFeatureHost(
               },
               onRestoreArchivedLapsedCols = {
                 viewModel.restoreArchivedLapsedCols()
-              }
+              },
+              isClearingLapsedCols = isClearingExpiredGh
             )
             3 -> OptimizerTabScreen(
               state = state,

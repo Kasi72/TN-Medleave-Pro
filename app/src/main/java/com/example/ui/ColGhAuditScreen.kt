@@ -97,7 +97,8 @@ fun ColGhAuditTabScreen(
   onClaimGhColCandidate: (com.example.domain.GhColCaptureCandidate) -> Unit = {},
   onClearLapsedCol: (com.example.domain.ColExpiryItem) -> Unit = {},
   onClearAllLapsedCols: (List<com.example.domain.ColExpiryItem>) -> Unit = {},
-  onRestoreArchivedLapsedCols: () -> Unit = {}
+  onRestoreArchivedLapsedCols: () -> Unit = {},
+  isClearingLapsedCols: Boolean = false
 ) {
   var showAllYears by remember { mutableStateOf(false) }
   var selectedStatusFilter by remember { mutableStateOf<ColAuditStatus?>(null) }
@@ -356,6 +357,7 @@ fun ColGhAuditTabScreen(
           onClearLapsedCol = onClearLapsedCol,
           onClearAllLapsedCols = onClearAllLapsedCols,
           onRestoreArchivedLapsedCols = onRestoreArchivedLapsedCols,
+          isClearingLapsedCols = isClearingLapsedCols,
           compactColMode = true
         )
       }
@@ -586,6 +588,7 @@ fun ColGhAuditTabScreen(
               onClearLapsedCol = onClearLapsedCol,
               onClearAllLapsedCols = onClearAllLapsedCols,
               onRestoreArchivedLapsedCols = onRestoreArchivedLapsedCols,
+              isClearingLapsedCols = isClearingLapsedCols,
               compactColMode = true
             )
           }

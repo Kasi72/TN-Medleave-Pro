@@ -15,10 +15,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+
+data class ExpiredGhClearResult(
+  val deletedCount: Int,
+  val failedCount: Int,
+  val skippedInvalidCount: Int,
+  val queuedOffline: Boolean
+)
 
 class LeaveRepository(private val db: FirebaseFirestore) {
 
@@ -32,6 +40,11 @@ class LeaveRepository(private val db: FirebaseFirestore) {
 
   companion object {
     const val BIOMETRIC_HOD_USER_ID = "biometric_hod_drkasi"
+    private val VALID_FIRESTORE_DOC_ID_REGEX = Regex("^[a-zA-Z0-9_\\-]{1,128}$")
+    internal fun isValidFirestoreDocId(id: String): Boolean = VALID_FIRESTORE_DOC_ID_REGEX.matches(id.trim())
+    private const val BATCH_DELETE_CHUNK_SIZE = 200
+    private const val BATCH_COMMIT_TIMEOUT_MS = 12_000L
+    private const val SINGLE_DELETE_TIMEOUT_MS = 4_000L
     private val biometricSessionRecordsFlow = MutableStateFlow<List<LeaveRecord>>(emptyList())
     private val biometricWorkflowsFlow = MutableStateFlow<Map<String, LeaveWorkflowMeta>>(emptyMap())
     private val biometricDutyShiftsFlow = MutableStateFlow<List<DutyShift>>(emptyList())
@@ -513,11 +526,15 @@ class LeaveRepository(private val db: FirebaseFirestore) {
 
   suspend fun deleteLeaveRecord(recordId: String): Result<Unit> {
     val uid = requireUserId()
+    val cleanId = recordId.trim()
+    if (!VALID_FIRESTORE_DOC_ID_REGEX.matches(cleanId)) {
+      return Result.failure(IllegalArgumentException("Invalid record ID for deletion"))
+    }
     if (auth.currentUser == null || uid == BIOMETRIC_HOD_USER_ID) {
-      biometricSessionRecordsFlow.value = biometricSessionRecordsFlow.value.filterNot { it.id == recordId }
+      biometricSessionRecordsFlow.value = biometricSessionRecordsFlow.value.filterNot { it.id == cleanId }
       return Result.success(Unit)
     }
-    val docRef = db.collection("users").document(uid).collection("leave_records").document(recordId)
+    val docRef = db.collection("users").document(uid).collection("leave_records").document(cleanId)
     return try {
       docRef.delete().await()
       Result.success(Unit)
@@ -526,6 +543,149 @@ class LeaveRepository(private val db: FirebaseFirestore) {
     } catch (e: Exception) {
       handleFirestoreError(e, OperationType.DELETE, docRef.path)
       Result.failure(e)
+    }
+  }
+
+  /**
+   * Resilient bulk-delete service for expired (>6-month) unclaimed GH_WORKED records.
+   *
+   * Safeguards against hangs and partial failures:
+   * 1. Pre-validates every userId/recordId against `firestore.rules`'s `isValidId` regex so a single
+   *    malformed ID can never poison an entire WriteBatch with PERMISSION_DENIED.
+   * 2. Chunks deletes into batches of 200 (<=400 ops including optional workflow cleanup, safely under
+   *    Firestore's 500-op WriteBatch limit).
+   * 3. Guards each Firestore commit with a bounded timeout (`withTimeoutOrNull`) so offline/flaky
+   *    hospital Wi-Fi never hangs the UI; Firestore's local cache applies deletes immediately and
+   *    syncs automatically upon reconnection.
+   * 4. Falls back to safe per-document iteration if any batch fails, isolating errors without
+   *    blocking deletion of the remaining expired records.
+   */
+  suspend fun deleteExpiredGhWorkedRecords(
+    recordIds: Collection<String>,
+    workflowIdsToCleanup: Set<String> = emptySet()
+  ): Result<ExpiredGhClearResult> {
+    val uid = requireUserId()
+    val distinctRaw = recordIds.map { it.trim() }.distinct()
+    val validIds = distinctRaw.filter { VALID_FIRESTORE_DOC_ID_REGEX.matches(it) }
+    val skippedInvalidCount = distinctRaw.size - validIds.size
+
+    if (validIds.isEmpty()) {
+      return Result.success(
+        ExpiredGhClearResult(
+          deletedCount = 0,
+          failedCount = 0,
+          skippedInvalidCount = skippedInvalidCount,
+          queuedOffline = false
+        )
+      )
+    }
+
+    if (auth.currentUser == null || uid == BIOMETRIC_HOD_USER_ID) {
+      val idSet = validIds.toSet()
+      val before = biometricSessionRecordsFlow.value
+      val after = before.filterNot { it.id in idSet }
+      biometricSessionRecordsFlow.value = after
+      if (workflowIdsToCleanup.isNotEmpty()) {
+        biometricWorkflowsFlow.value = biometricWorkflowsFlow.value - idSet
+      }
+      return Result.success(
+        ExpiredGhClearResult(
+          deletedCount = (before.size - after.size).coerceAtLeast(0),
+          failedCount = 0,
+          skippedInvalidCount = skippedInvalidCount,
+          queuedOffline = false
+        )
+      )
+    }
+
+    if (!VALID_FIRESTORE_DOC_ID_REGEX.matches(uid)) {
+      return Result.failure(IllegalStateException("Invalid authenticated user ID for Firestore deletion"))
+    }
+
+    val userDoc = db.collection("users").document(uid)
+    val recordsCol = userDoc.collection("leave_records")
+    val workflowsCol = userDoc.collection("leave_workflows")
+    val recordsPath = "users/$uid/leave_records"
+
+    var deletedCount = 0
+    var failedCount = 0
+    var queuedOffline = false
+    var lastError: Exception? = null
+
+    for (chunk in validIds.chunked(BATCH_DELETE_CHUNK_SIZE)) {
+      val batch = db.batch()
+      chunk.forEach { recId ->
+        batch.delete(recordsCol.document(recId))
+        if (recId in workflowIdsToCleanup) {
+          batch.delete(workflowsCol.document(recId))
+        }
+      }
+
+      val batchSucceeded = try {
+        val committed = withTimeoutOrNull(BATCH_COMMIT_TIMEOUT_MS) {
+          batch.commit().await()
+          true
+        }
+        if (committed == null) {
+          // Offline / slow network: Firestore local persistence already removed the docs and queued sync
+          queuedOffline = true
+        }
+        deletedCount += chunk.size
+        true
+      } catch (e: CancellationException) {
+        throw e
+      } catch (e: Exception) {
+        lastError = e
+        handleFirestoreError(e, OperationType.DELETE, recordsPath)
+        false
+      }
+
+      // Per-document fallback if the batch failed so one bad document never blocks clearing the rest
+      if (!batchSucceeded) {
+        for (recId in chunk) {
+          val docRef = recordsCol.document(recId)
+          try {
+            val done = withTimeoutOrNull(SINGLE_DELETE_TIMEOUT_MS) {
+              docRef.delete().await()
+              true
+            }
+            if (done == null) {
+              queuedOffline = true
+            }
+            if (recId in workflowIdsToCleanup) {
+              try {
+                withTimeoutOrNull(SINGLE_DELETE_TIMEOUT_MS) {
+                  workflowsCol.document(recId).delete().await()
+                }
+              } catch (e: CancellationException) {
+                throw e
+              } catch (_: Exception) {
+                // Best-effort workflow metadata cleanup; primary record deletion already succeeded
+              }
+            }
+            deletedCount++
+          } catch (e: CancellationException) {
+            throw e
+          } catch (e: Exception) {
+            lastError = e
+            failedCount++
+            handleFirestoreError(e, OperationType.DELETE, docRef.path)
+          }
+        }
+      }
+    }
+
+    return if (deletedCount == 0 && failedCount > 0 && lastError != null) {
+      Result.failure(lastError)
+    } else {
+      Result.success(
+        ExpiredGhClearResult(
+          deletedCount = deletedCount,
+          failedCount = failedCount,
+          skippedInvalidCount = skippedInvalidCount,
+          queuedOffline = queuedOffline
+        )
+      )
     }
   }
 
