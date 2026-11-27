@@ -111,6 +111,113 @@
         }
       },
       "required": ["userId", "leaveType", "startDate", "endDate", "totalDays", "status", "year", "pairedDutyDate", "reason", "isHalfDay", "createdAt", "updatedAt"]
+    },
+    "LeaveWorkflowMeta": {
+      "title": "LeaveWorkflowMeta",
+      "description": "Approval pipeline stage, sanction order reference, relieving officer, joining report status, and local slip vault filename for a leave record.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The authenticated user UID owning this workflow record."
+        },
+        "recordId": {
+          "type": "string",
+          "description": "ID of the parent LeaveRecord this workflow tracks."
+        },
+        "stage": {
+          "type": "string",
+          "enum": ["PLANNED", "SUBMITTED", "SANCTIONED", "JOINING_FILED"],
+          "description": "Current approval and paperwork lifecycle stage."
+        },
+        "sanctionOrderNo": {
+          "type": "string",
+          "description": "HOD office diary number or official sanction order reference."
+        },
+        "relievingOfficer": {
+          "type": "string",
+          "description": "Name and designation of the relieving medical officer."
+        },
+        "relievingContact": {
+          "type": "string",
+          "description": "Optional phone or unit contact for the relieving officer."
+        },
+        "joiningDateIso": {
+          "type": "string",
+          "description": "Return-to-duty joining date in YYYY-MM-DD format, or empty string."
+        },
+        "joiningSession": {
+          "type": "string",
+          "enum": ["FN", "AN"],
+          "description": "Forenoon (FN) or Afternoon (AN) joining report session."
+        },
+        "slipLocalFileName": {
+          "type": "string",
+          "description": "Filename of the signed sanction slip image saved in app-private storage."
+        },
+        "workflowNotes": {
+          "type": "string",
+          "description": "Optional paperwork or charge-handover remarks."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated."
+        }
+      },
+      "required": ["userId", "recordId", "stage", "sanctionOrderNo", "relievingOfficer", "relievingContact", "joiningDateIso", "joiningSession", "slipLocalFileName", "workflowNotes", "createdAt", "updatedAt"]
+    },
+    "DutyShift": {
+      "title": "DutyShift",
+      "description": "Assigned hospital clinical duty, call, OPD, exam, or GH emergency shift on the officer's calendar.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The authenticated user UID owning this duty shift."
+        },
+        "dateIso": {
+          "type": "string",
+          "description": "Date of the duty shift in YYYY-MM-DD format."
+        },
+        "year": {
+          "type": "integer",
+          "description": "Calendar year of the duty shift."
+        },
+        "shiftType": {
+          "type": "string",
+          "enum": ["CALL_24H", "NIGHT_DUTY", "OPD_DUTY", "WARD_OT", "EXAM_DME", "GH_EMERGENCY"],
+          "description": "Type of assigned hospital duty."
+        },
+        "departmentNote": {
+          "type": "string",
+          "description": "Optional unit, ward, or exam note for this shift."
+        },
+        "colClaimed": {
+          "type": "boolean",
+          "description": "Whether a GH Worked (+1 COL) credit has been claimed for this shift."
+        },
+        "linkedGhRecordId": {
+          "type": "string",
+          "description": "ID of the linked GH_WORKED LeaveRecord if COL credit was claimed."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when updated."
+        }
+      },
+      "required": ["userId", "dateIso", "year", "shiftType", "departmentNote", "colClaimed", "linkedGhRecordId", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -121,6 +228,14 @@
     "/users/{userId}/leave_entries/{entryId}": {
       "schema": { "$ref": "#/entities/LeaveEntry" },
       "description": "User-isolated multi-day or single-day LeaveEntry records with start/end dates and status."
+    },
+    "/users/{userId}/leave_workflows/{recordId}": {
+      "schema": { "$ref": "#/entities/LeaveWorkflowMeta" },
+      "description": "User-isolated leave approval pipeline, sanction order references, and joining report metadata."
+    },
+    "/users/{userId}/duty_shifts/{shiftId}": {
+      "schema": { "$ref": "#/entities/DutyShift" },
+      "description": "User-isolated clinical duty roster and on-call calendar shifts."
     }
   }
 }

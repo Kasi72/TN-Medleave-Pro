@@ -124,5 +124,105 @@ service cloud.firestore {
 
       allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(entryId);
     }
+
+    function isValidLeaveWorkflow(data, userId, recordId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.recordId is string &&
+             data.recordId == recordId &&
+             data.stage is string &&
+             data.stage in ['PLANNED', 'SUBMITTED', 'SANCTIONED', 'JOINING_FILED'] &&
+             data.sanctionOrderNo is string &&
+             data.sanctionOrderNo.size() <= 80 &&
+             data.relievingOfficer is string &&
+             data.relievingOfficer.size() <= 100 &&
+             data.relievingContact is string &&
+             data.relievingContact.size() <= 40 &&
+             data.joiningDateIso is string &&
+             (data.joiningDateIso == '' || (data.joiningDateIso.size() == 10 && data.joiningDateIso.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$'))) &&
+             data.joiningSession is string &&
+             data.joiningSession in ['FN', 'AN'] &&
+             data.slipLocalFileName is string &&
+             data.slipLocalFileName.size() <= 160 &&
+             data.workflowNotes is string &&
+             data.workflowNotes.size() <= 500 &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    function isValidDutyShift(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.dateIso is string &&
+             data.dateIso.size() == 10 &&
+             data.dateIso.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') &&
+             data.year is int &&
+             data.year >= 2020 &&
+             data.year <= 2035 &&
+             data.shiftType is string &&
+             data.shiftType in ['CALL_24H', 'NIGHT_DUTY', 'OPD_DUTY', 'WARD_OT', 'EXAM_DME', 'GH_EMERGENCY'] &&
+             data.departmentNote is string &&
+             data.departmentNote.size() <= 200 &&
+             data.colClaimed is bool &&
+             data.linkedGhRecordId is string &&
+             data.linkedGhRecordId.size() <= 128 &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    match /users/{userId}/leave_workflows/{recordId} {
+      allow get: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(recordId);
+      allow list: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+
+      allow create: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       isValidId(recordId) &&
+                       incoming().keys().hasAll(['userId', 'recordId', 'stage', 'sanctionOrderNo', 'relievingOfficer', 'relievingContact', 'joiningDateIso', 'joiningSession', 'slipLocalFileName', 'workflowNotes', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'recordId', 'stage', 'sanctionOrderNo', 'relievingOfficer', 'relievingContact', 'joiningDateIso', 'joiningSession', 'slipLocalFileName', 'workflowNotes', 'createdAt', 'updatedAt']) &&
+                       isValidLeaveWorkflow(incoming(), userId, recordId);
+
+      allow update: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       isValidId(recordId) &&
+                       isValidLeaveWorkflow(incoming(), userId, recordId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().recordId == existing().recordId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['stage', 'sanctionOrderNo', 'relievingOfficer', 'relievingContact', 'joiningDateIso', 'joiningSession', 'slipLocalFileName', 'workflowNotes', 'updatedAt']);
+
+      allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(recordId);
+    }
+
+    match /users/{userId}/duty_shifts/{shiftId} {
+      allow get: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(shiftId);
+      allow list: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+
+      allow create: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       isValidId(shiftId) &&
+                       incoming().keys().hasAll(['userId', 'dateIso', 'year', 'shiftType', 'departmentNote', 'colClaimed', 'linkedGhRecordId', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'dateIso', 'year', 'shiftType', 'departmentNote', 'colClaimed', 'linkedGhRecordId', 'createdAt', 'updatedAt']) &&
+                       isValidDutyShift(incoming(), userId);
+
+      allow update: if isSignedIn() &&
+                       request.auth.uid == userId &&
+                       isValidId(userId) &&
+                       isValidId(shiftId) &&
+                       isValidDutyShift(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['dateIso', 'year', 'shiftType', 'departmentNote', 'colClaimed', 'linkedGhRecordId', 'updatedAt']);
+
+      allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidId(shiftId);
+    }
   }
 }

@@ -1,23 +1,20 @@
 package com.example.data.local
 
+import android.content.ContentValues
 import android.content.Context
-import androidx.room.Dao
-import androidx.room.Database
-import androidx.room.Entity
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.PrimaryKey
-import androidx.room.Query
-import androidx.room.Room
-import androidx.room.RoomDatabase
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
 import com.example.data.InitialLeaveSeedData
 import com.example.data.TnHolidayItem
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
-@Entity(tableName = "tn_holidays")
 data class TnHolidayEntity(
-  @PrimaryKey val id: String,
+  val id: String,
   val dateIso: String,
   val dayOfWeek: String,
   val nameEnglish: String,
@@ -58,49 +55,209 @@ data class TnHolidayEntity(
   }
 }
 
-@Dao
 interface TnHolidayDao {
-  @Query("SELECT * FROM tn_holidays ORDER BY dateIso ASC")
   fun observeAllHolidays(): Flow<List<TnHolidayEntity>>
-
-  @Query("SELECT * FROM tn_holidays ORDER BY dateIso ASC")
   suspend fun getAllHolidaysOnce(): List<TnHolidayEntity>
-
-  @Query("SELECT COUNT(*) FROM tn_holidays")
   suspend fun getHolidayCount(): Int
-
-  @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun upsertHolidays(items: List<TnHolidayEntity>)
-
-  @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun upsertSingleHoliday(item: TnHolidayEntity)
-
-  @Query("DELETE FROM tn_holidays WHERE id = :id")
   suspend fun deleteHolidayById(id: String)
 }
 
-@Database(
-  entities = [TnHolidayEntity::class],
-  version = 1,
-  exportSchema = false
-)
-abstract class TnHolidayDatabase : RoomDatabase() {
-  abstract fun holidayDao(): TnHolidayDao
+/**
+ * Lightweight, zero-KSP native Android SQLite cache preserving the exact `tn_medleave_holidays.db`
+ * file and `tn_holidays` table schema for seamless local caching of synced TN Govt holidays.
+ */
+class TnHolidayDatabase private constructor(context: Context) {
+
+  private val openHelper = HolidaySqliteOpenHelper(context.applicationContext)
+  private val daoInstance: TnHolidayDao = SqliteTnHolidayDao(openHelper)
+
+  fun holidayDao(): TnHolidayDao = daoInstance
+
+  private class HolidaySqliteOpenHelper(context: Context) :
+    SQLiteOpenHelper(context, DB_NAME, null, DB_VERSION) {
+
+    override fun onCreate(db: SQLiteDatabase) {
+      db.execSQL(CREATE_TABLE_SQL)
+    }
+
+    override fun onOpen(db: SQLiteDatabase) {
+      super.onOpen(db)
+      if (!db.isReadOnly) {
+        db.execSQL(CREATE_TABLE_SQL)
+      }
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+      db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
+      onCreate(db)
+    }
+  }
+
+  private class SqliteTnHolidayDao(
+    private val helper: HolidaySqliteOpenHelper
+  ) : TnHolidayDao {
+
+    private val lock = Any()
+    private val holidaysState = MutableStateFlow<List<TnHolidayEntity>>(emptyList())
+    @Volatile
+    private var initializedFromDisk = false
+
+    private fun readAllSortedSync(): List<TnHolidayEntity> {
+      synchronized(lock) {
+        val db = helper.readableDatabase
+        val result = mutableListOf<TnHolidayEntity>()
+        db.query(
+          TABLE_NAME,
+          arrayOf(
+            "id",
+            "dateIso",
+            "dayOfWeek",
+            "nameEnglish",
+            "nameTamil",
+            "isRestrictedHoliday",
+            "monthNameTamil",
+            "sourceOrigin",
+            "syncedAtEpochMillis"
+          ),
+          null,
+          null,
+          null,
+          null,
+          "dateIso ASC"
+        ).use { cursor ->
+          while (cursor.moveToNext()) {
+            result.add(
+              TnHolidayEntity(
+                id = cursor.getString(0),
+                dateIso = cursor.getString(1),
+                dayOfWeek = cursor.getString(2),
+                nameEnglish = cursor.getString(3),
+                nameTamil = cursor.getString(4),
+                isRestrictedHoliday = cursor.getInt(5) != 0,
+                monthNameTamil = cursor.getString(6),
+                sourceOrigin = cursor.getString(7),
+                syncedAtEpochMillis = cursor.getLong(8)
+              )
+            )
+          }
+        }
+        initializedFromDisk = true
+        return result
+      }
+    }
+
+    private fun refreshStateSync(): List<TnHolidayEntity> {
+      val rows = readAllSortedSync()
+      holidaysState.value = rows
+      return rows
+    }
+
+    override fun observeAllHolidays(): Flow<List<TnHolidayEntity>> {
+      if (!initializedFromDisk) {
+        runCatching { refreshStateSync() }
+      }
+      return holidaysState.asStateFlow()
+    }
+
+    override suspend fun getAllHolidaysOnce(): List<TnHolidayEntity> = withContext(Dispatchers.IO) {
+      refreshStateSync()
+    }
+
+    override suspend fun getHolidayCount(): Int = withContext(Dispatchers.IO) {
+      synchronized(lock) {
+        val db = helper.readableDatabase
+        db.rawQuery("SELECT COUNT(*) FROM $TABLE_NAME", null).use { cursor ->
+          if (cursor.moveToFirst()) cursor.getInt(0) else 0
+        }
+      }
+    }
+
+    override suspend fun upsertHolidays(items: List<TnHolidayEntity>) = withContext(Dispatchers.IO) {
+      if (items.isEmpty()) return@withContext
+      synchronized(lock) {
+        val db = helper.writableDatabase
+        db.beginTransaction()
+        try {
+          items.forEach { item ->
+            db.insertWithOnConflict(
+              TABLE_NAME,
+              null,
+              item.toContentValues(),
+              SQLiteDatabase.CONFLICT_REPLACE
+            )
+          }
+          db.setTransactionSuccessful()
+        } finally {
+          db.endTransaction()
+        }
+      }
+      refreshStateSync()
+      Unit
+    }
+
+    override suspend fun upsertSingleHoliday(item: TnHolidayEntity) = withContext(Dispatchers.IO) {
+      synchronized(lock) {
+        val db = helper.writableDatabase
+        db.insertWithOnConflict(
+          TABLE_NAME,
+          null,
+          item.toContentValues(),
+          SQLiteDatabase.CONFLICT_REPLACE
+        )
+      }
+      refreshStateSync()
+      Unit
+    }
+
+    override suspend fun deleteHolidayById(id: String) = withContext(Dispatchers.IO) {
+      synchronized(lock) {
+        val db = helper.writableDatabase
+        db.delete(TABLE_NAME, "id = ?", arrayOf(id))
+      }
+      refreshStateSync()
+      Unit
+    }
+
+    private fun TnHolidayEntity.toContentValues(): ContentValues = ContentValues().apply {
+      put("id", id)
+      put("dateIso", dateIso)
+      put("dayOfWeek", dayOfWeek)
+      put("nameEnglish", nameEnglish)
+      put("nameTamil", nameTamil)
+      put("isRestrictedHoliday", if (isRestrictedHoliday) 1 else 0)
+      put("monthNameTamil", monthNameTamil)
+      put("sourceOrigin", sourceOrigin)
+      put("syncedAtEpochMillis", syncedAtEpochMillis)
+    }
+  }
 
   companion object {
+    private const val DB_NAME = "tn_medleave_holidays.db"
+    private const val DB_VERSION = 1
+    private const val TABLE_NAME = "tn_holidays"
+
+    private const val CREATE_TABLE_SQL = """
+      CREATE TABLE IF NOT EXISTS tn_holidays (
+        id TEXT NOT NULL PRIMARY KEY,
+        dateIso TEXT NOT NULL,
+        dayOfWeek TEXT NOT NULL,
+        nameEnglish TEXT NOT NULL,
+        nameTamil TEXT NOT NULL,
+        isRestrictedHoliday INTEGER NOT NULL,
+        monthNameTamil TEXT NOT NULL,
+        sourceOrigin TEXT NOT NULL,
+        syncedAtEpochMillis INTEGER NOT NULL
+      )
+    """
+
     @Volatile
     private var INSTANCE: TnHolidayDatabase? = null
 
     fun getInstance(context: Context): TnHolidayDatabase {
       return INSTANCE ?: synchronized(this) {
-        INSTANCE ?: Room.databaseBuilder(
-          context.applicationContext,
-          TnHolidayDatabase::class.java,
-          "tn_medleave_holidays.db"
-        )
-          .fallbackToDestructiveMigration(dropAllTables = true)
-          .build()
-          .also { INSTANCE = it }
+        INSTANCE ?: TnHolidayDatabase(context.applicationContext).also { INSTANCE = it }
       }
     }
   }

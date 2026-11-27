@@ -156,7 +156,8 @@ fun InteractiveLeaveBuilderSection(
   onCommitDraftLeaves: (Map<String, LeaveCategory>) -> Unit,
   modifier: Modifier = Modifier,
   pendingPreload: BuilderPreloadRequest? = null,
-  onPreloadConsumed: () -> Unit = {}
+  onPreloadConsumed: () -> Unit = {},
+  dutyShifts: List<com.example.data.DutyShift> = emptyList()
 ) {
   var builderYear by rememberSaveable(state.selectedYear) {
     mutableIntStateOf(if (state.selectedYear in 2026L..2027L) state.selectedYear.toInt() else 2026)
@@ -219,6 +220,13 @@ fun InteractiveLeaveBuilderSection(
       summary2026 = state.summary2026,
       unusedGhCreditsCount = state.colGhAuditAllYears.availableUnusedGhCount,
       allRecords = state.allRecords
+    )
+  }
+
+  val dutyConflicts = remember(draftBlocks.toMap(), dutyShifts) {
+    com.example.domain.DutyConflictEngine.findDutyConflicts(
+      candidateDatesIso = draftBlocks.keys,
+      dutyShifts = dutyShifts
     )
   }
 
@@ -339,6 +347,78 @@ fun InteractiveLeaveBuilderSection(
               maxLines = 1,
               softWrap = false
             )
+          }
+        }
+
+        if (dutyConflicts.isNotEmpty()) {
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .neumorphicInset(
+                shape = IosSharpWellShape,
+                depth = 2.dp,
+                blurRadius = 4.dp,
+                accentTint = StatusAlertRed,
+                accentTintAlpha = 0.10f,
+                borderColor = StatusAlertRed.copy(alpha = 0.42f),
+                neu = neu
+              )
+              .padding(10.dp)
+              .testTag("builder_duty_conflict_banner")
+          ) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              Icon(
+                imageVector = Icons.Default.WarningAmber,
+                contentDescription = "Duty roster conflict",
+                tint = StatusAlertRed,
+                modifier = Modifier.size(18.dp)
+              )
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = "${dutyConflicts.size} Hospital Duty Conflict(s) Detected",
+                  style = MaterialTheme.typography.labelMedium,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = StatusAlertRed
+                )
+                Text(
+                  text = dutyConflicts.take(3).joinToString(" • ") {
+                    "${com.example.domain.JoiningReportAndShareGenerator.formatDisplayDate(it.dateIso)} (${it.shiftType.shortLabel})"
+                  },
+                  style = MaterialTheme.typography.bodySmall,
+                  color = neu.textPrimary,
+                  maxLines = 2,
+                  overflow = TextOverflow.Ellipsis
+                )
+              }
+              Box(
+                modifier = Modifier
+                  .neumorphicExtruded(
+                    shape = IosSharpBadgeShape,
+                    elevation = 2.dp,
+                    blurRadius = 4.dp,
+                    surfaceColor = StatusAlertRed,
+                    neu = neu
+                  )
+                  .clickable {
+                    dutyConflicts.forEach { draftBlocks.remove(it.dateIso) }
+                  }
+                  .padding(horizontal = 8.dp, vertical = 5.dp)
+                  .testTag("builder_clear_duty_conflicts_btn")
+              ) {
+                Text(
+                  text = "Remove",
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = Color.White,
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
+            }
           }
         }
 

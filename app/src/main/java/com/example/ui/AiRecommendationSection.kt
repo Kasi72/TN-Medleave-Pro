@@ -112,7 +112,10 @@ fun AiLeaveRecommendationSection(
   onApplyBridge: (SmartLeaveBridge) -> Unit,
   onApplyPortfolio: (List<AiLeaveRecommendation>) -> Unit = {},
   onToggleTentativeHold: (AiLeaveRecommendation) -> Unit = {},
-  onSimulateInBuilder: (AiLeaveRecommendation) -> Unit = {}
+  onSimulateInBuilder: (AiLeaveRecommendation) -> Unit = {},
+  loggedDutyCount: Int = 0,
+  protectLoggedDutyShifts: Boolean = true,
+  onToggleProtectLoggedDutyShifts: (Boolean) -> Unit = {}
 ) {
   val context = LocalContext.current
   val summary2026 = state.summary2026
@@ -461,7 +464,10 @@ fun AiLeaveRecommendationSection(
         onRunWithPrompt = {
           onUpdateConstraints(effectiveUiConstraints)
           onGenerateRecommendations(activeStrategyString)
-        }
+        },
+        loggedDutyCount = loggedDutyCount,
+        protectLoggedDutyShifts = protectLoggedDutyShifts,
+        onToggleProtectLoggedDutyShifts = onToggleProtectLoggedDutyShifts
       )
 
       // Multi-Plan Portfolio Impact Dock (appears when ≥1 card is selected)

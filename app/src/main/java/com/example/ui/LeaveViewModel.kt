@@ -3,11 +3,15 @@ package com.example.ui
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.ApprovalStage
 import com.example.data.ColGhAuditSummary
+import com.example.data.DutyShift
+import com.example.data.DutyShiftType
 import com.example.data.InitialLeaveSeedData
 import com.example.data.LeaveCategory
 import com.example.data.LeaveRecord
 import com.example.data.LeaveRepository
+import com.example.data.LeaveWorkflowMeta
 import com.example.data.SmartLeaveBridge
 import com.example.data.TnHolidayItem
 import com.example.data.local.LocalHolidayRepository
@@ -19,9 +23,14 @@ import com.example.domain.BuilderPreloadRequest
 import com.example.domain.BurnDownSlotSuggestion
 import com.example.domain.CsvImportRow
 import com.example.domain.CustomRangeAnalysis
+import com.example.domain.DutyConflictEngine
+import com.example.domain.ExpiryWatchdogEngine
+import com.example.domain.ExpiryWatchdogSummary
+import com.example.domain.GhColCaptureCandidate
 import com.example.domain.HolidaySyncStatus
 import com.example.domain.LeaveOptimizerEngine
 import com.example.domain.OptimizerConstraints
+import com.example.domain.SanctionSlipVault
 import com.example.domain.TentativeHoldRecord
 import com.example.domain.TentativePlanStore
 import androidx.work.WorkInfo
@@ -32,6 +41,10 @@ import com.example.domain.TnHolidaySyncWorker
 import com.example.domain.TnHolidays2027Catalog
 import com.example.domain.YearCreditSummary
 import com.example.widget.MedLeaveQuotaAppWidget
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -117,6 +130,28 @@ class LeaveViewModel(
 
   private val _optimizerDeepLinkGoal = MutableStateFlow<String?>(null)
   val optimizerDeepLinkGoal: StateFlow<String?> = _optimizerDeepLinkGoal.asStateFlow()
+
+  private val _pendingWorkflowRecordId = MutableStateFlow<String?>(null)
+  val pendingWorkflowRecordId: StateFlow<String?> = _pendingWorkflowRecordId.asStateFlow()
+
+  private val _protectLoggedDutyShifts = MutableStateFlow(true)
+  val protectLoggedDutyShifts: StateFlow<Boolean> = _protectLoggedDutyShifts.asStateFlow()
+
+  val leaveWorkflowsByRecordId: StateFlow<Map<String, LeaveWorkflowMeta>> =
+    repository.observeLeaveWorkflows(currentUserId)
+      .stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000L),
+        initialValue = emptyMap()
+      )
+
+  val dutyShifts: StateFlow<List<DutyShift>> =
+    repository.observeDutyShifts(currentUserId)
+      .stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000L),
+        initialValue = emptyList()
+      )
 
   init {
     viewModelScope.launch {
@@ -250,6 +285,19 @@ class LeaveViewModel(
         )
       }
     }
+
+    // 6. Keep AI Optimizer's protectedDatesIso synced automatically with logged Clinical Duty Shifts
+    viewModelScope.launch {
+      combine(dutyShifts, _protectLoggedDutyShifts) { shifts, protectEnabled ->
+        if (protectEnabled) DutyConflictEngine.extractProtectedDutyDates(shifts) else emptySet()
+      }.collect { dutyDates ->
+        if (_optimizerConstraints.value.protectedDatesIso != dutyDates) {
+          _optimizerConstraints.value = _optimizerConstraints.value.copy(
+            protectedDatesIso = dutyDates
+          )
+        }
+      }
+    }
   }
 
   val uiState: StateFlow<LeaveUiState> = combine(
@@ -327,6 +375,31 @@ class LeaveViewModel(
       started = SharingStarted.WhileSubscribed(5000L),
       initialValue = LeaveUiState.Loading
     )
+
+  val expiryWatchdogSummary: StateFlow<ExpiryWatchdogSummary> = combine(
+    uiState,
+    leaveWorkflowsByRecordId
+  ) { state, workflows ->
+    val records = (state as? LeaveUiState.Success)?.allRecords.orEmpty()
+    ExpiryWatchdogEngine.evaluate(records = records, workflowsByRecordId = workflows)
+  }.stateIn(
+    scope = viewModelScope,
+    started = SharingStarted.WhileSubscribed(5000L),
+    initialValue = ExpiryWatchdogEngine.evaluate(emptyList(), emptyMap())
+  )
+
+  val unclaimedGhColCandidates: StateFlow<List<GhColCaptureCandidate>> = combine(
+    dutyShifts,
+    uiState,
+    _holidayDbVersion
+  ) { shifts, state, _ ->
+    val records = (state as? LeaveUiState.Success)?.allRecords.orEmpty()
+    DutyConflictEngine.findUnclaimedGhColCandidates(shifts, records)
+  }.stateIn(
+    scope = viewModelScope,
+    started = SharingStarted.WhileSubscribed(5000L),
+    initialValue = emptyList()
+  )
 
   fun triggerHolidaySync(
     customUrlOrFeedNote: String = "",
@@ -1235,6 +1308,157 @@ class LeaveViewModel(
     viewModelScope.launch {
       repository.deleteLeaveRecord(recordId).onSuccess {
         _statusBanner.value = "Leave entry removed."
+      }
+    }
+  }
+
+  // ===========================================================================
+  // Clinical Workflow, Sanction Slip Vault & Duty Roster Actions
+  // ===========================================================================
+
+  fun openWorkflowForRecord(recordId: String) {
+    _pendingWorkflowRecordId.value = recordId
+  }
+
+  fun consumePendingWorkflowRecord() {
+    _pendingWorkflowRecordId.value = null
+  }
+
+  fun toggleProtectLoggedDutyShifts(enabled: Boolean) {
+    _protectLoggedDutyShifts.value = enabled
+  }
+
+  fun saveLeaveWorkflow(meta: LeaveWorkflowMeta, feedbackMessage: String? = null) {
+    viewModelScope.launch {
+      repository.upsertLeaveWorkflow(meta).onSuccess {
+        _statusBanner.value = feedbackMessage ?: "Updated leave paperwork (${meta.stageEnum.label})."
+      }.onFailure { err ->
+        _statusBanner.value = "Unable to save paperwork: ${err.localizedMessage ?: "Retry"}"
+      }
+    }
+  }
+
+  fun quickAdvanceWorkflowStage(record: LeaveRecord) {
+    val existing = leaveWorkflowsByRecordId.value[record.id]
+    val nextStage = (existing?.stageEnum ?: ApprovalStage.PLANNED).nextStage()
+    val updated = (existing ?: LeaveWorkflowMeta(recordId = record.id)).copy(
+      recordId = record.id,
+      stage = nextStage.code
+    )
+    saveLeaveWorkflow(
+      meta = updated,
+      feedbackMessage = "${record.category.shortLabel} (${record.dateIso}) marked ${nextStage.label}."
+    )
+  }
+
+  fun attachSanctionSlipPhoto(recordId: String, sourceUri: android.net.Uri) {
+    viewModelScope.launch {
+      val saveRes = SanctionSlipVault.savePickedImageToPrivateVault(
+        context = appContext,
+        recordId = recordId,
+        sourceUri = sourceUri
+      )
+      saveRes.onSuccess { fileName ->
+        val existing = leaveWorkflowsByRecordId.value[recordId]
+        val oldFile = existing?.slipLocalFileName.orEmpty()
+        if (oldFile.isNotBlank() && oldFile != fileName) {
+          SanctionSlipVault.deleteSlipFile(appContext, oldFile)
+        }
+        val promotedStage = when (existing?.stageEnum) {
+          null, ApprovalStage.PLANNED, ApprovalStage.SUBMITTED -> ApprovalStage.SANCTIONED.code
+          else -> existing.stage
+        }
+        val updated = (existing ?: LeaveWorkflowMeta(recordId = recordId)).copy(
+          recordId = recordId,
+          stage = promotedStage,
+          slipLocalFileName = fileName
+        )
+        saveLeaveWorkflow(
+          meta = updated,
+          feedbackMessage = "Signed sanction slip saved to private vault & marked Sanctioned."
+        )
+      }.onFailure { err ->
+        _statusBanner.value = "Could not save sanction slip: ${err.localizedMessage ?: "Unsupported image"}"
+      }
+    }
+  }
+
+  fun removeSanctionSlipPhoto(recordId: String) {
+    viewModelScope.launch {
+      val existing = leaveWorkflowsByRecordId.value[recordId] ?: return@launch
+      if (existing.slipLocalFileName.isNotBlank()) {
+        SanctionSlipVault.deleteSlipFile(appContext, existing.slipLocalFileName)
+      }
+      saveLeaveWorkflow(
+        meta = existing.copy(slipLocalFileName = ""),
+        feedbackMessage = "Removed sanction slip attachment."
+      )
+    }
+  }
+
+  fun addDutyShift(dateIso: String, shiftType: DutyShiftType, departmentNote: String = "") {
+    viewModelScope.launch {
+      repository.addDutyShift(dateIso, shiftType, departmentNote).onSuccess {
+        _statusBanner.value = "Tagged ${shiftType.label} on $dateIso (AI Optimizer & Leave Builder protected)."
+      }.onFailure { err ->
+        _statusBanner.value = "Unable to save duty shift: ${err.localizedMessage}"
+      }
+    }
+  }
+
+  fun addRecurringMonthlyDutyShifts(
+    year: Int,
+    month: Int,
+    dayOfWeek: DayOfWeek,
+    shiftType: DutyShiftType,
+    departmentNote: String = ""
+  ) {
+    viewModelScope.launch {
+      val ym = YearMonth.of(year, month)
+      val fmt = DateTimeFormatter.ISO_LOCAL_DATE
+      var count = 0
+      for (day in 1..ym.lengthOfMonth()) {
+        val date = ym.atDay(day)
+        if (date.dayOfWeek == dayOfWeek) {
+          val res = repository.addDutyShift(date.format(fmt), shiftType, departmentNote)
+          if (res.isSuccess) count++
+        }
+      }
+      _statusBanner.value = "Tagged $count ${shiftType.shortLabel} shift(s) across ${ym.month.name.lowercase().replaceFirstChar { it.uppercase() }} $year."
+    }
+  }
+
+  fun deleteDutyShift(shiftId: String) {
+    viewModelScope.launch {
+      repository.deleteDutyShift(shiftId).onSuccess {
+        _statusBanner.value = "Duty shift removed from roster."
+      }
+    }
+  }
+
+  fun claimGhColFromDutyShift(candidate: GhColCaptureCandidate) {
+    val shift = candidate.shift
+    viewModelScope.launch {
+      val year = shift.dateIso.take(4).toLongOrNull() ?: _selectedYear.value
+      val note = buildString {
+        append("${shift.shiftTypeEnum.label} on ${candidate.holidayLabel}")
+        if (shift.departmentNote.isNotBlank()) append(" — ${shift.departmentNote}")
+      }.take(450)
+
+      val res = repository.addLeaveRecord(
+        leaveType = "GH_WORKED",
+        dateIso = shift.dateIso,
+        year = year,
+        pairedDateIso = "",
+        notes = note,
+        highlightStatus = "NORMAL",
+        isHalfDay = false
+      )
+      res.onSuccess { newRecordId ->
+        repository.markDutyShiftColClaimed(shift.id, newRecordId)
+        _statusBanner.value = "+1 COL Credit banked for ${shift.dateIso} (${candidate.holidayLabel}) — valid 6 months!"
+      }.onFailure { err ->
+        _statusBanner.value = "Could not bank COL credit: ${err.localizedMessage}"
       }
     }
   }

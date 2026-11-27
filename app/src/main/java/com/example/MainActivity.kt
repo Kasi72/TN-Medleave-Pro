@@ -196,6 +196,12 @@ fun MainFeatureHost(
   val tentativeHolds by viewModel.tentativeHolds.collectAsStateWithLifecycle()
   val builderPreloadRequest by viewModel.builderPreloadRequest.collectAsStateWithLifecycle()
   val optimizerDeepLinkGoal by viewModel.optimizerDeepLinkGoal.collectAsStateWithLifecycle()
+  val leaveWorkflowsByRecordId by viewModel.leaveWorkflowsByRecordId.collectAsStateWithLifecycle()
+  val dutyShifts by viewModel.dutyShifts.collectAsStateWithLifecycle()
+  val expiryWatchdogSummary by viewModel.expiryWatchdogSummary.collectAsStateWithLifecycle()
+  val unclaimedGhColCandidates by viewModel.unclaimedGhColCandidates.collectAsStateWithLifecycle()
+  val pendingWorkflowRecordId by viewModel.pendingWorkflowRecordId.collectAsStateWithLifecycle()
+  val protectLoggedDutyShifts by viewModel.protectLoggedDutyShifts.collectAsStateWithLifecycle()
   var currentTab by rememberSaveable { mutableIntStateOf(0) }
   var calendarInitialSubMode by rememberSaveable { mutableIntStateOf(0) }
   var showAddDialog by rememberSaveable { mutableStateOf(false) }
@@ -468,6 +474,21 @@ fun MainFeatureHost(
               onShowStatusBanner = { msg -> viewModel.showBannerMessage(msg) },
               onLogDualDutyAndCol = { dutyDate, colDate, dutyNotes ->
                 viewModel.logDualHolidayDutyAndCol(dutyDate, colDate, dutyNotes)
+              },
+              expiryWatchdog = expiryWatchdogSummary,
+              unclaimedGhCandidates = unclaimedGhColCandidates,
+              onOptimizeExpiringCol = { item ->
+                viewModel.triggerOptimizerDeepLink(
+                  "Consume expiring GH Worked ${item.ghDateIso} FIFO COL before ${item.expiryDateIso}"
+                )
+                currentTab = 3
+              },
+              onOpenPaperworkAlert = { alert ->
+                viewModel.openWorkflowForRecord(alert.recordId)
+                currentTab = 1
+              },
+              onClaimGhColCandidate = { candidate ->
+                viewModel.claimGhColFromDutyShift(candidate)
               }
             )
             1 -> LedgerTabScreen(
@@ -495,7 +516,13 @@ fun MainFeatureHost(
               },
               onScrubDuplicates = {
                 viewModel.scrubExistingDuplicatesFromLedger(state.allRecords)
-              }
+              },
+              workflowsByRecordId = leaveWorkflowsByRecordId,
+              pendingWorkflowRecordId = pendingWorkflowRecordId,
+              onConsumePendingWorkflowRecord = { viewModel.consumePendingWorkflowRecord() },
+              onSaveWorkflow = { meta, feedback -> viewModel.saveLeaveWorkflow(meta, feedback) },
+              onAttachSlipUri = { recId, uri -> viewModel.attachSanctionSlipPhoto(recId, uri) },
+              onRemoveSlip = { recId -> viewModel.removeSanctionSlipPhoto(recId) }
             )
             2 -> ColGhAuditTabScreen(
               state = state,
@@ -513,7 +540,18 @@ fun MainFeatureHost(
               onLogDualDutyAndCol = { dutyDate, colDate, dutyNotes ->
                 viewModel.logDualHolidayDutyAndCol(dutyDate, colDate, dutyNotes)
               },
-              onShowStatusBanner = { msg -> viewModel.showBannerMessage(msg) }
+              onShowStatusBanner = { msg -> viewModel.showBannerMessage(msg) },
+              expiryWatchdog = expiryWatchdogSummary,
+              unclaimedGhCandidates = unclaimedGhColCandidates,
+              onOptimizeExpiringCol = { item ->
+                viewModel.triggerOptimizerDeepLink(
+                  "Consume expiring GH Worked ${item.ghDateIso} FIFO COL before ${item.expiryDateIso}"
+                )
+                currentTab = 3
+              },
+              onClaimGhColCandidate = { candidate ->
+                viewModel.claimGhColFromDutyShift(candidate)
+              }
             )
             3 -> OptimizerTabScreen(
               state = state,
@@ -560,7 +598,10 @@ fun MainFeatureHost(
               onToggleTentativeHold = { rec -> viewModel.toggleTentativeHoldForBridge(rec) },
               onSimulateInBuilder = { rec -> viewModel.simulateRecInBuilder(rec) },
               pendingBuilderPreload = builderPreloadRequest,
-              onBuilderPreloadConsumed = { viewModel.consumeBuilderPreload() }
+              onBuilderPreloadConsumed = { viewModel.consumeBuilderPreload() },
+              dutyShifts = dutyShifts,
+              protectLoggedDutyShifts = protectLoggedDutyShifts,
+              onToggleProtectLoggedDutyShifts = { enabled -> viewModel.toggleProtectLoggedDutyShifts(enabled) }
             )
             4 -> IosCalendarTabScreen(
               state = state,
@@ -584,7 +625,16 @@ fun MainFeatureHost(
               onPromoteTentativeHold = { hold -> viewModel.promoteTentativeHoldToLedger(hold) },
               onClearTentativeHold = { dateIso -> viewModel.clearTentativeHold(dateIso) },
               pendingBuilderPreload = builderPreloadRequest,
-              onBuilderPreloadConsumed = { viewModel.consumeBuilderPreload() }
+              onBuilderPreloadConsumed = { viewModel.consumeBuilderPreload() },
+              dutyShifts = dutyShifts,
+              onAddDutyShift = { dateIso, shiftType, note ->
+                viewModel.addDutyShift(dateIso, shiftType, note)
+              },
+              onAddRecurringWeeklyShift = { year, month, dow, shiftType, note ->
+                viewModel.addRecurringMonthlyDutyShifts(year, month, dow, shiftType, note)
+              },
+              onDeleteDutyShift = { shiftId -> viewModel.deleteDutyShift(shiftId) },
+              onClaimGhCol = { candidate -> viewModel.claimGhColFromDutyShift(candidate) }
             )
             5 -> AiAdvisorChatTabScreen(
               leaveState = state,

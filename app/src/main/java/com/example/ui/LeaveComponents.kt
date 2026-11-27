@@ -347,7 +347,9 @@ fun LeaveRecordSquircleRow(
   meta: RecordAttachmentMeta? = null,
   onToggleSrState: ((RecordAttachmentMeta) -> Unit)? = null,
   onOpenCertificateVault: ((LeaveRecord, RecordAttachmentMeta) -> Unit)? = null,
-  onEditRecord: ((LeaveRecord) -> Unit)? = null
+  onEditRecord: ((LeaveRecord) -> Unit)? = null,
+  workflow: com.example.data.LeaveWorkflowMeta? = null,
+  onOpenPaperworkSheet: ((LeaveRecord) -> Unit)? = null
 ) {
   val context = LocalContext.current
   val neu = com.example.ui.theme.LocalNeumorphicColors.current
@@ -629,6 +631,13 @@ fun LeaveRecordSquircleRow(
                 softWrap = false
               )
             }
+          }
+
+          if (onOpenPaperworkSheet != null) {
+            LeaveStageChip(
+              workflow = workflow,
+              onClick = { onOpenPaperworkSheet(record) }
+            )
           }
 
           if (resolvedMeta.orderRefNo.isNotBlank() || resolvedMeta.certificatePhotoUri.isNotBlank()) {

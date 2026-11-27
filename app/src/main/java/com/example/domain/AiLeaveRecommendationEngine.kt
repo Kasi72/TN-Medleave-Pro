@@ -556,7 +556,8 @@ object AiLeaveRecommendationEngine {
         val alreadyLogged = existingDayRecs.any {
           it.category in setOf(LeaveCategory.CL, LeaveCategory.RH, LeaveCategory.COL, LeaveCategory.PL)
         }
-        val isOpdDay = cursor.dayOfWeek in effective.protectedDaysOfWeek
+        val isOpdDay = cursor.dayOfWeek in effective.protectedDaysOfWeek ||
+          iso in effective.protectedDatesIso
 
         val is2026 = cursor.year == 2026
         val canUseRh = if (is2026) remRh2026 > 0 else remRh2027 > 0
@@ -789,9 +790,9 @@ object AiLeaveRecommendationEngine {
       }
 
       val opdNote = when {
-        effective.protectedDaysOfWeek.isEmpty() -> ""
-        opdConflictCount == 0 -> "OPD-Safe: Zero protected clinic days touched"
-        else -> "OPD Notice: Touches ${opdConflictDays.joinToString(", ")} — arrange faculty cover"
+        effective.protectedDaysOfWeek.isEmpty() && effective.protectedDatesIso.isEmpty() -> ""
+        opdConflictCount == 0 -> "Duty/OPD-Safe: Zero protected clinical shifts touched"
+        else -> "Duty/OPD Notice: Touches ${opdConflictDays.joinToString(", ")} — arrange cover"
       }
 
       val rationale = buildString {
@@ -864,7 +865,8 @@ object AiLeaveRecommendationEngine {
         } ${d.dayOfMonth}"
         val ghItem = ghMap[iso]
         val isPrefOrSuf = d.isBefore(monStart) || d.isAfter(friEnd)
-        val isOpdDay = d.dayOfWeek in effective.protectedDaysOfWeek
+        val isOpdDay = d.dayOfWeek in effective.protectedDaysOfWeek ||
+          iso in effective.protectedDatesIso
         when {
           isPrefOrSuf && ghItem != null -> {
             freeDays++
@@ -902,9 +904,9 @@ object AiLeaveRecommendationEngine {
       val startIso = visualStart.format(isoFmt)
       val endIso = visualEnd.format(isoFmt)
       val opdNote = when {
-        effective.protectedDaysOfWeek.isEmpty() -> ""
-        opdConflictCount == 0 -> "OPD-Safe: Zero protected clinic days touched"
-        else -> "OPD Notice: Touches ${opdConflictDays.joinToString(", ")} — arrange faculty cover"
+        effective.protectedDaysOfWeek.isEmpty() && effective.protectedDatesIso.isEmpty() -> ""
+        opdConflictCount == 0 -> "Duty/OPD-Safe: Zero protected clinical shifts touched"
+        else -> "Duty/OPD Notice: Touches ${opdConflictDays.joinToString(", ")} — arrange cover"
       }
 
       return AiLeaveRecommendation(
@@ -1291,7 +1293,8 @@ object AiLeaveRecommendationEngine {
         val rh = rhMap[iso]
         val isWknd = d.dayOfWeek == DayOfWeek.SUNDAY ||
           (constraints.includeSaturdays && d.dayOfWeek == DayOfWeek.SATURDAY)
-        val isOpd = d.dayOfWeek in constraints.protectedDaysOfWeek
+        val isOpd = d.dayOfWeek in constraints.protectedDaysOfWeek ||
+          iso in constraints.protectedDatesIso
         val loggedRecs = existingByDate[iso].orEmpty()
         val alreadyLogged = loggedRecs.any {
           it.category in setOf(LeaveCategory.CL, LeaveCategory.RH, LeaveCategory.COL, LeaveCategory.PL, LeaveCategory.EL)
@@ -1362,9 +1365,9 @@ object AiLeaveRecommendationEngine {
 
       val mult = ((totalDays / creditsDebited) * 10.0).roundToInt() / 10.0
       val opdNote = when {
-        constraints.protectedDaysOfWeek.isEmpty() -> ""
-        opdConflicts == 0 -> "OPD-Safe: Zero protected clinic days touched"
-        else -> "OPD Notice: Touches ${opdConflictLabels.joinToString(", ")} — arrange faculty cover"
+        constraints.protectedDaysOfWeek.isEmpty() && constraints.protectedDatesIso.isEmpty() -> ""
+        opdConflicts == 0 -> "Duty/OPD-Safe: Zero protected clinical shifts touched"
+        else -> "Duty/OPD Notice: Touches ${opdConflictLabels.joinToString(", ")} — arrange cover"
       }
       val hasCol = verifiedSteps.any { it.creditType == "COL" && !it.isAlreadyLogged }
       val urgency = when {

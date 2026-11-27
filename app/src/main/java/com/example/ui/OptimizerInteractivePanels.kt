@@ -36,6 +36,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -106,7 +107,10 @@ private val HoldIndigoAccent = Color(0xFF6366F1)
 fun OptimizerConstraintControlPanel(
   constraints: OptimizerConstraints,
   onUpdateConstraints: (OptimizerConstraints) -> Unit,
-  onRunWithPrompt: () -> Unit
+  onRunWithPrompt: () -> Unit,
+  loggedDutyCount: Int = 0,
+  protectLoggedDutyShifts: Boolean = true,
+  onToggleProtectLoggedDutyShifts: (Boolean) -> Unit = {}
 ) {
   val neu = LocalNeumorphicColors.current
   var showTuningDrawer by remember { mutableStateOf(false) }
@@ -322,6 +326,46 @@ fun OptimizerConstraintControlPanel(
             fontSize = 10.5.sp,
             fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.SemiBold,
             color = if (isActive) displayAccent else neu.textSecondary,
+            maxLines = 1,
+            softWrap = false
+          )
+        }
+      }
+
+      if (loggedDutyCount > 0) {
+        val shieldColor = com.example.ui.theme.BadgeOnDutyBlue
+        Box(
+          modifier = Modifier
+            .then(
+              if (protectLoggedDutyShifts) {
+                Modifier.neumorphicInset(
+                  shape = IosSharpBadgeShape,
+                  depth = 1.8.dp,
+                  blurRadius = 3.5.dp,
+                  accentTint = shieldColor,
+                  accentTintAlpha = 0.14f,
+                  borderColor = shieldColor.copy(alpha = 0.45f),
+                  neu = neu
+                )
+              } else {
+                Modifier.neumorphicExtruded(
+                  shape = IosSharpBadgeShape,
+                  elevation = 1.8.dp,
+                  blurRadius = 3.5.dp,
+                  borderAlpha = 0.22f,
+                  neu = neu
+                )
+              }
+            )
+            .clickable { onToggleProtectLoggedDutyShifts(!protectLoggedDutyShifts) }
+            .padding(horizontal = 9.dp, vertical = 6.dp)
+            .testTag("optimizer_shield_duty_chip")
+        ) {
+          Text(
+            text = if (protectLoggedDutyShifts) "✓ Shield $loggedDutyCount Duty" else "Shield $loggedDutyCount Duty",
+            fontSize = 10.5.sp,
+            fontWeight = if (protectLoggedDutyShifts) FontWeight.ExtraBold else FontWeight.SemiBold,
+            color = if (protectLoggedDutyShifts) shieldColor else neu.textSecondary,
             maxLines = 1,
             softWrap = false
           )
@@ -1065,6 +1109,73 @@ fun HodSanctionLetterDialog(
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text("Share Memo", fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, softWrap = false)
+          }
+        }
+
+        // 1-Tap Device Calendar Sync & WhatsApp Handover Row
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          OutlinedButton(
+            onClick = {
+              val res = com.example.domain.CalendarAndHandoverBridge.openDeviceCalendarInsert(
+                context = context,
+                title = "Leave: ${rec.title} (${rec.creditMixSummary})",
+                startDateIso = rec.startDateIso,
+                endDateIso = rec.endDateIso,
+                description = "${rec.totalDaysOff} days off • ${rec.tnRuleComplianceCheck}",
+                location = HodProfileSettingsStore.getCollege(context)
+              )
+              Toast.makeText(
+                context,
+                res.exceptionOrNull()?.message ?: "Opening Calendar event composer…",
+                Toast.LENGTH_SHORT
+              ).show()
+            },
+            shape = IosSharpButtonShape,
+            modifier = Modifier
+              .weight(1f)
+              .testTag("sanction_add_to_calendar_btn")
+          ) {
+            Icon(
+              imageVector = Icons.Default.CalendarMonth,
+              contentDescription = null,
+              modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text("Add Calendar", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+          }
+
+          OutlinedButton(
+            onClick = {
+              val handoverText = com.example.domain.JoiningReportAndShareGenerator.generateClinicalHandoverMessage(
+                officerName = HodProfileSettingsStore.getOfficerName(context),
+                designation = HodProfileSettingsStore.getDesignation(context),
+                department = HodProfileSettingsStore.getDepartment(context),
+                institution = HodProfileSettingsStore.getCollege(context),
+                leaveLabel = "${rec.title} (${rec.creditMixSummary})",
+                startDateIso = rec.startDateIso,
+                endDateIso = rec.endDateIso
+              )
+              com.example.domain.CalendarAndHandoverBridge.shareClinicalHandover(
+                context = context,
+                message = handoverText,
+                preferWhatsApp = true
+              )
+            },
+            shape = IosSharpButtonShape,
+            modifier = Modifier
+              .weight(1f)
+              .testTag("sanction_whatsapp_handover_btn")
+          ) {
+            Icon(
+              imageVector = Icons.Default.Share,
+              contentDescription = null,
+              modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text("WhatsApp Handover", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
           }
         }
       }

@@ -87,7 +87,11 @@ fun ColGhAuditTabScreen(
   onAvailUnusedGhAsCol: (newColDateIso: String, ghRecord: LeaveRecord, notes: String) -> Unit,
   onOpenPdfExportModal: () -> Unit = {},
   onLogDualDutyAndCol: (dutyDateIso: String, colDateIso: String, dutyNotes: String) -> Unit = { _, _, _ -> },
-  onShowStatusBanner: (String) -> Unit = {}
+  onShowStatusBanner: (String) -> Unit = {},
+  expiryWatchdog: com.example.domain.ExpiryWatchdogSummary? = null,
+  unclaimedGhCandidates: List<com.example.domain.GhColCaptureCandidate> = emptyList(),
+  onOptimizeExpiringCol: (com.example.domain.ColExpiryItem) -> Unit = {},
+  onClaimGhColCandidate: (com.example.domain.GhColCaptureCandidate) -> Unit = {}
 ) {
   var showAllYears by remember { mutableStateOf(false) }
   var selectedStatusFilter by remember { mutableStateOf<ColAuditStatus?>(null) }
@@ -331,6 +335,22 @@ fun ColGhAuditTabScreen(
       }
     }
 
+    if (expiryWatchdog != null &&
+      (expiryWatchdog.criticalColCount > 0 || expiryWatchdog.expiredColCount > 0 || unclaimedGhCandidates.isNotEmpty())
+    ) {
+      item {
+        ExpiryWatchdogAndActionCard(
+          watchdog = expiryWatchdog,
+          unclaimedGhCandidates = unclaimedGhCandidates,
+          onOptimizeExpiringCol = onOptimizeExpiringCol,
+          onOpenColAuditTab = { activeSubTab = 2 },
+          onOpenPaperworkAlert = {},
+          onClaimGhColCandidate = onClaimGhColCandidate,
+          compactColMode = true
+        )
+      }
+    }
+
     // Sub-Tab Switcher to keep Audit screen clean & organized
     item {
       EnterpriseSubTabSwitcher(
@@ -544,6 +564,19 @@ fun ColGhAuditTabScreen(
 
       2 -> {
         // Sub-Tab 2: 6-Month Comp-Off (COL) Expiry Countdown & FIFO Oldest-Credit Radar
+        if (expiryWatchdog != null) {
+          item {
+            ExpiryWatchdogAndActionCard(
+              watchdog = expiryWatchdog,
+              unclaimedGhCandidates = unclaimedGhCandidates,
+              onOptimizeExpiringCol = onOptimizeExpiringCol,
+              onOpenColAuditTab = {},
+              onOpenPaperworkAlert = {},
+              onClaimGhColCandidate = onClaimGhColCandidate,
+              compactColMode = true
+            )
+          }
+        }
         item {
           ColSixMonthExpiryRadarCard(
             unusedGhRecords = audit.unusedGhRecords,

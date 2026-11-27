@@ -106,7 +106,12 @@ fun IosCalendarTabScreen(
   onPromoteTentativeHold: (TentativeHoldRecord) -> Unit = {},
   onClearTentativeHold: (String) -> Unit = {},
   pendingBuilderPreload: BuilderPreloadRequest? = null,
-  onBuilderPreloadConsumed: () -> Unit = {}
+  onBuilderPreloadConsumed: () -> Unit = {},
+  dutyShifts: List<com.example.data.DutyShift> = emptyList(),
+  onAddDutyShift: (String, com.example.data.DutyShiftType, String) -> Unit = { _, _, _ -> },
+  onAddRecurringWeeklyShift: (Int, Int, java.time.DayOfWeek, com.example.data.DutyShiftType, String) -> Unit = { _, _, _, _, _ -> },
+  onDeleteDutyShift: (String) -> Unit = {},
+  onClaimGhCol: (com.example.domain.GhColCaptureCandidate) -> Unit = {}
 ) {
   var currentMonthValue by rememberSaveable(state.selectedYear) {
     mutableIntStateOf(
@@ -138,8 +143,16 @@ fun IosCalendarTabScreen(
     InitialLeaveSeedData.tnRestrictedHolidays2026 + TnHolidays2027Catalog.tnRestrictedHolidays2027
   }
 
+  var selectedLayerName by rememberSaveable { mutableStateOf(CalendarLayerFilter.ALL.name) }
+  val selectedLayer = remember(selectedLayerName) {
+    CalendarLayerFilter.entries.firstOrNull { it.name == selectedLayerName } ?: CalendarLayerFilter.ALL
+  }
+
   val recordsByDate: Map<String, List<LeaveRecord>> = remember(state.allRecords) {
     state.allRecords.groupBy { it.dateIso }
+  }
+  val shiftsByDate: Map<String, List<com.example.data.DutyShift>> = remember(dutyShifts) {
+    dutyShifts.groupBy { it.dateIso }
   }
   val ghByDate: Map<String, TnHolidayItem> = remember(allPublicHolidays) {
     allPublicHolidays.associateBy { it.dateIso }
@@ -149,6 +162,9 @@ fun IosCalendarTabScreen(
   }
 
   val monthPrefix = String.format("%04d-%02d", currentYearMonth.year, currentYearMonth.monthValue)
+  val monthDutyCount = remember(dutyShifts, monthPrefix) {
+    dutyShifts.count { it.dateIso.startsWith(monthPrefix) }
+  }
   val monthRecords = remember(state.allRecords, monthPrefix) {
     state.allRecords.filter { it.dateIso.startsWith(monthPrefix) }
   }
@@ -221,7 +237,8 @@ fun IosCalendarTabScreen(
               state = state,
               onCommitDraftLeaves = onCommitDraftLeaves,
               pendingPreload = pendingBuilderPreload,
-              onPreloadConsumed = onBuilderPreloadConsumed
+              onPreloadConsumed = onBuilderPreloadConsumed,
+              dutyShifts = dutyShifts
             )
           }
         }
@@ -451,6 +468,12 @@ fun IosCalendarTabScreen(
                   currentMonthValue = mNum
                   selectedDateIso = String.format("%04d-%02d-01", state.selectedYear, mNum)
                 }
+              )
+
+              CalendarLayerFilterStrip(
+                selectedLayer = selectedLayer,
+                dutyCountInMonth = monthDutyCount,
+                onSelectLayer = { selectedLayerName = it.name }
               )
             }
           }
@@ -709,6 +732,7 @@ fun IosCalendarTabScreen(
                             dayNumber
                           )
                           val dayRecords = recordsByDate[dateIso].orEmpty()
+                          val dayShifts = shiftsByDate[dateIso].orEmpty()
                           val ghItem = ghByDate[dateIso]
                           val rhItem = rhByDate[dateIso]
                           val isSunday = colIdx == 0
@@ -722,6 +746,8 @@ fun IosCalendarTabScreen(
                             isSunday = isSunday,
                             isSaturday = isSaturday,
                             dayRecords = dayRecords,
+                            dayShifts = dayShifts,
+                            layerFilter = selectedLayer,
                             ghItem = ghItem,
                             rhItem = rhItem,
                             tentativeHold = tentativeHolds[dateIso],
@@ -818,6 +844,26 @@ fun IosCalendarTabScreen(
               onClearTentativeHold = onClearTentativeHold,
               onQuickLogLeave = onQuickLogLeave,
               onOpenFullAddDialog = onOpenFullAddDialog
+            )
+          }
+
+          // 4. Clinical Duty Roster & 1-Tap GH Worked -> +1 COL Capture Panel
+          item {
+            val ghCandidate = remember(selectedDateIso, dutyShifts, state.allRecords) {
+              com.example.domain.DutyConflictEngine.findUnclaimedGhCaptureForDate(
+                dateIso = selectedDateIso,
+                dutyShifts = dutyShifts,
+                existingRecords = state.allRecords
+              )
+            }
+            CalendarDutyRosterPanel(
+              selectedDateIso = selectedDateIso,
+              shiftsForDate = shiftsByDate[selectedDateIso].orEmpty(),
+              ghCaptureCandidateForDate = ghCandidate,
+              onAddDutyShift = onAddDutyShift,
+              onAddRecurringWeeklyShift = onAddRecurringWeeklyShift,
+              onDeleteDutyShift = onDeleteDutyShift,
+              onClaimGhCol = onClaimGhCol
             )
           }
 
@@ -976,6 +1022,8 @@ private fun IosCalendarDayCell(
   isSunday: Boolean,
   isSaturday: Boolean,
   dayRecords: List<LeaveRecord>,
+  dayShifts: List<com.example.data.DutyShift> = emptyList(),
+  layerFilter: CalendarLayerFilter = CalendarLayerFilter.ALL,
   ghItem: TnHolidayItem?,
   rhItem: TnHolidayItem?,
   tentativeHold: TentativeHoldRecord? = null,
@@ -983,13 +1031,23 @@ private fun IosCalendarDayCell(
   modifier: Modifier = Modifier
 ) {
   val neu = LocalNeumorphicColors.current
-  val primaryRecord = dayRecords.firstOrNull()
+  val visibleRecords = if (layerFilter == CalendarLayerFilter.DUTY) emptyList() else dayRecords
+  val visibleShifts = if (layerFilter == CalendarLayerFilter.LEAVES) emptyList() else dayShifts
+  val primaryRecord = visibleRecords.firstOrNull()
+  val primaryShift = visibleShifts.firstOrNull()
   val recordCode = primaryRecord?.category?.shortLabel?.uppercase()
 
   val isColOrDuty = recordCode == "COL" || recordCode == "GHW" || primaryRecord?.leaveType == "GH_WORKED"
   val isPlRecord = recordCode == "PL"
   val isLeaveRecord = primaryRecord != null && !isColOrDuty && !isPlRecord
-  val hasHoldOnly = primaryRecord == null && tentativeHold != null
+  val hasHoldOnly = layerFilter != CalendarLayerFilter.DUTY && primaryRecord == null && tentativeHold != null
+  val dutyHighlightColor = if (primaryShift?.shiftTypeEnum == com.example.data.DutyShiftType.CALL_24H ||
+    primaryShift?.shiftTypeEnum == com.example.data.DutyShiftType.GH_EMERGENCY
+  ) {
+    com.example.ui.theme.StatusAlertRed
+  } else {
+    com.example.ui.theme.BadgeOnDutyBlue
+  }
 
   val goldText = if (neu.isDark) Color(0xFFFDE68A) else Color(0xFFB45309)
   val tealText = if (neu.isDark) Color(0xFF99F6E4) else Color(0xFF0F766E)
@@ -1000,9 +1058,11 @@ private fun IosCalendarDayCell(
   val satColor = if (neu.isDark) Color(0xFF7DD3FC) else Color(0xFF0284C7)
 
   val tileAccent: Color? = when {
+    layerFilter == CalendarLayerFilter.DUTY && primaryShift != null -> dutyHighlightColor
     isColOrDuty -> CyanColHighlight
     isPlRecord || ghItem != null -> GoldHolidayHighlight
     isLeaveRecord -> EmeraldLeaveHighlight
+    primaryShift != null -> dutyHighlightColor
     hasHoldOnly -> TentativeHoldViolet
     rhItem != null -> TealRhHighlight
     else -> null
@@ -1010,9 +1070,11 @@ private fun IosCalendarDayCell(
 
   val dayNumberColor = when {
     isSelected -> neu.primaryAccent
+    layerFilter == CalendarLayerFilter.DUTY && primaryShift != null -> dutyHighlightColor
     isColOrDuty -> cyanText
     isPlRecord || ghItem != null -> goldText
     isLeaveRecord -> emeraldText
+    primaryShift != null -> dutyHighlightColor
     hasHoldOnly -> holdText
     rhItem != null -> tealText
     isSunday -> sunColor
@@ -1021,7 +1083,9 @@ private fun IosCalendarDayCell(
   }
 
   val badgeLabel: String? = when {
+    layerFilter == CalendarLayerFilter.DUTY && primaryShift != null -> primaryShift.shiftTypeEnum.shortLabel.take(4)
     primaryRecord != null -> primaryRecord.category.shortLabel.take(4)
+    primaryShift != null -> primaryShift.shiftTypeEnum.shortLabel.take(4)
     hasHoldOnly -> "HOLD"
     ghItem != null -> "GH"
     rhItem != null -> "RL"
@@ -1029,15 +1093,18 @@ private fun IosCalendarDayCell(
   }
 
   val badgePillBg: Color = when {
+    layerFilter == CalendarLayerFilter.DUTY && primaryShift != null -> dutyHighlightColor
     isColOrDuty -> CyanColHighlight
     isPlRecord || ghItem != null -> GoldHolidayHighlight
     isLeaveRecord -> EmeraldLeaveHighlight
+    primaryShift != null -> dutyHighlightColor
     hasHoldOnly -> TentativeHoldViolet
     rhItem != null -> TealRhHighlight
     else -> EmeraldOptimal
   }
 
   val badgePillTextColor: Color = when {
+    layerFilter == CalendarLayerFilter.DUTY && primaryShift != null -> Color.White
     isPlRecord || ghItem != null -> Color(0xFF1F1202)
     isColOrDuty || rhItem != null -> Color(0xFF031824)
     else -> Color.White
@@ -1073,8 +1140,8 @@ private fun IosCalendarDayCell(
       .padding(horizontal = 3.dp, vertical = 4.dp)
       .testTag("calendar_day_$dateIso")
   ) {
-    // Multi-Record Count Badge (top-left)
-    if (dayRecords.size > 1) {
+    // Multi-Record Count Badge or Duty Overlay Dot (top-left)
+    if (visibleRecords.size > 1) {
       Box(
         modifier = Modifier
           .align(Alignment.TopStart)
@@ -1083,7 +1150,7 @@ private fun IosCalendarDayCell(
           .background(neu.primaryAccent.copy(alpha = 0.22f))
       ) {
         Text(
-          text = "×${dayRecords.size}",
+          text = "×${visibleRecords.size}",
           fontFamily = JetBrainsMonoFontFamily,
           fontSize = 7.sp,
           lineHeight = 8.sp,
@@ -1092,6 +1159,15 @@ private fun IosCalendarDayCell(
           modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
         )
       }
+    } else if (visibleShifts.isNotEmpty() && primaryRecord != null) {
+      Box(
+        modifier = Modifier
+          .align(Alignment.TopStart)
+          .padding(top = 2.dp, start = 2.dp)
+          .size(6.dp)
+          .clip(CircleShape)
+          .background(dutyHighlightColor)
+      )
     }
 
     // Active Selection Indicator Dot in Top-Right Corner

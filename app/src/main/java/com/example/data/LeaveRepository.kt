@@ -33,6 +33,8 @@ class LeaveRepository(private val db: FirebaseFirestore) {
   companion object {
     const val BIOMETRIC_HOD_USER_ID = "biometric_hod_drkasi"
     private val biometricSessionRecordsFlow = MutableStateFlow<List<LeaveRecord>>(emptyList())
+    private val biometricWorkflowsFlow = MutableStateFlow<Map<String, LeaveWorkflowMeta>>(emptyMap())
+    private val biometricDutyShiftsFlow = MutableStateFlow<List<DutyShift>>(emptyList())
 
     private fun ensureBiometricFallbackSeeded(): Int {
       if (biometricSessionRecordsFlow.value.isNotEmpty()) return 0
@@ -565,6 +567,214 @@ class LeaveRepository(private val db: FirebaseFirestore) {
       throw e
     } catch (e: Exception) {
       handleFirestoreError(e, OperationType.WRITE, colRef.path)
+      Result.failure(e)
+    }
+  }
+
+  // ===========================================================================
+  // LeaveWorkflowMeta CRUD (/users/{userId}/leave_workflows/{recordId})
+  // ===========================================================================
+
+  fun observeLeaveWorkflows(userId: String = requireUserId()): Flow<Map<String, LeaveWorkflowMeta>> {
+    if (auth.currentUser == null || userId == BIOMETRIC_HOD_USER_ID) {
+      return biometricWorkflowsFlow
+    }
+    val path = "users/$userId/leave_workflows"
+    return db.collection("users")
+      .document(userId)
+      .collection("leave_workflows")
+      .whereEqualTo("userId", userId)
+      .snapshots()
+      .map { snapshot ->
+        snapshot.toObjects(
+          LeaveWorkflowMeta::class.java,
+          DocumentSnapshot.ServerTimestampBehavior.ESTIMATE
+        ).associateBy { it.recordId.ifBlank { it.id } }
+      }
+      .catch { error ->
+        if (error is Exception) {
+          handleFirestoreError(error, OperationType.LIST, path)
+        }
+        emit(emptyMap())
+      }
+  }
+
+  suspend fun upsertLeaveWorkflow(meta: LeaveWorkflowMeta): Result<Unit> {
+    val uid = requireUserId()
+    val safeRecordId = meta.recordId.trim().take(128)
+    if (safeRecordId.isBlank()) {
+      return Result.failure(IllegalArgumentException("Record ID is required for workflow update"))
+    }
+    if (auth.currentUser == null || uid == BIOMETRIC_HOD_USER_ID) {
+      val now = Timestamp.now()
+      val updated = meta.copy(
+        id = safeRecordId,
+        userId = uid,
+        recordId = safeRecordId,
+        createdAt = meta.createdAt ?: now,
+        updatedAt = now
+      )
+      biometricWorkflowsFlow.value = biometricWorkflowsFlow.value + (safeRecordId to updated)
+      return Result.success(Unit)
+    }
+    val docRef = db.collection("users")
+      .document(uid)
+      .collection("leave_workflows")
+      .document(safeRecordId)
+    return try {
+      val existing = docRef.get().await()
+      if (existing.exists()) {
+        docRef.update(meta.copy(recordId = safeRecordId).toUpdatePayload()).await()
+      } else {
+        docRef.set(meta.copy(recordId = safeRecordId).toCreatePayload(uid)).await()
+      }
+      Result.success(Unit)
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      handleFirestoreError(e, OperationType.WRITE, docRef.path)
+      Result.failure(e)
+    }
+  }
+
+  // ===========================================================================
+  // Clinical DutyShift CRUD (/users/{userId}/duty_shifts/{shiftId})
+  // ===========================================================================
+
+  fun observeDutyShifts(userId: String = requireUserId()): Flow<List<DutyShift>> {
+    if (auth.currentUser == null || userId == BIOMETRIC_HOD_USER_ID) {
+      return biometricDutyShiftsFlow.map { list -> list.sortedBy { it.dateIso } }
+    }
+    val path = "users/$userId/duty_shifts"
+    return db.collection("users")
+      .document(userId)
+      .collection("duty_shifts")
+      .whereEqualTo("userId", userId)
+      .snapshots()
+      .map { snapshot ->
+        snapshot.toObjects(
+          DutyShift::class.java,
+          DocumentSnapshot.ServerTimestampBehavior.ESTIMATE
+        ).sortedBy { it.dateIso }
+      }
+      .catch { error ->
+        if (error is Exception) {
+          handleFirestoreError(error, OperationType.LIST, path)
+        }
+        emit(emptyList())
+      }
+  }
+
+  suspend fun addDutyShift(
+    dateIso: String,
+    shiftType: DutyShiftType,
+    departmentNote: String = ""
+  ): Result<String> {
+    val uid = requireUserId()
+    val cleanDate = dateIso.trim().take(10)
+    val year = cleanDate.take(4).toLongOrNull()?.coerceIn(2020L, 2035L) ?: 2026L
+
+    if (auth.currentUser == null || uid == BIOMETRIC_HOD_USER_ID) {
+      val now = Timestamp.now()
+      val newId = "shift_${cleanDate.replace("-", "")}_${shiftType.code.lowercase()}_${UUID.randomUUID().toString().take(4)}"
+      val item = DutyShift(
+        id = newId,
+        userId = uid,
+        dateIso = cleanDate,
+        year = year,
+        shiftType = shiftType.code,
+        departmentNote = departmentNote.trim().take(200),
+        colClaimed = false,
+        linkedGhRecordId = "",
+        createdAt = now,
+        updatedAt = now
+      )
+      val filtered = biometricDutyShiftsFlow.value.filterNot {
+        it.dateIso == cleanDate && it.shiftType == shiftType.code
+      }
+      biometricDutyShiftsFlow.value = filtered + item
+      return Result.success(newId)
+    }
+
+    val colRef = db.collection("users").document(uid).collection("duty_shifts")
+    val docId = "shift_${cleanDate.replace("-", "_")}_${shiftType.code.lowercase()}"
+    val docRef = colRef.document(docId)
+    return try {
+      val existing = docRef.get().await()
+      if (existing.exists()) {
+        docRef.update(
+          mapOf(
+            "departmentNote" to departmentNote.trim().take(200),
+            "updatedAt" to FieldValue.serverTimestamp()
+          )
+        ).await()
+      } else {
+        val shift = DutyShift(
+          id = docId,
+          userId = uid,
+          dateIso = cleanDate,
+          year = year,
+          shiftType = shiftType.code,
+          departmentNote = departmentNote.trim().take(200),
+          colClaimed = false,
+          linkedGhRecordId = ""
+        )
+        docRef.set(shift.toCreatePayload(uid)).await()
+      }
+      Result.success(docId)
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      handleFirestoreError(e, OperationType.CREATE, docRef.path)
+      Result.failure(e)
+    }
+  }
+
+  suspend fun markDutyShiftColClaimed(shiftId: String, linkedGhRecordId: String): Result<Unit> {
+    val uid = requireUserId()
+    if (auth.currentUser == null || uid == BIOMETRIC_HOD_USER_ID) {
+      val now = Timestamp.now()
+      biometricDutyShiftsFlow.value = biometricDutyShiftsFlow.value.map { s ->
+        if (s.id == shiftId) {
+          s.copy(colClaimed = true, linkedGhRecordId = linkedGhRecordId, updatedAt = now)
+        } else {
+          s
+        }
+      }
+      return Result.success(Unit)
+    }
+    val docRef = db.collection("users").document(uid).collection("duty_shifts").document(shiftId)
+    return try {
+      docRef.update(
+        mapOf(
+          "colClaimed" to true,
+          "linkedGhRecordId" to linkedGhRecordId.trim().take(128),
+          "updatedAt" to FieldValue.serverTimestamp()
+        )
+      ).await()
+      Result.success(Unit)
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      handleFirestoreError(e, OperationType.UPDATE, docRef.path)
+      Result.failure(e)
+    }
+  }
+
+  suspend fun deleteDutyShift(shiftId: String): Result<Unit> {
+    val uid = requireUserId()
+    if (auth.currentUser == null || uid == BIOMETRIC_HOD_USER_ID) {
+      biometricDutyShiftsFlow.value = biometricDutyShiftsFlow.value.filterNot { it.id == shiftId }
+      return Result.success(Unit)
+    }
+    val docRef = db.collection("users").document(uid).collection("duty_shifts").document(shiftId)
+    return try {
+      docRef.delete().await()
+      Result.success(Unit)
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      handleFirestoreError(e, OperationType.DELETE, docRef.path)
       Result.failure(e)
     }
   }

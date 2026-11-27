@@ -27,6 +27,7 @@ data class OptimizerConstraints(
   val enforce10DayCap: Boolean = true,
   val horizonMode: OptimizerHorizon = OptimizerHorizon.FULL_HORIZON,
   val protectedDaysOfWeek: Set<DayOfWeek> = emptySet(),
+  val protectedDatesIso: Set<String> = emptySet(),
   val customNaturalPrompt: String = ""
 ) {
   fun buildStrategySummary(baseFocusTitle: String): String {
@@ -45,6 +46,9 @@ data class OptimizerConstraints(
         it.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
       }
       parts.add("Protect $opd OPD")
+    }
+    if (protectedDatesIso.isNotEmpty()) {
+      parts.add("Shield ${protectedDatesIso.size} Roster Duty Date(s)")
     }
     parts.add("Horizon: ${horizonMode.label}")
     if (customNaturalPrompt.isNotBlank()) {

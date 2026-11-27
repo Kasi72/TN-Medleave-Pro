@@ -98,7 +98,12 @@ fun OverviewTabScreen(
   onOpenHolidayDashboard: () -> Unit = { onNavigateToTab(4) },
   onCommitBurnDownSlots: (List<BurnDownSlotSuggestion>) -> Unit = {},
   onShowStatusBanner: (String) -> Unit = {},
-  onLogDualDutyAndCol: (dutyDateIso: String, colDateIso: String, dutyNotes: String) -> Unit = { _, _, _ -> }
+  onLogDualDutyAndCol: (dutyDateIso: String, colDateIso: String, dutyNotes: String) -> Unit = { _, _, _ -> },
+  expiryWatchdog: com.example.domain.ExpiryWatchdogSummary? = null,
+  unclaimedGhCandidates: List<com.example.domain.GhColCaptureCandidate> = emptyList(),
+  onOptimizeExpiringCol: (com.example.domain.ColExpiryItem) -> Unit = {},
+  onOpenPaperworkAlert: (com.example.domain.PendingPaperworkAlert) -> Unit = {},
+  onClaimGhColCandidate: (com.example.domain.GhColCaptureCandidate) -> Unit = {}
 ) {
   val context = LocalContext.current
   val summary = state.yearSummary
@@ -314,6 +319,20 @@ fun OverviewTabScreen(
             )
           }
         }
+      }
+    }
+
+    // Clinical Watchdog: COL 6-Month Expiry, CL/RL Year-End Burn-Down, Pending Paperwork & GH Duty Capture
+    if (expiryWatchdog != null) {
+      item {
+        ExpiryWatchdogAndActionCard(
+          watchdog = expiryWatchdog,
+          unclaimedGhCandidates = unclaimedGhCandidates,
+          onOptimizeExpiringCol = onOptimizeExpiringCol,
+          onOpenColAuditTab = { onNavigateToTab(2) },
+          onOpenPaperworkAlert = onOpenPaperworkAlert,
+          onClaimGhColCandidate = onClaimGhColCandidate
+        )
       }
     }
 
@@ -954,7 +973,13 @@ fun LedgerTabScreen(
   onDismissUndo: () -> Unit = {},
   onUpdateRecord: (LeaveRecord) -> Unit = {},
   onQuickLogLeave: (leaveType: String, dateIso: String, notes: String) -> Unit = { _, _, _ -> },
-  onScrubDuplicates: () -> Unit = {}
+  onScrubDuplicates: () -> Unit = {},
+  workflowsByRecordId: Map<String, com.example.data.LeaveWorkflowMeta> = emptyMap(),
+  pendingWorkflowRecordId: String? = null,
+  onConsumePendingWorkflowRecord: () -> Unit = {},
+  onSaveWorkflow: (com.example.data.LeaveWorkflowMeta, String?) -> Unit = { _, _ -> },
+  onAttachSlipUri: (String, android.net.Uri) -> Unit = { _, _ -> },
+  onRemoveSlip: (String) -> Unit = {}
 ) {
   val context = LocalContext.current
   val neu = LocalNeumorphicColors.current
@@ -962,6 +987,17 @@ fun LedgerTabScreen(
   var selectedSrFilter by remember { mutableStateOf<SrReconciliationState?>(null) }
   var activeVaultRecord by remember { mutableStateOf<Pair<LeaveRecord, RecordAttachmentMeta>?>(null) }
   var recordBeingEdited by remember { mutableStateOf<LeaveRecord?>(null) }
+  var activePaperworkRecord by remember { mutableStateOf<LeaveRecord?>(null) }
+
+  androidx.compose.runtime.LaunchedEffect(pendingWorkflowRecordId, state.allRecords) {
+    if (!pendingWorkflowRecordId.isNullOrBlank()) {
+      val target = state.allRecords.firstOrNull { it.id == pendingWorkflowRecordId }
+      if (target != null) {
+        activePaperworkRecord = target
+      }
+      onConsumePendingWorkflowRecord()
+    }
+  }
 
   // Wave-2 Upgrade #2: Instant Search & Multi-Year Cross-Filter state
   var searchQuery by remember { mutableStateOf("") }
@@ -1424,6 +1460,10 @@ fun LedgerTabScreen(
               },
               onEditRecord = { rec ->
                 recordBeingEdited = rec
+              },
+              workflow = workflowsByRecordId[record.id],
+              onOpenPaperworkSheet = { rec ->
+                activePaperworkRecord = rec
               }
             )
           }
@@ -1561,6 +1601,10 @@ fun LedgerTabScreen(
             },
             onEditRecord = { rec ->
               recordBeingEdited = rec
+            },
+            workflow = workflowsByRecordId[record.id],
+            onOpenPaperworkSheet = { rec ->
+              activePaperworkRecord = rec
             }
           )
         }
@@ -1624,6 +1668,21 @@ fun LedgerTabScreen(
       }
     )
   }
+
+  activePaperworkRecord?.let { rec ->
+    LeavePaperworkDialog(
+      record = rec,
+      existingWorkflow = workflowsByRecordId[rec.id],
+      onDismiss = { activePaperworkRecord = null },
+      onSaveWorkflow = { updatedMeta, feedback ->
+        onSaveWorkflow(updatedMeta, feedback)
+        activePaperworkRecord = null
+      },
+      onAttachSlipUri = onAttachSlipUri,
+      onRemoveSlip = onRemoveSlip,
+      onShowFeedback = onShowStatusBanner
+    )
+  }
 }
 
 @Composable
@@ -1651,7 +1710,10 @@ fun OptimizerTabScreen(
   onToggleTentativeHold: (com.example.domain.AiLeaveRecommendation) -> Unit = {},
   onSimulateInBuilder: (com.example.domain.AiLeaveRecommendation) -> Unit = {},
   pendingBuilderPreload: com.example.domain.BuilderPreloadRequest? = null,
-  onBuilderPreloadConsumed: () -> Unit = {}
+  onBuilderPreloadConsumed: () -> Unit = {},
+  dutyShifts: List<com.example.data.DutyShift> = emptyList(),
+  protectLoggedDutyShifts: Boolean = true,
+  onToggleProtectLoggedDutyShifts: (Boolean) -> Unit = {}
 ) {
   val neu = LocalNeumorphicColors.current
   var startInput by remember { mutableStateOf("2026-12-24") }
@@ -1837,7 +1899,10 @@ fun OptimizerTabScreen(
             onSimulateInBuilder = { rec ->
               onSimulateInBuilder(rec)
               activeSubTab = 4
-            }
+            },
+            loggedDutyCount = dutyShifts.size,
+            protectLoggedDutyShifts = protectLoggedDutyShifts,
+            onToggleProtectLoggedDutyShifts = onToggleProtectLoggedDutyShifts
           )
         }
       }
@@ -2037,7 +2102,8 @@ fun OptimizerTabScreen(
             state = state,
             onCommitDraftLeaves = onCommitDraftLeaves,
             pendingPreload = pendingBuilderPreload,
-            onPreloadConsumed = onBuilderPreloadConsumed
+            onPreloadConsumed = onBuilderPreloadConsumed,
+            dutyShifts = dutyShifts
           )
         }
       }
