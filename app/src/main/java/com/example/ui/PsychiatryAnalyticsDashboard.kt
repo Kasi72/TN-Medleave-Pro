@@ -160,9 +160,9 @@ fun PsychiatryLeaveAnalyticsSection(
                   shape = IosSharpButtonShape,
                   depth = 2.dp,
                   blurRadius = 4.dp,
-                  accentTint = EmeraldOptimal,
+                  accentTint = neu.primaryAccent,
                   accentTintAlpha = 0.12f,
-                  borderColor = EmeraldOptimal.copy(alpha = 0.30f),
+                  borderColor = neu.primaryAccent.copy(alpha = 0.30f),
                   neu = neu
                 ),
               contentAlignment = Alignment.Center
@@ -170,7 +170,7 @@ fun PsychiatryLeaveAnalyticsSection(
               Icon(
                 imageVector = Icons.Default.Analytics,
                 contentDescription = null,
-                tint = EmeraldOptimal,
+                tint = neu.primaryAccent,
                 modifier = Modifier.size(20.dp)
               )
             }
@@ -179,7 +179,7 @@ fun PsychiatryLeaveAnalyticsSection(
               Text(
                 text = "${department.uppercase()} • VISUAL ANALYTICS",
                 style = MaterialTheme.typography.labelMedium,
-                color = EmeraldOptimal,
+                color = neu.primaryAccent,
                 fontSize = 10.sp,
                 lineHeight = 13.sp,
                 maxLines = 1,
@@ -384,7 +384,7 @@ fun PsychiatryLeaveAnalyticsSection(
                   center = offset
                 )
                 drawCircle(
-                  color = if (isSelectedNode) EmeraldOptimal else creditLineColor,
+                  color = if (isSelectedNode) neu.primaryAccent else creditLineColor,
                   radius = if (isSelectedNode) 4.2.dp.toPx() else 2.6.dp.toPx(),
                   center = offset
                 )
@@ -413,7 +413,7 @@ fun PsychiatryLeaveAnalyticsSection(
                   fontSize = 9.5.sp,
                   lineHeight = 12.sp,
                   fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
-                  color = if (isSel) EmeraldOptimal else MaterialTheme.colorScheme.onSurfaceVariant,
+                  color = if (isSel) neu.primaryAccent else MaterialTheme.colorScheme.onSurfaceVariant,
                   maxLines = 1,
                   softWrap = false
                 )

@@ -81,6 +81,7 @@ import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusVerifiedGreen
@@ -357,6 +358,7 @@ fun SmartHolidayNotificationCard(
       }
 
       // Action Buttons: Send Digest Notification Now & Open Full Alert Center
+      val actions = LocalFunctionalActionColors.current
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -366,7 +368,7 @@ fun SmartHolidayNotificationCard(
         OutlinedButton(
           onClick = onOpenFullNotificationCenter,
           shape = RoundedCornerShape(14.dp),
-          border = BorderStroke(1.2.dp, EmeraldOptimal),
+          border = BorderStroke(1.2.dp, actions.aiOptimize),
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
@@ -375,13 +377,13 @@ fun SmartHolidayNotificationCard(
           Icon(
             imageVector = Icons.Default.Notifications,
             contentDescription = null,
-            tint = EmeraldOptimal,
+            tint = actions.aiOptimize,
             modifier = Modifier.size(16.dp)
           )
           Spacer(modifier = Modifier.width(6.dp))
           Text(
             text = "All ${alerts.size} Alerts",
-            color = EmeraldOptimal,
+            color = actions.aiOptimize,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             softWrap = false,
@@ -399,7 +401,10 @@ fun SmartHolidayNotificationCard(
             }
           },
           shape = RoundedCornerShape(14.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = actions.shareHandover,
+            contentColor = Color.White
+          ),
           modifier = Modifier
             .weight(1.3f)
             .fillMaxHeight()
@@ -408,11 +413,13 @@ fun SmartHolidayNotificationCard(
           Icon(
             imageVector = Icons.Default.Send,
             contentDescription = null,
+            tint = Color.White,
             modifier = Modifier.size(16.dp)
           )
           Spacer(modifier = Modifier.width(6.dp))
           Text(
             text = "Push Optimal Alerts Now",
+            color = Color.White,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             softWrap = false,
@@ -1118,6 +1125,7 @@ private fun FullNotificationAlertCard(
 
       HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
 
+      val actionsModal = LocalFunctionalActionColors.current
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -1129,7 +1137,7 @@ private fun FullNotificationAlertCard(
           shape = RoundedCornerShape(12.dp),
           border = BorderStroke(
             1.dp,
-            if (isScheduled) StatusVerifiedGreen else MaterialTheme.colorScheme.outline
+            if (isScheduled) actionsModal.verifyApprove else MaterialTheme.colorScheme.outline
           ),
           modifier = Modifier
             .weight(1f)
@@ -1138,7 +1146,7 @@ private fun FullNotificationAlertCard(
           Icon(
             imageVector = if (isScheduled) Icons.Default.AlarmOn else Icons.Default.Schedule,
             contentDescription = null,
-            tint = if (isScheduled) StatusVerifiedGreen else MaterialTheme.colorScheme.onSurface,
+            tint = if (isScheduled) actionsModal.verifyApprove else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(15.dp)
           )
           Spacer(modifier = Modifier.width(4.dp))
@@ -1146,7 +1154,7 @@ private fun FullNotificationAlertCard(
             text = if (isScheduled) "Scheduled (${leadDays}d)" else "Remind (${leadDays}d)",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
-            color = if (isScheduled) StatusVerifiedGreen else MaterialTheme.colorScheme.onSurface,
+            color = if (isScheduled) actionsModal.verifyApprove else MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis
@@ -1156,7 +1164,10 @@ private fun FullNotificationAlertCard(
         Button(
           onClick = onPushNow,
           shape = RoundedCornerShape(12.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = actionsModal.shareHandover,
+            contentColor = Color.White
+          ),
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
@@ -1164,11 +1175,13 @@ private fun FullNotificationAlertCard(
           Icon(
             imageVector = Icons.Default.NotificationsActive,
             contentDescription = null,
+            tint = Color.White,
             modifier = Modifier.size(15.dp)
           )
           Spacer(modifier = Modifier.width(4.dp))
           Text(
             text = "Push Alert Now",
+            color = Color.White,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -1183,19 +1196,21 @@ private fun FullNotificationAlertCard(
           onClick = { onApplyBridge(alert.bridgeToApply) },
           shape = RoundedCornerShape(12.dp),
           colors = ButtonDefaults.buttonColors(
-            containerColor = EmeraldOptimal.copy(alpha = 0.14f),
-            contentColor = EmeraldOptimal
+            containerColor = actionsModal.createPrimary,
+            contentColor = Color.White
           ),
           modifier = Modifier.fillMaxWidth()
         ) {
           Icon(
             imageVector = Icons.Default.AutoAwesome,
             contentDescription = null,
+            tint = Color.White,
             modifier = Modifier.size(15.dp)
           )
           Spacer(modifier = Modifier.width(6.dp))
           Text(
             text = "One-Tap Apply Recommended Dates to Ledger",
+            color = Color.White,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -1209,7 +1224,7 @@ private fun FullNotificationAlertCard(
         OutlinedButton(
           onClick = { onOptimizeInAi(alert.optimizerGoalHint) },
           shape = RoundedCornerShape(12.dp),
-          border = BorderStroke(1.dp, neu.primaryAccent.copy(alpha = 0.45f)),
+          border = BorderStroke(1.2.dp, actionsModal.aiOptimize),
           modifier = Modifier
             .fillMaxWidth()
             .testTag("optimize_alert_in_ai_${alert.id}")
@@ -1217,7 +1232,7 @@ private fun FullNotificationAlertCard(
           Icon(
             imageVector = Icons.Default.AutoAwesome,
             contentDescription = null,
-            tint = neu.primaryAccent,
+            tint = actionsModal.aiOptimize,
             modifier = Modifier.size(15.dp)
           )
           Spacer(modifier = Modifier.width(6.dp))
@@ -1225,7 +1240,7 @@ private fun FullNotificationAlertCard(
             text = "Optimize in AI Planner →",
             fontSize = 12.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = neu.primaryAccent,
+            color = actionsModal.aiOptimize,
             maxLines = 1,
             softWrap = false
           )

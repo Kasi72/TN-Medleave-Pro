@@ -91,6 +91,7 @@ import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
 import com.example.ui.theme.StatusVerifiedGreen
@@ -1406,6 +1407,7 @@ fun AddLeaveRecordDialog(
       }
     },
     confirmButton = {
+      val saveActions = LocalFunctionalActionColors.current
       Button(
         enabled = duplicateGuardEval.canProceed,
         onClick = {
@@ -1456,6 +1458,10 @@ fun AddLeaveRecordDialog(
           }
         },
         shape = IosSharpButtonShape,
+        colors = ButtonDefaults.buttonColors(
+          containerColor = saveActions.createPrimary,
+          contentColor = Color.White
+        ),
         modifier = Modifier.testTag("confirm_add_leave_button")
       ) {
         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))

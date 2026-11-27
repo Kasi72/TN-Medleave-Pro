@@ -68,6 +68,7 @@ import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -313,6 +314,7 @@ fun UpcomingHolidayDashboardSection(
   }
 
   val neu = LocalNeumorphicColors.current
+  val actions = LocalFunctionalActionColors.current
   Box(
     modifier = modifier
       .fillMaxWidth()
@@ -320,7 +322,7 @@ fun UpcomingHolidayDashboardSection(
         shape = IosSharpCardShape,
         elevation = 5.dp,
         blurRadius = 10.dp,
-        accentTint = EmeraldOptimal,
+        accentTint = neu.primaryAccent,
         accentTintAlpha = 0.04f,
         borderAlpha = 0.30f,
         neu = neu
@@ -351,7 +353,7 @@ fun UpcomingHolidayDashboardSection(
           label = "LEAVE BRIDGES",
           value = "$upcomingBridgeCount Active",
           sub = "$totalBridgeOpportunities total in 2026",
-          accent = EmeraldOptimal,
+          accent = actions.aiOptimize,
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
@@ -381,7 +383,8 @@ fun UpcomingHolidayDashboardSection(
         onClick = onOpenFullHolidayDashboard,
         shape = IosSharpButtonShape,
         colors = ButtonDefaults.buttonColors(
-          containerColor = MaterialTheme.colorScheme.primary
+          containerColor = actions.createPrimary,
+          contentColor = Color.White
         ),
         modifier = Modifier
           .fillMaxWidth()
@@ -959,13 +962,14 @@ fun EnterpriseHolidayBridgeCard(
           Spacer(modifier = Modifier.width(10.dp))
 
           if (enriched.matchingSmartBridge != null && enriched.existingLedgerType == null) {
+            val bridgeActions = LocalFunctionalActionColors.current
             Box(
               modifier = Modifier
                 .neumorphicExtruded(
                   shape = IosSharpBadgeShape,
                   elevation = 2.5.dp,
                   blurRadius = 5.dp,
-                  surfaceColor = EmeraldOptimal,
+                  surfaceColor = bridgeActions.aiOptimize,
                   borderAlpha = 0.35f,
                   neu = neu
                 )

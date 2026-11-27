@@ -84,6 +84,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.ActionButtonRole
 import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgeOnDutyBlue
 import com.example.ui.theme.BadgePlGold
@@ -95,6 +96,7 @@ import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpSquircleShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.NeumorphicColors
 import java.time.Instant
@@ -140,15 +142,41 @@ fun Modifier.neumorphicExtruded(
   borderAlpha: Float = 0.35f,
   neu: NeumorphicColors = LocalNeumorphicColors.current
 ): Modifier {
+  val isVividFill = surfaceColor != null &&
+    surfaceColor != neu.surfaceRaised &&
+    surfaceColor != neu.baseBg &&
+    surfaceColor != neu.surfaceInset
   val baseFill = surfaceColor ?: if (accentTint != null) {
     lerp(neu.surfaceRaised, accentTint, accentTintAlpha.coerceIn(0f, 0.25f))
   } else {
     neu.surfaceRaised
   }
-  val topLeftConvex = lerp(baseFill, neu.bevelHighlight, if (neu.isDark) 0.32f else 0.48f)
-  val bottomRightConvex = lerp(baseFill, neu.darkShadow, if (neu.isDark) 0.14f else 0.09f)
-  val rimStart = neu.lightShadow.copy(alpha = if (neu.isDark) 0.42f else 0.85f)
-  val rimEnd = (accentTint ?: neu.darkShadow).copy(alpha = borderAlpha.coerceIn(0.10f, 0.55f))
+  val topLeftConvex = if (isVividFill) {
+    lerp(baseFill, Color.White, 0.16f)
+  } else {
+    lerp(baseFill, neu.bevelHighlight, if (neu.isDark) 0.28f else 0.62f)
+  }
+  val bottomRightConvex = if (isVividFill) {
+    lerp(baseFill, Color.Black, 0.14f)
+  } else {
+    lerp(baseFill, neu.darkShadow, if (neu.isDark) 0.14f else 0.06f)
+  }
+  val rimStart = if (isVividFill) {
+    Color.White.copy(alpha = 0.56f)
+  } else {
+    neu.lightShadow.copy(alpha = if (neu.isDark) 0.42f else 0.94f)
+  }
+  val rimEnd = if (isVividFill) {
+    Color.Black.copy(alpha = 0.18f)
+  } else {
+    (accentTint ?: neu.darkShadow).copy(alpha = borderAlpha.coerceIn(0.10f, 0.55f))
+  }
+  val castDarkShadow = if (isVividFill) {
+    lerp(neu.darkShadow, baseFill, 0.36f).copy(alpha = if (neu.isDark) 0.72f else 0.58f)
+  } else {
+    neu.darkShadow.copy(alpha = if (neu.isDark) 0.90f else 0.74f)
+  }
+  val castLightShadow = neu.lightShadow.copy(alpha = if (neu.isDark) 0.80f else 0.96f)
 
   return this
     .drawWithCache {
@@ -157,8 +185,8 @@ fun Modifier.neumorphicExtruded(
       val outline = shape.createOutline(size, layoutDirection, this)
       val composePath = outlineToComposePath(outline)
       val androidPath = composePath.asAndroidPath()
-      val lightPaint = makeBlurPaint(neu.lightShadow.copy(alpha = if (neu.isDark) 0.82f else 0.92f), blurPx)
-      val darkPaint = makeBlurPaint(neu.darkShadow.copy(alpha = if (neu.isDark) 0.90f else 0.72f), blurPx)
+      val lightPaint = makeBlurPaint(castLightShadow, blurPx)
+      val darkPaint = makeBlurPaint(castDarkShadow, blurPx)
 
       onDrawBehind {
         drawIntoCanvas { canvas ->
@@ -318,6 +346,83 @@ fun NeumorphicLinearProgress(
 }
 
 /**
+ * Standardized Tactile 3D Neumorphic Functional Action Button.
+ * Guarantees that every button performing the same functional role across the app shares
+ * the exact same jewel-tone fill, glossy convex sheen, cast shadow, and crisp white text.
+ */
+@Composable
+fun NeumorphicFunctionalButton(
+  text: String,
+  role: ActionButtonRole,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier,
+  icon: ImageVector? = null,
+  enabled: Boolean = true,
+  compact: Boolean = false
+) {
+  val neu = LocalNeumorphicColors.current
+  val actions = LocalFunctionalActionColors.current
+  val roleColor = actions.colorFor(role)
+  val fillColor = if (enabled) roleColor else neu.surfaceInset
+  val contentColor = if (enabled) Color.White else neu.textSecondary.copy(alpha = 0.65f)
+
+  Box(
+    modifier = modifier
+      .height(if (compact) 38.dp else 48.dp)
+      .then(
+        if (enabled) {
+          Modifier
+            .neumorphicExtruded(
+              shape = IosSharpButtonShape,
+              elevation = if (compact) 3.5.dp else 5.dp,
+              blurRadius = if (compact) 7.dp else 10.dp,
+              surfaceColor = fillColor,
+              showBorder = true,
+              borderAlpha = 0.45f,
+              neu = neu
+            )
+            .clickable(onClick = onClick)
+        } else {
+          Modifier.neumorphicInset(
+            shape = IosSharpButtonShape,
+            depth = 2.dp,
+            blurRadius = 4.dp,
+            surfaceColor = fillColor,
+            neu = neu
+          )
+        }
+      ),
+    contentAlignment = Alignment.Center
+  ) {
+    Row(
+      modifier = Modifier.padding(horizontal = if (compact) 12.dp else 16.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+      if (icon != null) {
+        Icon(
+          imageVector = icon,
+          contentDescription = text,
+          tint = contentColor,
+          modifier = Modifier.size(if (compact) 15.dp else 17.dp)
+        )
+      }
+      Text(
+        text = text,
+        color = contentColor,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = if (compact) 11.5.sp else 13.sp,
+        lineHeight = if (compact) 14.sp else 16.sp,
+        letterSpacing = (-0.15).sp,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis
+      )
+    }
+  }
+}
+
+/**
  * Reusable ui-neumorphism Tactile Soft-UI Switch (Inset Track + Extruded Circular/Squircle Thumb).
  */
 @Composable
@@ -325,7 +430,7 @@ fun NeumorphicSwitch(
   checked: Boolean,
   onCheckedChange: (Boolean) -> Unit,
   modifier: Modifier = Modifier,
-  accentColor: Color = EmeraldOptimal
+  accentColor: Color = LocalNeumorphicColors.current.primaryAccent
 ) {
   val neu = LocalNeumorphicColors.current
   val thumbOffset by animateDpAsState(
@@ -400,7 +505,7 @@ fun IosAmbientGlassBackdrop(
  */
 @Composable
 fun Modifier.iosFrostedGlassCard(
-  accentColor: Color = EmeraldOptimal,
+  accentColor: Color = LocalNeumorphicColors.current.primaryAccent,
   shape: Shape = IosSharpCardShape,
   borderWidth: Dp = 1.dp,
   borderAlpha: Float = 0.30f
@@ -410,22 +515,22 @@ fun Modifier.iosFrostedGlassCard(
     elevation = 4.5.dp,
     blurRadius = 9.dp,
     accentTint = accentColor,
-    accentTintAlpha = 0.035f,
+    accentTintAlpha = 0.03f,
     showBorder = borderWidth > 0.dp,
     borderAlpha = borderAlpha
   )
 }
 
 /**
- * Neumorphic Executive Hero Container — adapts seamlessly to Mint Soft UI, Soft Clay Light, and Dark #292E35.
+ * Neumorphic Executive Hero Container — adapts seamlessly to Sky Blue & White, Cloud White, and Dark Sky Obsidian.
  * Uses raised extruded outer relief with subtle directional bevel highlight & soft accent glow.
  */
 @Composable
 fun EnterpriseMeshHeroContainer(
   modifier: Modifier = Modifier,
   cornerRadius: Dp = 18.dp,
-  primaryGlowColor: Color = EmeraldOptimal,
-  secondaryGlowColor: Color = BadgeColCyan,
+  primaryGlowColor: Color = LocalNeumorphicColors.current.primaryAccent,
+  secondaryGlowColor: Color = LocalNeumorphicColors.current.secondaryAccent,
   contentPadding: PaddingValues = PaddingValues(18.dp),
   content: @Composable BoxScope.() -> Unit
 ) {
@@ -462,6 +567,7 @@ fun IosControlCenterBentoStrip(
   onExportPdf: () -> Unit,
   modifier: Modifier = Modifier
 ) {
+  val actions = LocalFunctionalActionColors.current
   Row(
     modifier = modifier
       .fillMaxWidth()
@@ -472,7 +578,7 @@ fun IosControlCenterBentoStrip(
       icon = Icons.Default.Add,
       title = "Log Leave",
       subtitle = "CL • RH • EL",
-      accent = EmeraldOptimal,
+      accent = actions.createPrimary,
       onClick = onLogLeave,
       modifier = Modifier
         .weight(1f)
@@ -482,7 +588,7 @@ fun IosControlCenterBentoStrip(
       icon = Icons.Default.FactCheck,
       title = "COL ↔ GH",
       subtitle = "Pair Duty",
-      accent = BadgeColCyan,
+      accent = actions.verifyApprove,
       onClick = onOpenColAudit,
       modifier = Modifier
         .weight(1f)
@@ -492,7 +598,7 @@ fun IosControlCenterBentoStrip(
       icon = Icons.Default.AutoAwesome,
       title = "AI Bridge",
       subtitle = "10d Cap",
-      accent = BadgePlGold,
+      accent = actions.aiOptimize,
       onClick = onOpenOptimizer,
       modifier = Modifier
         .weight(1f)
@@ -502,7 +608,7 @@ fun IosControlCenterBentoStrip(
       icon = Icons.Default.PictureAsPdf,
       title = "A4 Report",
       subtitle = "Dean PDF",
-      accent = BadgeOnDutyBlue,
+      accent = actions.exportDocs,
       onClick = onExportPdf,
       modifier = Modifier
         .weight(1f)
@@ -525,11 +631,11 @@ private fun IosControlCenterTile(
     modifier = modifier
       .neumorphicExtruded(
         shape = IosSharpButtonShape,
-        elevation = 4.dp,
-        blurRadius = 8.dp,
+        elevation = 4.5.dp,
+        blurRadius = 8.5.dp,
         accentTint = accent,
-        accentTintAlpha = 0.04f,
-        borderAlpha = 0.28f
+        accentTintAlpha = 0.045f,
+        borderAlpha = 0.34f
       )
       .clickable { onClick() }
   ) {
@@ -546,21 +652,22 @@ private fun IosControlCenterTile(
       ) {
         Box(
           modifier = Modifier
-            .size(26.dp)
-            .neumorphicInset(
+            .size(28.dp)
+            .neumorphicExtruded(
               shape = IosSharpMicroShape,
-              depth = 2.dp,
-              blurRadius = 4.dp,
-              accentTint = accent,
-              accentTintAlpha = 0.12f
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              surfaceColor = accent,
+              borderAlpha = 0.45f,
+              neu = neu
             ),
           contentAlignment = Alignment.Center
         ) {
           Icon(
             imageVector = icon,
             contentDescription = title,
-            tint = accent,
-            modifier = Modifier.size(14.dp)
+            tint = Color.White,
+            modifier = Modifier.size(15.dp)
           )
         }
         Icon(
@@ -607,7 +714,7 @@ fun EnterpriseSectionHeader(
   title: String,
   subtitle: String? = null,
   badgeText: String? = null,
-  badgeColor: Color = EmeraldOptimal,
+  badgeColor: Color = LocalNeumorphicColors.current.primaryAccent,
   onBadgeClick: (() -> Unit)? = null,
   modifier: Modifier = Modifier
 ) {
@@ -1047,7 +1154,7 @@ fun DatePickerOutlinedField(
         text = friendlyHint,
         fontFamily = JetBrainsMonoFontFamily,
         fontSize = 10.sp,
-        color = EmeraldOptimal,
+        color = neu.primaryAccent,
         fontWeight = FontWeight.SemiBold,
         maxLines = 1,
         softWrap = false,
@@ -1087,7 +1194,7 @@ fun DatePickerOutlinedField(
             showCalendarDialog = false
           }
         ) {
-          Text("Select Date", fontWeight = FontWeight.Bold, color = EmeraldOptimal)
+          Text("Select Date", fontWeight = FontWeight.Bold, color = neu.primaryAccent)
         }
       },
       dismissButton = {

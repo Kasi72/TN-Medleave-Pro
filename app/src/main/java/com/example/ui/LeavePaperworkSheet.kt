@@ -81,6 +81,7 @@ import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpWellShape
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
@@ -150,6 +151,7 @@ fun LeavePaperworkDialog(
   val context = LocalContext.current
   val clipboard = LocalClipboardManager.current
   val neu = LocalNeumorphicColors.current
+  val actions = LocalFunctionalActionColors.current
 
   val officerName = remember { HodProfileSettingsStore.getOfficerName(context) }
   val designation = remember { HodProfileSettingsStore.getDesignation(context) }
@@ -223,7 +225,7 @@ fun LeavePaperworkDialog(
     title = {
       ExecutiveDialogHeader(
         icon = Icons.Default.Description,
-        accent = BadgeColCyan,
+        accent = neu.primaryAccent,
         title = "${record.category.shortLabel} Paperwork & Actions",
         subtitle = "${JoiningReportAndShareGenerator.formatDisplayDate(record.dateIso)} • ${record.category.fullTitle}"
       )
@@ -334,7 +336,7 @@ fun LeavePaperworkDialog(
                         shape = IosSharpBadgeShape,
                         elevation = 2.dp,
                         blurRadius = 4.dp,
-                        surfaceColor = EmeraldOptimal,
+                        surfaceColor = neu.primaryAccent,
                         neu = neu
                       )
                     } else {
@@ -489,7 +491,7 @@ fun LeavePaperworkDialog(
                 shape = IosSharpButtonShape,
                 elevation = 2.5.dp,
                 blurRadius = 5.dp,
-                surfaceColor = EmeraldOptimal,
+                surfaceColor = actions.exportDocs,
                 neu = neu
               )
               .clickable { showJoiningReportPreview = true }
@@ -511,7 +513,7 @@ fun LeavePaperworkDialog(
                 shape = IosSharpButtonShape,
                 elevation = 2.5.dp,
                 blurRadius = 5.dp,
-                surfaceColor = BadgeColCyan,
+                surfaceColor = actions.exportDocs,
                 neu = neu
               )
               .clickable {
@@ -564,9 +566,7 @@ fun LeavePaperworkDialog(
                 shape = IosSharpButtonShape,
                 elevation = 2.5.dp,
                 blurRadius = 5.dp,
-                accentTint = BadgeInLieuLavender,
-                accentTintAlpha = 0.12f,
-                borderAlpha = 0.35f,
+                surfaceColor = actions.shareHandover,
                 neu = neu
               )
               .clickable {
@@ -588,9 +588,9 @@ fun LeavePaperworkDialog(
             contentAlignment = Alignment.Center
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Default.Share, contentDescription = null, tint = BadgeInLieuLavender, modifier = Modifier.size(15.dp))
+              Icon(Icons.Default.Share, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
               Spacer(modifier = Modifier.width(6.dp))
-              Text("WhatsApp Handover", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = BadgeInLieuLavender, maxLines = 1)
+              Text("WhatsApp Handover", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
             }
           }
 
@@ -599,9 +599,9 @@ fun LeavePaperworkDialog(
               .weight(0.7f)
               .neumorphicExtruded(
                 shape = IosSharpButtonShape,
-                elevation = 2.dp,
-                blurRadius = 4.dp,
-                borderAlpha = 0.28f,
+                elevation = 2.5.dp,
+                blurRadius = 5.dp,
+                surfaceColor = actions.exportDocs,
                 neu = neu
               )
               .clickable {
@@ -616,7 +616,7 @@ fun LeavePaperworkDialog(
               .testTag("export_ics_button"),
             contentAlignment = Alignment.Center
           ) {
-            Text(".ICS File", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = neu.textPrimary, maxLines = 1)
+            Text(".ICS File", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
           }
         }
       }
@@ -628,7 +628,10 @@ fun LeavePaperworkDialog(
           onDismiss()
         },
         shape = IosSharpButtonShape,
-        colors = ButtonDefaults.buttonColors(containerColor = BadgeColCyan),
+        colors = ButtonDefaults.buttonColors(
+          containerColor = actions.createPrimary,
+          contentColor = Color.White
+        ),
         modifier = Modifier.testTag("save_leave_workflow_button")
       ) {
         Text("Save Paperwork", fontWeight = FontWeight.Bold)
@@ -693,28 +696,36 @@ fun LeavePaperworkDialog(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
           ) {
-            OutlinedButton(
+            Button(
               onClick = {
                 clipboard.setText(AnnotatedString(reportText))
                 onShowFeedback("Copied Official Joining Report to clipboard!")
               },
               shape = IosSharpButtonShape,
+              colors = ButtonDefaults.buttonColors(
+                containerColor = actions.shareHandover,
+                contentColor = Color.White
+              ),
               modifier = Modifier.weight(1f)
             ) {
               Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
               Spacer(modifier = Modifier.width(4.dp))
-              Text("Copy", fontSize = 11.sp)
+              Text("Copy", fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
-            OutlinedButton(
+            Button(
               onClick = {
                 CalendarAndHandoverBridge.shareClinicalHandover(context, reportText, preferWhatsApp = false)
               },
               shape = IosSharpButtonShape,
+              colors = ButtonDefaults.buttonColors(
+                containerColor = actions.shareHandover,
+                contentColor = Color.White
+              ),
               modifier = Modifier.weight(1f)
             ) {
               Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
               Spacer(modifier = Modifier.width(4.dp))
-              Text("Share", fontSize = 11.sp)
+              Text("Share", fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
             Button(
               onClick = {
@@ -725,12 +736,15 @@ fun LeavePaperworkDialog(
                 ).onFailure { onShowFeedback("PDF export failed: ${it.localizedMessage}") }
               },
               shape = IosSharpButtonShape,
-              colors = ButtonDefaults.buttonColors(containerColor = BadgeColCyan),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = actions.exportDocs,
+                contentColor = Color.White
+              ),
               modifier = Modifier.weight(1f)
             ) {
               Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(14.dp))
               Spacer(modifier = Modifier.width(4.dp))
-              Text("PDF", fontSize = 11.sp)
+              Text("PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
           }
         }
@@ -747,7 +761,10 @@ fun LeavePaperworkDialog(
             onDismiss()
           },
           shape = IosSharpButtonShape,
-          colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = actions.verifyApprove,
+            contentColor = Color.White
+          ),
           modifier = Modifier.testTag("mark_joining_filed_button")
         ) {
           Text("Mark Joining Filed", fontWeight = FontWeight.Bold)

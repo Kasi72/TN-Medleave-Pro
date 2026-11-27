@@ -78,6 +78,7 @@ import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import kotlinx.coroutines.delay
@@ -435,13 +436,14 @@ fun BiometricVaultLockScreen(
           }
         }
 
+        val actions = LocalFunctionalActionColors.current
         // Direct Biometric Unlock CTA Button
         Button(
           onClick = { triggerBiometricUnlock() },
           shape = IosSharpButtonShape,
           colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
+            containerColor = actions.verifyApprove,
+            contentColor = Color.White
           ),
           modifier = Modifier
             .fillMaxWidth()
@@ -505,6 +507,7 @@ fun BiometricSecuritySettingsDialog(
 ) {
   val context = LocalContext.current
   val neu = LocalNeumorphicColors.current
+  val actions = LocalFunctionalActionColors.current
   var lockEnabled by remember {
     mutableStateOf(BiometricLockManager.isBiometricLockEnabled(context))
   }
@@ -699,8 +702,8 @@ fun BiometricSecuritySettingsDialog(
               },
               shape = IosSharpButtonShape,
               colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                containerColor = actions.createPrimary,
+                contentColor = Color.White
               ),
               modifier = Modifier.height(52.dp)
             ) {
@@ -717,7 +720,7 @@ fun BiometricSecuritySettingsDialog(
           }
         }
 
-        // Lock App Immediately Button (Extruded Dark/Accent Pill)
+        // Lock App Immediately Button
         Button(
           onClick = {
             onDismiss()
@@ -725,8 +728,8 @@ fun BiometricSecuritySettingsDialog(
           },
           shape = IosSharpButtonShape,
           colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
+            containerColor = actions.editUtility,
+            contentColor = Color.White
           ),
           modifier = Modifier
             .fillMaxWidth()

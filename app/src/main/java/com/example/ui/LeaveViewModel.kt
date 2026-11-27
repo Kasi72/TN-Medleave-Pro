@@ -22,12 +22,14 @@ import com.example.domain.AiRecommendationUiState
 import com.example.domain.BuilderPreloadRequest
 import com.example.domain.BurnDownSlotSuggestion
 import com.example.domain.CsvImportRow
+import com.example.domain.ColExpiryItem
 import com.example.domain.CustomRangeAnalysis
 import com.example.domain.DutyConflictEngine
 import com.example.domain.ExpiryWatchdogEngine
 import com.example.domain.ExpiryWatchdogSummary
 import com.example.domain.GhColCaptureCandidate
 import com.example.domain.HolidaySyncStatus
+import com.example.domain.LapsedColArchiveStore
 import com.example.domain.LeaveOptimizerEngine
 import com.example.domain.OptimizerConstraints
 import com.example.domain.SanctionSlipVault
@@ -136,6 +138,11 @@ class LeaveViewModel(
 
   private val _protectLoggedDutyShifts = MutableStateFlow(true)
   val protectLoggedDutyShifts: StateFlow<Boolean> = _protectLoggedDutyShifts.asStateFlow()
+
+  private val _clearedLapsedColKeys = MutableStateFlow(
+    LapsedColArchiveStore.getClearedKeys(appContext, currentUserId)
+  )
+  val clearedLapsedColKeys: StateFlow<Set<String>> = _clearedLapsedColKeys.asStateFlow()
 
   val leaveWorkflowsByRecordId: StateFlow<Map<String, LeaveWorkflowMeta>> =
     repository.observeLeaveWorkflows(currentUserId)
@@ -378,10 +385,15 @@ class LeaveViewModel(
 
   val expiryWatchdogSummary: StateFlow<ExpiryWatchdogSummary> = combine(
     uiState,
-    leaveWorkflowsByRecordId
-  ) { state, workflows ->
+    leaveWorkflowsByRecordId,
+    _clearedLapsedColKeys
+  ) { state, workflows, clearedKeys ->
     val records = (state as? LeaveUiState.Success)?.allRecords.orEmpty()
-    ExpiryWatchdogEngine.evaluate(records = records, workflowsByRecordId = workflows)
+    ExpiryWatchdogEngine.evaluate(
+      records = records,
+      workflowsByRecordId = workflows,
+      clearedLapsedRecordKeys = clearedKeys
+    )
   }.stateIn(
     scope = viewModelScope,
     started = SharingStarted.WhileSubscribed(5000L),
@@ -1461,5 +1473,32 @@ class LeaveViewModel(
         _statusBanner.value = "Could not bank COL credit: ${err.localizedMessage}"
       }
     }
+  }
+
+  fun clearLapsedColItem(item: ColExpiryItem) {
+    _clearedLapsedColKeys.value = LapsedColArchiveStore.clearItems(
+      context = appContext,
+      userId = currentUserId,
+      items = listOf(item)
+    )
+    _statusBanner.value = "Cleared lapsed GH Worked (${item.ghDateIso}) from Watchdog. Historical record remains archived in Ledger."
+  }
+
+  fun clearAllLapsedColItems(items: List<ColExpiryItem>) {
+    if (items.isEmpty()) return
+    _clearedLapsedColKeys.value = LapsedColArchiveStore.clearItems(
+      context = appContext,
+      userId = currentUserId,
+      items = items
+    )
+    _statusBanner.value = "Cleared ${items.size} lapsed GH-Worked credit${if (items.size > 1) "s" else ""} from Watchdog. Historical duty records remain safely archived in Ledger."
+  }
+
+  fun restoreArchivedLapsedCols() {
+    _clearedLapsedColKeys.value = LapsedColArchiveStore.restoreAll(
+      context = appContext,
+      userId = currentUserId
+    )
+    _statusBanner.value = "Restored previously cleared lapsed GH-Worked credits in Watchdog."
   }
 }

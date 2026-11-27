@@ -149,6 +149,70 @@ val IosSharpWellShape = IosSharpSquircleShape(15.dp, sharpnessBias = 0.74f)
 val IosSharpCardShape = IosSharpSquircleShape(18.dp, sharpnessBias = 0.74f)
 val IosSharpHeroShape = IosSharpSquircleShape(22.dp, sharpnessBias = 0.74f)
 
+/**
+ * Standardized 7-role functional button taxonomy so buttons doing the same job
+ * always share the exact same signature jewel-tone color across every screen.
+ */
+enum class ActionButtonRole {
+  /** Create / Log Leave / Add Duty / Save / Commit / Apply Plan — Royal Sky Blue */
+  CREATE_PRIMARY,
+  /** Verify / Approve / Advance Stage / Claim +1 COL / Pair COL ↔ GH — Clinical Emerald */
+  VERIFY_APPROVE,
+  /** AI Intelligence / Gemini Optimizer / Smart Bridges / Ask Advisor — Royal Indigo-Violet */
+  AI_OPTIMIZE,
+  /** Export PDF / Official Joining Report / Google Calendar Sync / .ics — Warm Amber-Gold */
+  EXPORT_DOCS,
+  /** Share / WhatsApp Handover / Copy Memo / Attach Slip Photo — Deep Clinical Teal */
+  SHARE_HANDOVER,
+  /** Edit / Filter / Sync TN Holidays / Configure / Utility — Crisp Cobalt Blue */
+  EDIT_UTILITY,
+  /** Delete / Clear / Cancel / Remove / Urgent Expiry Warning — Crisp Crimson Red */
+  DESTRUCTIVE_ALERT
+}
+
+@Immutable
+data class FunctionalActionColors(
+  val createPrimary: Color,
+  val verifyApprove: Color,
+  val aiOptimize: Color,
+  val exportDocs: Color,
+  val shareHandover: Color,
+  val editUtility: Color,
+  val destructiveAlert: Color
+) {
+  fun colorFor(role: ActionButtonRole): Color = when (role) {
+    ActionButtonRole.CREATE_PRIMARY -> createPrimary
+    ActionButtonRole.VERIFY_APPROVE -> verifyApprove
+    ActionButtonRole.AI_OPTIMIZE -> aiOptimize
+    ActionButtonRole.EXPORT_DOCS -> exportDocs
+    ActionButtonRole.SHARE_HANDOVER -> shareHandover
+    ActionButtonRole.EDIT_UTILITY -> editUtility
+    ActionButtonRole.DESTRUCTIVE_ALERT -> destructiveAlert
+  }
+}
+
+private val LightFunctionalActionColors = FunctionalActionColors(
+  createPrimary = ActionCreateLight,
+  verifyApprove = ActionVerifyLight,
+  aiOptimize = ActionAiLight,
+  exportDocs = ActionExportLight,
+  shareHandover = ActionShareLight,
+  editUtility = ActionEditLight,
+  destructiveAlert = ActionDestructiveLight
+)
+
+private val DarkFunctionalActionColors = FunctionalActionColors(
+  createPrimary = ActionCreateDark,
+  verifyApprove = ActionVerifyDark,
+  aiOptimize = ActionAiDark,
+  exportDocs = ActionExportDark,
+  shareHandover = ActionShareDark,
+  editUtility = ActionEditDark,
+  destructiveAlert = ActionDestructiveDark
+)
+
+val LocalFunctionalActionColors = compositionLocalOf { LightFunctionalActionColors }
+
 @Immutable
 data class NeumorphicColors(
   val isDark: Boolean,
@@ -165,22 +229,22 @@ data class NeumorphicColors(
   val hairlineDivider: Color
 )
 
-private val MintNeumorphicColors = NeumorphicColors(
+private val SkyWhiteNeumorphicColors = NeumorphicColors(
   isDark = false,
-  baseBg = NeuMintBase,
-  surfaceRaised = NeuMintRaised,
-  surfaceInset = NeuMintInset,
-  lightShadow = NeuMintShadowLight,
-  darkShadow = NeuMintShadowDark,
-  bevelHighlight = NeuMintBevel,
-  primaryAccent = Color(0xFF047857),
-  secondaryAccent = Color(0xFF0E7490),
-  textPrimary = Color(0xFF062C22),
-  textSecondary = Color(0xFF28584B),
-  hairlineDivider = Color(0xFFA9C0B6).copy(alpha = 0.55f)
+  baseBg = NeuSkyBase,
+  surfaceRaised = NeuSkyRaised,
+  surfaceInset = NeuSkyInset,
+  lightShadow = NeuSkyShadowLight,
+  darkShadow = NeuSkyShadowDark,
+  bevelHighlight = NeuSkyBevel,
+  primaryAccent = SkyPrimary,
+  secondaryAccent = ActionShareLight,
+  textPrimary = Color(0xFF0F2942),
+  textSecondary = Color(0xFF476582),
+  hairlineDivider = Color(0xFFB5D2EE).copy(alpha = 0.65f)
 )
 
-private val LightClayNeumorphicColors = NeumorphicColors(
+private val CloudWhiteNeumorphicColors = NeumorphicColors(
   isDark = false,
   baseBg = NeuLightBase,
   surfaceRaised = NeuLightRaised,
@@ -188,11 +252,11 @@ private val LightClayNeumorphicColors = NeumorphicColors(
   lightShadow = NeuLightShadowLight,
   darkShadow = NeuLightShadowDark,
   bevelHighlight = NeuLightBevel,
-  primaryAccent = Color(0xFF0284C7),
-  secondaryAccent = Color(0xFF059669),
-  textPrimary = Color(0xFF1E293B),
-  textSecondary = Color(0xFF475569),
-  hairlineDivider = Color(0xFFB8C4D8).copy(alpha = 0.60f)
+  primaryAccent = SkyPrimary,
+  secondaryAccent = ActionShareLight,
+  textPrimary = Color(0xFF0F2942),
+  textSecondary = Color(0xFF526A84),
+  hairlineDivider = Color(0xFFC2D2E6).copy(alpha = 0.65f)
 )
 
 private val DarkNeumorphicColors = NeumorphicColors(
@@ -203,14 +267,14 @@ private val DarkNeumorphicColors = NeumorphicColors(
   lightShadow = NeuDarkShadowLight,
   darkShadow = NeuDarkShadowDark,
   bevelHighlight = NeuDarkBevel,
-  primaryAccent = Color(0xFF34D399),
-  secondaryAccent = Color(0xFF38BDF8),
+  primaryAccent = SkyPrimaryBright,
+  secondaryAccent = ActionShareDark,
   textPrimary = Color(0xFFF1F5F9),
   textSecondary = Color(0xFF94A3B8),
-  hairlineDivider = Color(0xFF383F49).copy(alpha = 0.70f)
+  hairlineDivider = Color(0xFF333F52).copy(alpha = 0.72f)
 )
 
-val LocalNeumorphicColors = compositionLocalOf { MintNeumorphicColors }
+val LocalNeumorphicColors = compositionLocalOf { SkyWhiteNeumorphicColors }
 
 enum class AppThemeMode(
   val id: String,
@@ -218,28 +282,30 @@ enum class AppThemeMode(
   val shortBadge: String,
   val subtitle: String
 ) {
-  GREEN_EMERALD(
-    id = "green_emerald",
-    displayName = "Mint Soft UI",
-    shortBadge = "MINT NEU",
-    subtitle = "Neumorphic Sage Mint & Emerald"
+  SKY_WHITE(
+    id = "sky_white",
+    displayName = "Sky Blue & White",
+    shortBadge = "SKY WHITE",
+    subtitle = "Airy Light Sky-Blue Canvas & Crisp White Neumorphism"
   ),
   WHITE_CLINICAL(
     id = "white_clinical",
-    displayName = "Soft Clay Light",
-    shortBadge = "CLAY LIGHT",
-    subtitle = "Classic ui-neumorphism Daylight Clay"
+    displayName = "Pure White Cloud",
+    shortBadge = "CLOUD WHITE",
+    subtitle = "Ultra-Crisp Porcelain White Daylight Soft UI"
   ),
   DARK_OBSIDIAN(
     id = "dark_obsidian",
-    displayName = "Dark Neumorphic",
-    shortBadge = "DARK #292E35",
-    subtitle = "ui-neumorphism Slate Charcoal"
+    displayName = "Dark Sky Obsidian",
+    shortBadge = "DARK SKY",
+    subtitle = "Midnight Slate Neumorphism with Luminous Sky Accent"
   );
 
   companion object {
     fun fromId(id: String?): AppThemeMode {
-      return entries.firstOrNull { it.id == id } ?: GREEN_EMERALD
+      // Automatically migrate legacy saved "green_emerald" preference to the new Sky Blue & White default
+      if (id == null || id == "green_emerald") return SKY_WHITE
+      return entries.firstOrNull { it.id == id } ?: SKY_WHITE
     }
   }
 }
@@ -248,15 +314,19 @@ object AppThemeController {
   private const val PREFS_NAME = "hod_profile_settings_prefs"
   private const val KEY_APP_THEME_MODE = "app_theme_mode"
 
-  private val _themeMode = MutableStateFlow(AppThemeMode.GREEN_EMERALD)
+  private val _themeMode = MutableStateFlow(AppThemeMode.SKY_WHITE)
   val themeMode: StateFlow<AppThemeMode> = _themeMode.asStateFlow()
   private var initialized = false
 
   fun initialize(context: Context) {
     if (!initialized) {
-      val savedId = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        .getString(KEY_APP_THEME_MODE, AppThemeMode.GREEN_EMERALD.id)
-      _themeMode.value = AppThemeMode.fromId(savedId)
+      val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      val savedId = prefs.getString(KEY_APP_THEME_MODE, AppThemeMode.SKY_WHITE.id)
+      val resolved = AppThemeMode.fromId(savedId)
+      _themeMode.value = resolved
+      if (savedId == "green_emerald") {
+        prefs.edit().putString(KEY_APP_THEME_MODE, AppThemeMode.SKY_WHITE.id).apply()
+      }
       initialized = true
     }
   }
@@ -276,61 +346,68 @@ object AppThemeController {
   }
 }
 
-val LocalAppThemeMode = compositionLocalOf { AppThemeMode.GREEN_EMERALD }
+val LocalAppThemeMode = compositionLocalOf { AppThemeMode.SKY_WHITE }
 
-// 1. MINT SOFT UI THEME (Single-Hue Botanical Sage-Mint Neumorphism)
-private val GreenEmeraldColorScheme = lightColorScheme(
-  primary = Color(0xFF047857),
+// 1. AIRY SKY BLUE & CRISP WHITE THEME (New Signature Default)
+private val SkyWhiteColorScheme = lightColorScheme(
+  primary = SkyPrimary,
   onPrimary = Color.White,
-  primaryContainer = Color(0xFFC2E5D6),
-  onPrimaryContainer = Color(0xFF062C22),
-  secondary = EmeraldOptimal,
+  primaryContainer = Color(0xFFD2EAFE),
+  onPrimaryContainer = Color(0xFF0C4A6E),
+  secondary = ActionShareLight,
   onSecondary = Color.White,
-  secondaryContainer = Color(0xFFD0E5DC),
-  onSecondaryContainer = Color(0xFF064E3B),
-  tertiary = Color(0xFF0E7490),
-  background = NeuMintBase,
-  onBackground = Color(0xFF062C22),
-  surface = NeuMintRaised,
-  onSurface = Color(0xFF062C22),
-  surfaceVariant = NeuMintInset,
-  onSurfaceVariant = Color(0xFF28584B),
-  outline = NeuMintShadowDark,
-  outlineVariant = Color(0xFFB5CDC2)
+  secondaryContainer = Color(0xFFCCFBF1),
+  onSecondaryContainer = Color(0xFF115E59),
+  tertiary = ActionAiLight,
+  onTertiary = Color.White,
+  background = NeuSkyBase,
+  onBackground = Color(0xFF0F2942),
+  surface = NeuSkyRaised,
+  onSurface = Color(0xFF0F2942),
+  surfaceVariant = NeuSkyInset,
+  onSurfaceVariant = Color(0xFF476582),
+  outline = NeuSkyShadowDark,
+  outlineVariant = Color(0xFFC5DDF4),
+  error = ActionDestructiveLight,
+  onError = Color.White
 )
 
-// 2. CLASSIC SOFT CLAY LIGHT THEME (Single-Hue #E4EBF5 ui-neumorphism Daylight)
+// 2. PURE WHITE CLOUD LIGHT THEME
 private val WhiteClinicalColorScheme = lightColorScheme(
-  primary = Color(0xFF0284C7),
+  primary = SkyPrimary,
   onPrimary = Color.White,
-  primaryContainer = Color(0xFFD2E4F6),
+  primaryContainer = Color(0xFFD8ECFD),
   onPrimaryContainer = Color(0xFF0C4A6E),
-  secondary = EmeraldOptimal,
+  secondary = ActionShareLight,
   onSecondary = Color.White,
   secondaryContainer = NeuLightInset,
-  onSecondaryContainer = Color(0xFF1E293B),
-  tertiary = Color(0xFFD97706),
+  onSecondaryContainer = Color(0xFF0F2942),
+  tertiary = ActionAiLight,
+  onTertiary = Color.White,
   background = NeuLightBase,
-  onBackground = Color(0xFF1E293B),
+  onBackground = Color(0xFF0F2942),
   surface = NeuLightRaised,
-  onSurface = Color(0xFF1E293B),
+  onSurface = Color(0xFF0F2942),
   surfaceVariant = NeuLightInset,
-  onSurfaceVariant = Color(0xFF475569),
+  onSurfaceVariant = Color(0xFF526A84),
   outline = NeuLightShadowDark,
-  outlineVariant = Color(0xFFC7D2E3)
+  outlineVariant = Color(0xFFD2DFEE),
+  error = ActionDestructiveLight,
+  onError = Color.White
 )
 
-// 3. DARK NEUMORPHIC THEME (Classic ui-neumorphism #292E35 Slate Charcoal)
+// 3. DARK SKY OBSIDIAN NEUMORPHIC THEME
 private val DarkObsidianColorScheme = darkColorScheme(
-  primary = Color(0xFF34D399),
-  onPrimary = Color(0xFF0B1F1A),
-  primaryContainer = Color(0xFF1E3A34),
-  onPrimaryContainer = Color(0xFFD1FAE5),
-  secondary = Color(0xFF38BDF8),
-  onSecondary = Color(0xFF0C2334),
-  secondaryContainer = Color(0xFF22272D),
-  onSecondaryContainer = Color(0xFFE0F2FE),
-  tertiary = Color(0xFFFBBF24),
+  primary = SkyPrimaryBright,
+  onPrimary = Color(0xFF082032),
+  primaryContainer = Color(0xFF133652),
+  onPrimaryContainer = Color(0xFFE0F2FE),
+  secondary = ActionShareDark,
+  onSecondary = Color(0xFF042F2E),
+  secondaryContainer = Color(0xFF1A2533),
+  onSecondaryContainer = Color(0xFFCCFBF1),
+  tertiary = ActionAiDark,
+  onTertiary = Color.White,
   background = NeuDarkBase,
   onBackground = Color(0xFFF1F5F9),
   surface = NeuDarkRaised,
@@ -338,7 +415,9 @@ private val DarkObsidianColorScheme = darkColorScheme(
   surfaceVariant = NeuDarkInset,
   onSurfaceVariant = Color(0xFF94A3B8),
   outline = NeuDarkShadowLight,
-  outlineVariant = NeuDarkShadowDark
+  outlineVariant = NeuDarkShadowDark,
+  error = ActionDestructiveDark,
+  onError = Color.White
 )
 
 val IosSquircleShapes = Shapes(
@@ -362,20 +441,23 @@ fun MyApplicationTheme(
   val activeMode = overrideThemeMode ?: observedMode
 
   val colorScheme = when (activeMode) {
-    AppThemeMode.GREEN_EMERALD -> GreenEmeraldColorScheme
+    AppThemeMode.SKY_WHITE -> SkyWhiteColorScheme
     AppThemeMode.WHITE_CLINICAL -> WhiteClinicalColorScheme
     AppThemeMode.DARK_OBSIDIAN -> DarkObsidianColorScheme
   }
 
   val neuColors = when (activeMode) {
-    AppThemeMode.GREEN_EMERALD -> MintNeumorphicColors
-    AppThemeMode.WHITE_CLINICAL -> LightClayNeumorphicColors
+    AppThemeMode.SKY_WHITE -> SkyWhiteNeumorphicColors
+    AppThemeMode.WHITE_CLINICAL -> CloudWhiteNeumorphicColors
     AppThemeMode.DARK_OBSIDIAN -> DarkNeumorphicColors
   }
 
+  val actionColors = if (neuColors.isDark) DarkFunctionalActionColors else LightFunctionalActionColors
+
   CompositionLocalProvider(
     LocalAppThemeMode provides activeMode,
-    LocalNeumorphicColors provides neuColors
+    LocalNeumorphicColors provides neuColors,
+    LocalFunctionalActionColors provides actionColors
   ) {
     MaterialTheme(
       colorScheme = colorScheme,

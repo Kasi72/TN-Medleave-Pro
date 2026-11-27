@@ -102,6 +102,7 @@ import com.example.ui.theme.IosSharpSquircleShape
 import com.example.ui.theme.IosSharpTabShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.LocalAppThemeMode
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.MyApplicationTheme
 import com.google.firebase.Firebase
@@ -200,6 +201,7 @@ fun MainFeatureHost(
   val dutyShifts by viewModel.dutyShifts.collectAsStateWithLifecycle()
   val expiryWatchdogSummary by viewModel.expiryWatchdogSummary.collectAsStateWithLifecycle()
   val unclaimedGhColCandidates by viewModel.unclaimedGhColCandidates.collectAsStateWithLifecycle()
+  val clearedLapsedColKeys by viewModel.clearedLapsedColKeys.collectAsStateWithLifecycle()
   val pendingWorkflowRecordId by viewModel.pendingWorkflowRecordId.collectAsStateWithLifecycle()
   val protectLoggedDutyShifts by viewModel.protectLoggedDutyShifts.collectAsStateWithLifecycle()
   var currentTab by rememberSaveable { mutableIntStateOf(0) }
@@ -291,13 +293,14 @@ fun MainFeatureHost(
     floatingActionButton = {
       if (currentTab !in listOf(3, 5) && !showEnterpriseSettingsDialog) {
         val neu = LocalNeumorphicColors.current
+        val actions = LocalFunctionalActionColors.current
         Box(
           modifier = Modifier
             .neumorphicExtruded(
               shape = IosSharpButtonShape,
               elevation = 6.dp,
               blurRadius = 12.dp,
-              surfaceColor = neu.primaryAccent,
+              surfaceColor = actions.createPrimary,
               showBorder = true,
               borderAlpha = 0.45f,
               neu = neu
@@ -477,6 +480,7 @@ fun MainFeatureHost(
               },
               expiryWatchdog = expiryWatchdogSummary,
               unclaimedGhCandidates = unclaimedGhColCandidates,
+              clearedLapsedColKeys = clearedLapsedColKeys,
               onOptimizeExpiringCol = { item ->
                 viewModel.triggerOptimizerDeepLink(
                   "Consume expiring GH Worked ${item.ghDateIso} FIFO COL before ${item.expiryDateIso}"
@@ -489,6 +493,15 @@ fun MainFeatureHost(
               },
               onClaimGhColCandidate = { candidate ->
                 viewModel.claimGhColFromDutyShift(candidate)
+              },
+              onClearLapsedCol = { item ->
+                viewModel.clearLapsedColItem(item)
+              },
+              onClearAllLapsedCols = { items ->
+                viewModel.clearAllLapsedColItems(items)
+              },
+              onRestoreArchivedLapsedCols = {
+                viewModel.restoreArchivedLapsedCols()
               }
             )
             1 -> LedgerTabScreen(
@@ -543,6 +556,7 @@ fun MainFeatureHost(
               onShowStatusBanner = { msg -> viewModel.showBannerMessage(msg) },
               expiryWatchdog = expiryWatchdogSummary,
               unclaimedGhCandidates = unclaimedGhColCandidates,
+              clearedLapsedColKeys = clearedLapsedColKeys,
               onOptimizeExpiringCol = { item ->
                 viewModel.triggerOptimizerDeepLink(
                   "Consume expiring GH Worked ${item.ghDateIso} FIFO COL before ${item.expiryDateIso}"
@@ -551,6 +565,15 @@ fun MainFeatureHost(
               },
               onClaimGhColCandidate = { candidate ->
                 viewModel.claimGhColFromDutyShift(candidate)
+              },
+              onClearLapsedCol = { item ->
+                viewModel.clearLapsedColItem(item)
+              },
+              onClearAllLapsedCols = { items ->
+                viewModel.clearAllLapsedColItems(items)
+              },
+              onRestoreArchivedLapsedCols = {
+                viewModel.restoreArchivedLapsedCols()
               }
             )
             3 -> OptimizerTabScreen(
@@ -743,6 +766,7 @@ private fun IosExecutiveTopBar(
   }
 
   val neu = LocalNeumorphicColors.current
+  val actions = LocalFunctionalActionColors.current
 
   Column(
     modifier = Modifier
@@ -799,7 +823,7 @@ private fun IosExecutiveTopBar(
         }
       }
 
-      // Right: Extruded 1-Tap Neumorphic Theme Mode Cycle Pill (Mint / Soft Clay / Dark #292E35)
+      // Right: Extruded 1-Tap Neumorphic Theme Mode Cycle Pill (Sky White / Cloud White / Dark Sky)
       Box(
         modifier = Modifier
           .height(24.dp)
@@ -814,9 +838,9 @@ private fun IosExecutiveTopBar(
           )
           .clickable {
             val nextMode = when (activeThemeMode) {
-              AppThemeMode.GREEN_EMERALD -> AppThemeMode.WHITE_CLINICAL
+              AppThemeMode.SKY_WHITE -> AppThemeMode.WHITE_CLINICAL
               AppThemeMode.WHITE_CLINICAL -> AppThemeMode.DARK_OBSIDIAN
-              AppThemeMode.DARK_OBSIDIAN -> AppThemeMode.GREEN_EMERALD
+              AppThemeMode.DARK_OBSIDIAN -> AppThemeMode.SKY_WHITE
             }
             AppThemeController.setThemeMode(context, nextMode)
           }
@@ -919,8 +943,7 @@ private fun IosExecutiveTopBar(
                 shape = IosSharpButtonShape,
                 elevation = 2.5.dp,
                 blurRadius = 5.dp,
-                accentTint = neu.primaryAccent,
-                accentTintAlpha = 0.05f,
+                surfaceColor = actions.editUtility,
                 neu = neu
               )
               .clickable { onOpenBiometricLock() }
@@ -930,7 +953,7 @@ private fun IosExecutiveTopBar(
             Icon(
               imageVector = Icons.Default.Fingerprint,
               contentDescription = "Biometric Lock & Security",
-              tint = neu.primaryAccent,
+              tint = Color.White,
               modifier = Modifier.size(15.dp)
             )
           }
@@ -942,8 +965,7 @@ private fun IosExecutiveTopBar(
                 shape = IosSharpButtonShape,
                 elevation = 2.5.dp,
                 blurRadius = 5.dp,
-                accentTint = neu.secondaryAccent,
-                accentTintAlpha = 0.05f,
+                surfaceColor = actions.shareHandover,
                 neu = neu
               )
               .clickable { onOpenNotifications() }
@@ -953,7 +975,7 @@ private fun IosExecutiveTopBar(
             Icon(
               imageVector = Icons.Default.NotificationsActive,
               contentDescription = "Holiday & Leave Push Alerts",
-              tint = neu.secondaryAccent,
+              tint = Color.White,
               modifier = Modifier.size(15.dp)
             )
           }
@@ -965,8 +987,7 @@ private fun IosExecutiveTopBar(
                 shape = IosSharpButtonShape,
                 elevation = 2.5.dp,
                 blurRadius = 5.dp,
-                accentTint = neu.primaryAccent,
-                accentTintAlpha = 0.08f,
+                surfaceColor = actions.exportDocs,
                 neu = neu
               )
               .clickable { onOpenPdfExport() }
@@ -980,13 +1001,13 @@ private fun IosExecutiveTopBar(
               Icon(
                 imageVector = Icons.Default.PictureAsPdf,
                 contentDescription = "Export Official PDF Report",
-                tint = neu.primaryAccent,
+                tint = Color.White,
                 modifier = Modifier.size(13.dp)
               )
               Spacer(modifier = Modifier.width(3.dp))
               Text(
                 text = "PDF",
-                color = neu.primaryAccent,
+                color = Color.White,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 10.sp,
                 lineHeight = 12.sp,
@@ -1005,7 +1026,7 @@ private fun IosExecutiveTopBar(
                     shape = IosSharpButtonShape,
                     depth = 2.dp,
                     blurRadius = 4.dp,
-                    surfaceColor = neu.primaryAccent,
+                    surfaceColor = actions.createPrimary,
                     neu = neu
                   )
                 } else {
@@ -1013,8 +1034,7 @@ private fun IosExecutiveTopBar(
                     shape = IosSharpButtonShape,
                     elevation = 2.5.dp,
                     blurRadius = 5.dp,
-                    accentTint = neu.primaryAccent,
-                    accentTintAlpha = 0.05f,
+                    surfaceColor = actions.createPrimary,
                     neu = neu
                   )
                 }
@@ -1026,7 +1046,7 @@ private fun IosExecutiveTopBar(
             Icon(
               imageVector = Icons.Default.Settings,
               contentDescription = "Enterprise Settings & 2027 Holiday Sync",
-              tint = if (isSettingsOpen) Color.White else neu.primaryAccent,
+              tint = Color.White,
               modifier = Modifier.size(15.dp)
             )
           }
@@ -1038,6 +1058,7 @@ private fun IosExecutiveTopBar(
                 shape = IosSharpButtonShape,
                 elevation = 2.5.dp,
                 blurRadius = 5.dp,
+                surfaceColor = actions.destructiveAlert,
                 neu = neu
               )
               .clickable { onSignOut() }
@@ -1047,7 +1068,7 @@ private fun IosExecutiveTopBar(
             Icon(
               imageVector = Icons.AutoMirrored.Filled.Logout,
               contentDescription = "Sign Out",
-              tint = neu.textSecondary,
+              tint = Color.White,
               modifier = Modifier.size(14.dp)
             )
           }

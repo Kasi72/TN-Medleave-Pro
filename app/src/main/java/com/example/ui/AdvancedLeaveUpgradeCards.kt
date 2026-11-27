@@ -104,6 +104,7 @@ import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
@@ -904,6 +905,7 @@ fun EarnedLeaveMasterPassbookCard(
         }
       },
       confirmButton = {
+        val actions = LocalFunctionalActionColors.current
         Button(
           onClick = {
             val newOpen = openInput.toIntOrNull()?.coerceIn(0, 300) ?: openingEl2023
@@ -915,9 +917,13 @@ fun EarnedLeaveMasterPassbookCard(
             showConfigDialog = false
             onShowStatusBanner("Updated EL Passbook (Opening 2023: ${newOpen}d, Surrendered: ${newSurr}d)")
           },
-          shape = IosSharpButtonShape
+          shape = IosSharpButtonShape,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = actions.createPrimary,
+            contentColor = Color.White
+          )
         ) {
-          Text("Save Passbook")
+          Text("Save Passbook", fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -1497,6 +1503,7 @@ fun CsvSpreadsheetHubCard(
         }
       },
       confirmButton = {
+        val actions = LocalFunctionalActionColors.current
         Button(
           onClick = {
             val rows = CsvSpreadsheetService.parseCsvText(csvTextInput)
@@ -1507,9 +1514,13 @@ fun CsvSpreadsheetHubCard(
               onShowStatusBanner("No valid YYYY-MM-DD rows found to import.")
             }
           },
-          shape = IosSharpButtonShape
+          shape = IosSharpButtonShape,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = actions.createPrimary,
+            contentColor = Color.White
+          )
         ) {
-          Text("Import Rows")
+          Text("Import Rows", fontWeight = FontWeight.Bold)
         }
       },
       dismissButton = {
@@ -2099,6 +2110,7 @@ fun CertificateVaultAndSrDialog(
       }
     },
     confirmButton = {
+      val actions = LocalFunctionalActionColors.current
       Button(
         onClick = {
           onSaveMeta(
@@ -2110,9 +2122,13 @@ fun CertificateVaultAndSrDialog(
             )
           )
         },
-        shape = IosSharpButtonShape
+        shape = IosSharpButtonShape,
+        colors = ButtonDefaults.buttonColors(
+          containerColor = actions.createPrimary,
+          contentColor = Color.White
+        )
       ) {
-        Text("Save Vault & SR Status")
+        Text("Save Vault & SR Status", fontWeight = FontWeight.Bold)
       }
     },
     dismissButton = {

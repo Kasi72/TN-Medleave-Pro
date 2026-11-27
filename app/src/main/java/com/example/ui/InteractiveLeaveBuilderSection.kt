@@ -89,6 +89,7 @@ import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusVerifiedGreen
@@ -935,6 +936,7 @@ fun InteractiveLeaveBuilderSection(
         }
 
         // 7. Commit Draft Leave Blocks to 2026 Firestore Ledger Button
+        val actions = LocalFunctionalActionColors.current
         Button(
           onClick = {
             if (draftBlocks.isNotEmpty()) {
@@ -944,7 +946,8 @@ fun InteractiveLeaveBuilderSection(
           enabled = draftBlocks.isNotEmpty() && analysis.isFullyCompliant,
           shape = IosSharpButtonShape,
           colors = ButtonDefaults.buttonColors(
-            containerColor = EmeraldOptimal,
+            containerColor = actions.createPrimary,
+            contentColor = Color.White,
             disabledContainerColor = neu.surfaceInset
           ),
           modifier = Modifier
@@ -1032,7 +1035,7 @@ private fun BuilderCalendarDayCell(
 ) {
   val neu = LocalNeumorphicColors.current
   val cellAccent = when {
-    isHoveredDropTarget -> EmeraldOptimal
+    isHoveredDropTarget -> neu.primaryAccent
     draftedCat != null -> categoryBuilderColor(draftedCat)
     isTrappedEl -> StatusAlertRed
     isFreeAttached -> EmeraldOptimal

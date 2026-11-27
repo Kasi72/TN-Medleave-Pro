@@ -77,7 +77,9 @@ import com.example.ui.theme.IosSharpHeroShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
+import com.example.ui.theme.SkyPrimary
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -85,9 +87,9 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private val GoldHolidayHighlight = Color(0xFFF59E0B)
-private val TealRhHighlight = Color(0xFF14B8A6)
-private val CyanColHighlight = Color(0xFF06B6D4)
-private val EmeraldLeaveHighlight = Color(0xFF10B981)
+private val TealRhHighlight = Color(0xFF0D9488)
+private val CyanColHighlight = Color(0xFF0284C7)
+private val EmeraldLeaveHighlight = Color(0xFF0284C7)
 private val TentativeHoldViolet = Color(0xFF6366F1)
 
 @Composable
@@ -181,7 +183,7 @@ fun IosCalendarTabScreen(
         index = 0,
         title = "Month Grid",
         badge = "${state.selectedYear}",
-        accentColor = EmeraldOptimal
+        accentColor = SkyPrimary
       ),
       SubTabOption(
         index = 1,
@@ -1100,7 +1102,7 @@ private fun IosCalendarDayCell(
     primaryShift != null -> dutyHighlightColor
     hasHoldOnly -> TentativeHoldViolet
     rhItem != null -> TealRhHighlight
-    else -> EmeraldOptimal
+    else -> SkyPrimary
   }
 
   val badgePillTextColor: Color = when {
@@ -1525,14 +1527,15 @@ private fun SelectedDayInspectorCard(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+              val holdActions = LocalFunctionalActionColors.current
               Box(
                 modifier = Modifier
                   .weight(1f)
                   .neumorphicExtruded(
                     shape = IosSharpButtonShape,
-                    elevation = 2.dp,
-                    blurRadius = 4.dp,
-                    surfaceColor = EmeraldOptimal,
+                    elevation = 2.5.dp,
+                    blurRadius = 5.dp,
+                    surfaceColor = holdActions.createPrimary,
                     neu = neu
                   )
                   .clickable { onPromoteTentativeHold(tentativeHold) }

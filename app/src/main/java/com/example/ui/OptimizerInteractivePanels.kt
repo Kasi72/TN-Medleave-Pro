@@ -88,6 +88,7 @@ import com.example.ui.theme.BadgeRhSlate
 import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
@@ -876,11 +877,12 @@ fun PortfolioImpactSummaryDock(
         }
       }
 
+      val actions = LocalFunctionalActionColors.current
       Button(
         onClick = onApplyPortfolio,
         enabled = !impact.hasOverlappingDates && impact.exceedsQuotaMessage == null,
         shape = IosSharpButtonShape,
-        colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+        colors = ButtonDefaults.buttonColors(containerColor = actions.createPrimary),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
         modifier = Modifier
           .fillMaxWidth()
@@ -1062,6 +1064,7 @@ fun HodSanctionLetterDialog(
           )
         }
 
+        val actions = LocalFunctionalActionColors.current
         Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1073,6 +1076,7 @@ fun HodSanctionLetterDialog(
               Toast.makeText(context, "Copied official TN Govt leave application!", Toast.LENGTH_SHORT).show()
             },
             shape = IosSharpButtonShape,
+            border = androidx.compose.foundation.BorderStroke(1.2.dp, actions.shareHandover),
             modifier = Modifier
               .weight(1f)
               .testTag("copy_sanction_letter_btn")
@@ -1080,10 +1084,11 @@ fun HodSanctionLetterDialog(
             Icon(
               imageVector = Icons.Default.ContentCopy,
               contentDescription = null,
+              tint = actions.shareHandover,
               modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text("Copy Letter", fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+            Text("Copy Letter", color = actions.shareHandover, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
           }
 
           Button(
@@ -1096,7 +1101,7 @@ fun HodSanctionLetterDialog(
               context.startActivity(Intent.createChooser(sendIntent, "Share Leave Application"))
             },
             shape = IosSharpButtonShape,
-            colors = ButtonDefaults.buttonColors(containerColor = neu.primaryAccent),
+            colors = ButtonDefaults.buttonColors(containerColor = actions.shareHandover),
             modifier = Modifier
               .weight(1f)
               .testTag("share_sanction_letter_btn")
@@ -1117,7 +1122,7 @@ fun HodSanctionLetterDialog(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-          OutlinedButton(
+          Button(
             onClick = {
               val res = com.example.domain.CalendarAndHandoverBridge.openDeviceCalendarInsert(
                 context = context,
@@ -1134,6 +1139,7 @@ fun HodSanctionLetterDialog(
               ).show()
             },
             shape = IosSharpButtonShape,
+            colors = ButtonDefaults.buttonColors(containerColor = actions.exportDocs),
             modifier = Modifier
               .weight(1f)
               .testTag("sanction_add_to_calendar_btn")
@@ -1141,13 +1147,14 @@ fun HodSanctionLetterDialog(
             Icon(
               imageVector = Icons.Default.CalendarMonth,
               contentDescription = null,
+              tint = Color.White,
               modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(5.dp))
-            Text("Add Calendar", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+            Text("Add Calendar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
           }
 
-          OutlinedButton(
+          Button(
             onClick = {
               val handoverText = com.example.domain.JoiningReportAndShareGenerator.generateClinicalHandoverMessage(
                 officerName = HodProfileSettingsStore.getOfficerName(context),
@@ -1165,6 +1172,7 @@ fun HodSanctionLetterDialog(
               )
             },
             shape = IosSharpButtonShape,
+            colors = ButtonDefaults.buttonColors(containerColor = actions.shareHandover),
             modifier = Modifier
               .weight(1f)
               .testTag("sanction_whatsapp_handover_btn")
@@ -1172,10 +1180,11 @@ fun HodSanctionLetterDialog(
             Icon(
               imageVector = Icons.Default.Share,
               contentDescription = null,
+              tint = Color.White,
               modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(5.dp))
-            Text("WhatsApp Handover", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+            Text("WhatsApp Handover", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
           }
         }
       }

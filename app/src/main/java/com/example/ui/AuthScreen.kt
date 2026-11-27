@@ -87,6 +87,7 @@ import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -300,6 +301,7 @@ fun AuthScreen(
   }
 
   val neu = LocalNeumorphicColors.current
+  val actions = LocalFunctionalActionColors.current
 
   IosAmbientGlassBackdrop {
     Box(
@@ -432,48 +434,62 @@ fun AuthScreen(
 
           Spacer(modifier = Modifier.height(18.dp))
 
-          // 1. PRIMARY CTA: SIGN IN WITH BIOMETRICS (Front Page)
-          Button(
-            onClick = { triggerFrontPageBiometricSignIn() },
-            enabled = !isBiometricScanning && !isGoogleLoading,
-            shape = IosSharpButtonShape,
-            colors = ButtonDefaults.buttonColors(
-              containerColor = MaterialTheme.colorScheme.primary,
-              contentColor = MaterialTheme.colorScheme.onPrimary
-            ),
+          // 1. PRIMARY CTA: SIGN IN WITH BIOMETRICS (3D Neumorphic Royal Sky Button)
+          Box(
+            contentAlignment = Alignment.Center,
             modifier = Modifier
               .fillMaxWidth()
               .height(58.dp)
+              .neumorphicExtruded(
+                shape = IosSharpButtonShape,
+                elevation = 5.dp,
+                blurRadius = 10.dp,
+                surfaceColor = actions.createPrimary,
+                showBorder = true,
+                borderAlpha = 0.45f,
+                neu = neu
+              )
+              .clickable(enabled = !isBiometricScanning && !isGoogleLoading) {
+                triggerFrontPageBiometricSignIn()
+              }
               .testTag("biometric_sign_in_button")
           ) {
-            Icon(
-              imageVector = Icons.Default.Fingerprint,
-              contentDescription = null,
-              modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(horizontalAlignment = Alignment.Start) {
-              Text(
-                text = "Sign in with Biometrics",
-                fontSize = 16.sp,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                softWrap = false
+            Row(
+              modifier = Modifier.padding(horizontal = 16.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.Center
+            ) {
+              Icon(
+                imageVector = Icons.Default.Fingerprint,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
               )
-              Text(
-                text = if (hardwareStatus == HardwareBiometricStatus.READY) {
-                  "Fingerprint / Face ID Hardware Ready"
-                } else {
-                  "Instant Touch Sensor & HOD Vault Access"
-                },
-                fontSize = 11.sp,
-                lineHeight = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
-                maxLines = 1,
-                softWrap = false
-              )
+              Spacer(modifier = Modifier.width(10.dp))
+              Column(horizontalAlignment = Alignment.Start) {
+                Text(
+                  text = "Sign in with Biometrics",
+                  fontSize = 16.sp,
+                  lineHeight = 20.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = Color.White,
+                  maxLines = 1,
+                  softWrap = false
+                )
+                Text(
+                  text = if (hardwareStatus == HardwareBiometricStatus.READY) {
+                    "Fingerprint / Face ID Hardware Ready"
+                  } else {
+                    "Instant Touch Sensor & HOD Vault Access"
+                  },
+                  fontSize = 11.sp,
+                  lineHeight = 13.sp,
+                  fontWeight = FontWeight.SemiBold,
+                  color = Color.White.copy(alpha = 0.88f),
+                  maxLines = 1,
+                  softWrap = false
+                )
+              }
             }
           }
 
@@ -569,7 +585,7 @@ fun AuthScreen(
                   },
                   shape = IosSharpButtonShape,
                   colors = ButtonDefaults.buttonColors(
-                    containerColor = neu.secondaryAccent,
+                    containerColor = actions.verifyApprove,
                     contentColor = Color.White
                   ),
                   modifier = Modifier.height(52.dp)

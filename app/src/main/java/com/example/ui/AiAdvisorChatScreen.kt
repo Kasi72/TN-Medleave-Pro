@@ -68,6 +68,7 @@ import com.example.ui.theme.EmeraldOptimal
 import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpWellShape
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 
 @Composable
@@ -100,12 +101,13 @@ fun AiAdvisorChatTabScreen(
     }
   }
 
+  val actions = LocalFunctionalActionColors.current
   val subTabs = listOf(
     SubTabOption(
       index = 0,
       title = "Live AI Chat",
       badge = "${chatState.messages.size}",
-      accentColor = EmeraldOptimal
+      accentColor = actions.aiOptimize
     ),
     SubTabOption(
       index = 1,
@@ -233,7 +235,7 @@ fun AiAdvisorChatTabScreen(
               Icon(
                 imageVector = Icons.Default.DeleteSweep,
                 contentDescription = "Reset Chat",
-                tint = neu.textPrimary,
+                tint = actions.destructiveAlert,
                 modifier = Modifier.size(18.dp)
               )
             }
@@ -265,7 +267,7 @@ fun AiAdvisorChatTabScreen(
                 CircularProgressIndicator(
                   modifier = Modifier.size(18.dp),
                   strokeWidth = 2.dp,
-                  color = EmeraldOptimal
+                  color = actions.aiOptimize
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
@@ -341,7 +343,7 @@ fun AiAdvisorChatTabScreen(
                   shape = CircleShape,
                   elevation = if (canSend) 3.5.dp else 1.5.dp,
                   blurRadius = 7.dp,
-                  surfaceColor = if (canSend) MaterialTheme.colorScheme.primary else neu.surfaceRaised,
+                  surfaceColor = if (canSend) actions.aiOptimize else neu.surfaceRaised,
                   borderAlpha = 0.40f,
                   neu = neu
                 )
@@ -350,7 +352,7 @@ fun AiAdvisorChatTabScreen(
               Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
                 contentDescription = "Send Message",
-                tint = if (canSend) MaterialTheme.colorScheme.onPrimary else neu.textSecondary
+                tint = if (canSend) Color.White else neu.textSecondary
               )
             }
           }

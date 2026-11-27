@@ -90,6 +90,7 @@ import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
@@ -488,6 +489,7 @@ fun AiLeaveRecommendationSection(
       }
 
       // Primary Gemini AI CTA
+      val actions = LocalFunctionalActionColors.current
       if (aiState !is AiRecommendationUiState.Success) {
         Button(
           onClick = {
@@ -501,14 +503,15 @@ fun AiLeaveRecommendationSection(
           shape = IosSharpButtonShape,
           contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
           colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
+            containerColor = actions.aiOptimize,
+            contentColor = Color.White
           )
         ) {
           if (aiState is AiRecommendationUiState.Loading) {
             CircularProgressIndicator(
               modifier = Modifier.size(18.dp),
               strokeWidth = 2.2.dp,
-              color = MaterialTheme.colorScheme.onPrimary
+              color = Color.White
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -633,15 +636,17 @@ fun AiLeaveRecommendationSection(
                   )
                   OutlinedButton(
                     onClick = { onGenerateRecommendations(activeStrategyString) },
-                    shape = IosSharpButtonShape
+                    shape = IosSharpButtonShape,
+                    border = androidx.compose.foundation.BorderStroke(1.2.dp, actions.aiOptimize)
                   ) {
                     Icon(
                       imageVector = Icons.Default.Refresh,
                       contentDescription = null,
+                      tint = actions.aiOptimize,
                       modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Retry Gemini AI")
+                    Text("Retry Gemini AI", color = actions.aiOptimize, fontWeight = FontWeight.Bold)
                   }
                 }
               }
@@ -888,17 +893,20 @@ fun AiLeaveRecommendationSection(
               },
               modifier = Modifier.testTag("regenerate_ai_recommendations_btn"),
               shape = IosSharpButtonShape,
+              border = androidx.compose.foundation.BorderStroke(1.2.dp, actions.aiOptimize),
               contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
               Icon(
                 imageVector = Icons.Default.Refresh,
                 contentDescription = "Regenerate AI Plan",
+                tint = actions.aiOptimize,
                 modifier = Modifier.size(15.dp)
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
                 text = "Re-run Selected Strategy",
                 style = MaterialTheme.typography.labelSmall,
+                color = actions.aiOptimize,
                 fontWeight = FontWeight.Bold
               )
             }
@@ -1209,7 +1217,7 @@ private fun AiRecommendationItemCard(
                   shape = IosSharpBadgeShape,
                   elevation = 2.dp,
                   blurRadius = 4.dp,
-                  surfaceColor = EmeraldOptimal,
+                  surfaceColor = LocalFunctionalActionColors.current.verifyApprove,
                   neu = neu
                 )
               } else {
@@ -1508,10 +1516,11 @@ private fun AiRecommendationItemCard(
                 .fillMaxHeight()
                 .testTag("hold_ai_rec_btn_$rank")
             )
+            val actionsCard = LocalFunctionalActionColors.current
             TacticalCardActionChip(
               icon = Icons.Default.Tune,
               label = "Simulate",
-              accent = BadgeColCyan,
+              accent = actionsCard.aiOptimize,
               isActive = false,
               onClick = onSimulateInBuilder,
               modifier = Modifier
@@ -1522,7 +1531,7 @@ private fun AiRecommendationItemCard(
             TacticalCardActionChip(
               icon = Icons.Default.Description,
               label = "HOD Letter",
-              accent = neu.primaryAccent,
+              accent = actionsCard.exportDocs,
               isActive = false,
               onClick = onOpenSanctionLetter,
               modifier = Modifier
@@ -1533,6 +1542,7 @@ private fun AiRecommendationItemCard(
           }
 
           // Primary Apply Action Row + Quick Copy
+          val actionsRow = LocalFunctionalActionColors.current
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1545,7 +1555,8 @@ private fun AiRecommendationItemCard(
                 .testTag("apply_ai_rec_btn_$rank"),
               shape = IosSharpButtonShape,
               colors = ButtonDefaults.buttonColors(
-                containerColor = badgeColor
+                containerColor = actionsRow.createPrimary,
+                contentColor = Color.White
               ),
               contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
@@ -1586,7 +1597,7 @@ private fun AiRecommendationItemCard(
                 Icon(
                   imageVector = Icons.Default.ContentCopy,
                   contentDescription = "Copy Optimal Leave Plan",
-                  tint = neu.primaryAccent,
+                  tint = actionsRow.shareHandover,
                   modifier = Modifier.size(18.dp)
                 )
               }

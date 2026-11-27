@@ -114,6 +114,7 @@ import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.LocalAppThemeMode
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import java.time.DayOfWeek
@@ -858,6 +859,7 @@ private fun OfficerAndCollegeProfileSubTab(
         )
       }
 
+      val actions = LocalFunctionalActionColors.current
       Button(
         onClick = {
           HodProfileSettingsStore.saveProfile(
@@ -881,8 +883,11 @@ private fun OfficerAndCollegeProfileSubTab(
             Toast.LENGTH_SHORT
           ).show()
         },
-        shape = RoundedCornerShape(14.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+        shape = IosSharpButtonShape,
+        colors = ButtonDefaults.buttonColors(
+          containerColor = actions.createPrimary,
+          contentColor = Color.White
+        ),
         modifier = Modifier
           .fillMaxWidth()
           .testTag("save_hod_profile_btn")
@@ -1142,6 +1147,7 @@ private fun NotificationTogglesSubTab(
           }
         }
 
+        val actions = LocalFunctionalActionColors.current
         // Action Row: Send Test Notification & Open Alert Center
         Row(
           modifier = Modifier.fillMaxWidth(),
@@ -1156,8 +1162,11 @@ private fun NotificationTogglesSubTab(
                 onShowStatusBanner("Enable Master Notifications & OS Permission to dispatch push alerts")
               }
             },
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+            shape = IosSharpButtonShape,
+            colors = ButtonDefaults.buttonColors(
+              containerColor = actions.shareHandover,
+              contentColor = Color.White
+            ),
             modifier = Modifier
               .weight(1f)
               .testTag("send_test_notification_btn")
@@ -1177,9 +1186,13 @@ private fun NotificationTogglesSubTab(
             )
           }
 
-          OutlinedButton(
+          Button(
             onClick = onOpenNotificationCenter,
-            shape = RoundedCornerShape(12.dp),
+            shape = IosSharpButtonShape,
+            colors = ButtonDefaults.buttonColors(
+              containerColor = actions.aiOptimize,
+              contentColor = Color.White
+            ),
             modifier = Modifier
               .weight(1f)
               .testTag("open_alert_center_from_settings_btn")
@@ -1284,13 +1297,13 @@ private fun DataAndCalendarSyncSubTab(
             Icon(
               imageVector = Icons.Default.CloudSync,
               contentDescription = null,
-              tint = EmeraldOptimal,
+              tint = neu.primaryAccent,
               modifier = Modifier.size(20.dp)
             )
             Text(
               text = "EXTERNAL CALENDAR FETCHING & DATA SYNC",
               style = MaterialTheme.typography.labelMedium,
-              color = EmeraldOptimal,
+              color = neu.primaryAccent,
               fontWeight = FontWeight.ExtraBold
             )
           }
@@ -1327,7 +1340,7 @@ private fun DataAndCalendarSyncSubTab(
           SettingsMetricPill(
             label = "2027 GH",
             value = "$gh2027 dates",
-            accent = EmeraldOptimal,
+            accent = neu.primaryAccent,
             modifier = Modifier
               .weight(1f)
               .fillMaxHeight()
@@ -1423,6 +1436,7 @@ private fun DataAndCalendarSyncSubTab(
             .testTag("external_calendar_url_input")
         )
 
+        val syncActions = LocalFunctionalActionColors.current
         Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1437,8 +1451,11 @@ private fun DataAndCalendarSyncSubTab(
               )
             },
             enabled = !holidaySyncStatus.isSyncing,
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+            shape = IosSharpButtonShape,
+            colors = ButtonDefaults.buttonColors(
+              containerColor = syncActions.editUtility,
+              contentColor = Color.White
+            ),
             modifier = Modifier
               .weight(1f)
               .testTag("settings_sync_2026_2027_btn")
@@ -1462,13 +1479,17 @@ private fun DataAndCalendarSyncSubTab(
             )
           }
 
-          OutlinedButton(
+          Button(
             onClick = {
               val nextYr = if (selectedYear == 2027L) 2026L else 2027L
               onSelectYear(nextYr)
               onShowStatusBanner("Switched active service year to $nextYr")
             },
-            shape = RoundedCornerShape(12.dp),
+            shape = IosSharpButtonShape,
+            colors = ButtonDefaults.buttonColors(
+              containerColor = syncActions.createPrimary,
+              contentColor = Color.White
+            ),
             modifier = Modifier.testTag("settings_toggle_2027_year_btn")
           ) {
             Icon(
@@ -1661,12 +1682,17 @@ private fun DataAndCalendarSyncSubTab(
           style = MaterialTheme.typography.titleSmall,
           fontWeight = FontWeight.Bold
         )
-        OutlinedButton(
+        val icsActions = LocalFunctionalActionColors.current
+        Button(
           onClick = {
             CalendarIcsSyncService.exportAndShareIcsFile(context, state.allRecords)
             onShowStatusBanner("Exported 2026–2027 Leave & TN Holiday .ICS file")
           },
-          shape = RoundedCornerShape(12.dp),
+          shape = IosSharpButtonShape,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = icsActions.exportDocs,
+            contentColor = Color.White
+          ),
           modifier = Modifier.fillMaxWidth()
         ) {
           Icon(
@@ -1909,7 +1935,7 @@ private fun AppConfigSecurityAndExportSubTab(
             text = "DEFAULT EMERGENCY CL SAFETY RESERVE",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.ExtraBold,
-            color = EmeraldOptimal
+            color = neu.primaryAccent
           )
           Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1926,7 +1952,7 @@ private fun AppConfigSecurityAndExportSubTab(
                         shape = IosSharpMicroShape,
                         elevation = 2.5.dp,
                         blurRadius = 5.dp,
-                        surfaceColor = EmeraldOptimal,
+                        surfaceColor = neu.primaryAccent,
                         neu = neu
                       )
                     } else {
@@ -1961,6 +1987,8 @@ private fun AppConfigSecurityAndExportSubTab(
       }
     }
 
+    val secActions = LocalFunctionalActionColors.current
+
     // 2. Biometric Security Card
     Box(
       modifier = Modifier
@@ -1986,13 +2014,13 @@ private fun AppConfigSecurityAndExportSubTab(
           Icon(
             imageVector = Icons.Default.Fingerprint,
             contentDescription = null,
-            tint = EmeraldOptimal,
+            tint = neu.primaryAccent,
             modifier = Modifier.size(22.dp)
           )
           Text(
             text = "BIOMETRIC VAULT & SESSION SECURITY",
             style = MaterialTheme.typography.labelMedium,
-            color = EmeraldOptimal,
+            color = neu.primaryAccent,
             fontWeight = FontWeight.ExtraBold
           )
         }
@@ -2022,9 +2050,13 @@ private fun AppConfigSecurityAndExportSubTab(
           }
         )
 
-        OutlinedButton(
+        Button(
           onClick = onLockVaultNow,
-          shape = RoundedCornerShape(12.dp),
+          shape = IosSharpButtonShape,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = secActions.editUtility,
+            contentColor = Color.White
+          ),
           modifier = Modifier.fillMaxWidth()
         ) {
           Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -2053,14 +2085,17 @@ private fun AppConfigSecurityAndExportSubTab(
         Text(
           text = "OFFICIAL EXPORT & ACCOUNT ($userEmail)",
           style = MaterialTheme.typography.labelMedium,
-          color = EmeraldOptimal,
+          color = neu.primaryAccent,
           fontWeight = FontWeight.ExtraBold
         )
 
         Button(
           onClick = onOpenPdfExport,
-          shape = RoundedCornerShape(12.dp),
-          colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+          shape = IosSharpButtonShape,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = secActions.exportDocs,
+            contentColor = Color.White
+          ),
           modifier = Modifier.fillMaxWidth()
         ) {
           Icon(
@@ -2072,7 +2107,7 @@ private fun AppConfigSecurityAndExportSubTab(
           Text("Generate Official A4 PDF Leave & COL Audit Report", fontWeight = FontWeight.Bold)
         }
 
-        OutlinedButton(
+        Button(
           onClick = {
             val elPassbook = ElMasterPassbookEngine.computePassbook(
               allRecords = state.allRecords,
@@ -2087,7 +2122,11 @@ private fun AppConfigSecurityAndExportSubTab(
             ExecutiveDigestShareService.copyDigestToClipboard(context, "HOD Leave Digest", digest)
             onShowStatusBanner("Copied HOD Executive Leave Digest to Clipboard!")
           },
-          shape = RoundedCornerShape(12.dp),
+          shape = IosSharpButtonShape,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = secActions.shareHandover,
+            contentColor = Color.White
+          ),
           modifier = Modifier.fillMaxWidth()
         ) {
           Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -2095,20 +2134,23 @@ private fun AppConfigSecurityAndExportSubTab(
           Text("Copy HOD Executive Digest for Dean's Office", fontWeight = FontWeight.Bold)
         }
 
-        OutlinedButton(
+        Button(
           onClick = onSignOut,
-          shape = RoundedCornerShape(12.dp),
-          border = BorderStroke(1.dp, StatusAlertRed.copy(alpha = 0.5f)),
+          shape = IosSharpButtonShape,
+          colors = ButtonDefaults.buttonColors(
+            containerColor = secActions.destructiveAlert,
+            contentColor = Color.White
+          ),
           modifier = Modifier.fillMaxWidth()
         ) {
           Icon(
             imageVector = Icons.AutoMirrored.Filled.Logout,
             contentDescription = null,
-            tint = StatusAlertRed,
+            tint = Color.White,
             modifier = Modifier.size(18.dp)
           )
           Spacer(modifier = Modifier.width(8.dp))
-          Text("Sign Out of Session", color = StatusAlertRed, fontWeight = FontWeight.Bold)
+          Text("Sign Out of Session", color = Color.White, fontWeight = FontWeight.Bold)
         }
       }
     }
@@ -2273,7 +2315,7 @@ fun AppearanceThemeSelectorCard(
               overflow = TextOverflow.Ellipsis
             )
             Text(
-              text = "Mint Soft UI, Soft Clay Light or Dark #292E35",
+              text = "Sky Blue & White, Cloud White or Dark Sky",
               style = MaterialTheme.typography.titleSmall,
               fontWeight = FontWeight.ExtraBold,
               letterSpacing = (-0.2).sp,
@@ -2357,12 +2399,13 @@ fun AppearanceThemeSelectorCard(
               Text(
                 text = mode.displayName,
                 style = MaterialTheme.typography.labelMedium,
-                fontSize = 11.sp,
+                fontSize = 10.5.sp,
                 fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
                 letterSpacing = (-0.15).sp,
                 color = if (isSelected) Color.White else neu.textSecondary,
                 maxLines = 1,
-                softWrap = false
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
               )
             }
           }
@@ -2379,28 +2422,33 @@ fun AppearanceThemeSelectorCard(
         AppThemeMode.entries.forEach { mode ->
           val isSelected = currentTheme == mode
           val previewCanvasBg = when (mode) {
-            AppThemeMode.GREEN_EMERALD -> com.example.ui.theme.NeuMintBase
+            AppThemeMode.SKY_WHITE -> com.example.ui.theme.NeuSkyBase
             AppThemeMode.WHITE_CLINICAL -> com.example.ui.theme.NeuLightBase
             AppThemeMode.DARK_OBSIDIAN -> com.example.ui.theme.NeuDarkBase
           }
+          val previewCardBg = when (mode) {
+            AppThemeMode.SKY_WHITE -> com.example.ui.theme.NeuSkyRaised
+            AppThemeMode.WHITE_CLINICAL -> com.example.ui.theme.NeuLightRaised
+            AppThemeMode.DARK_OBSIDIAN -> com.example.ui.theme.NeuDarkRaised
+          }
           val previewDarkShadow = when (mode) {
-            AppThemeMode.GREEN_EMERALD -> com.example.ui.theme.NeuMintShadowDark
+            AppThemeMode.SKY_WHITE -> com.example.ui.theme.NeuSkyShadowDark
             AppThemeMode.WHITE_CLINICAL -> com.example.ui.theme.NeuLightShadowDark
             AppThemeMode.DARK_OBSIDIAN -> com.example.ui.theme.NeuDarkShadowDark
           }
           val previewLightShadow = when (mode) {
-            AppThemeMode.GREEN_EMERALD -> com.example.ui.theme.NeuMintShadowLight
+            AppThemeMode.SKY_WHITE -> com.example.ui.theme.NeuSkyShadowLight
             AppThemeMode.WHITE_CLINICAL -> com.example.ui.theme.NeuLightShadowLight
             AppThemeMode.DARK_OBSIDIAN -> com.example.ui.theme.NeuDarkShadowLight
           }
           val previewAccent = when (mode) {
-            AppThemeMode.GREEN_EMERALD -> Color(0xFF047857)
+            AppThemeMode.SKY_WHITE -> Color(0xFF0284C7)
             AppThemeMode.WHITE_CLINICAL -> Color(0xFF0284C7)
-            AppThemeMode.DARK_OBSIDIAN -> Color(0xFF34D399)
+            AppThemeMode.DARK_OBSIDIAN -> Color(0xFF38BDF8)
           }
           val previewText = when (mode) {
-            AppThemeMode.GREEN_EMERALD -> Color(0xFF062C22)
-            AppThemeMode.WHITE_CLINICAL -> Color(0xFF1E293B)
+            AppThemeMode.SKY_WHITE -> Color(0xFF0F2942)
+            AppThemeMode.WHITE_CLINICAL -> Color(0xFF0F2942)
             AppThemeMode.DARK_OBSIDIAN -> Color(0xFFF1F5F9)
           }
 
@@ -2441,7 +2489,7 @@ fun AppearanceThemeSelectorCard(
                 .padding(9.dp),
               verticalArrangement = Arrangement.SpaceBetween
             ) {
-              // Mini Neumorphic Preview Window showing extruded mini card on single-hue canvas
+              // Mini Neumorphic Preview Window showing crisp white card on airy sky canvas
               Box(
                 modifier = Modifier
                   .fillMaxWidth()
@@ -2485,7 +2533,7 @@ fun AppearanceThemeSelectorCard(
                       .fillMaxWidth()
                       .height(16.dp)
                       .clip(IosSharpMicroShape)
-                      .background(previewCanvasBg)
+                      .background(previewCardBg)
                       .border(
                         width = 0.9.dp,
                         brush = Brush.linearGradient(listOf(previewLightShadow, previewDarkShadow)),

@@ -65,6 +65,7 @@ import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.NeonAquaAccent
 import com.example.ui.theme.NeonCyanBright
@@ -518,7 +519,7 @@ fun OptimizerMaterial3CalendarSection(
                 Text(
                   text = "$totalDaysSelected Days Total • $freeHolidayOrWeekendDays Free (GH/Wknd) • $leaveCreditsRequired Leave Credits ($ghCountInRange GH, $rhCountInRange RL)",
                   style = MaterialTheme.typography.bodySmall,
-                  color = EmeraldOptimal,
+                  color = neu.primaryAccent,
                   fontWeight = FontWeight.SemiBold,
                   fontSize = 11.sp
                 )
@@ -526,12 +527,12 @@ fun OptimizerMaterial3CalendarSection(
             },
             showModeToggle = true,
             colors = DatePickerDefaults.colors(
-              selectedDayContainerColor = EmeraldOptimal,
+              selectedDayContainerColor = neu.primaryAccent,
               selectedDayContentColor = Color.White,
-              dayInSelectionRangeContainerColor = NeonCyanText.copy(alpha = 0.22f),
+              dayInSelectionRangeContainerColor = neu.primaryAccent.copy(alpha = 0.20f),
               dayInSelectionRangeContentColor = MaterialTheme.colorScheme.onSurface,
-              todayDateBorderColor = NeonAquaAccent,
-              todayContentColor = EmeraldOptimal
+              todayDateBorderColor = neu.primaryAccent,
+              todayContentColor = neu.primaryAccent
             )
           )
         }
@@ -595,7 +596,7 @@ fun OptimizerMaterial3CalendarSection(
             RangeSummaryMetricPill(
               label = "Total Off",
               value = "$totalDaysSelected Days",
-              accent = EmeraldOptimal,
+              accent = neu.primaryAccent,
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
@@ -687,6 +688,7 @@ fun OptimizerMaterial3CalendarSection(
           }
 
           val workingLeaveDays = dayInspections.filter { !it.isFreeDay }
+          val actions = LocalFunctionalActionColors.current
           if (workingLeaveDays.isNotEmpty() && !exceedsTenDayCap) {
             Button(
               onClick = {
@@ -721,7 +723,10 @@ fun OptimizerMaterial3CalendarSection(
                 )
               },
               shape = RoundedCornerShape(14.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = actions.createPrimary,
+                contentColor = Color.White
+              ),
               modifier = Modifier
                 .fillMaxWidth()
                 .testTag("m3_apply_selected_range_btn")

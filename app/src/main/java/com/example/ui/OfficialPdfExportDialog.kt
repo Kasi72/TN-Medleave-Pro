@@ -74,6 +74,7 @@ import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import kotlinx.coroutines.launch
@@ -87,6 +88,7 @@ fun OfficialPdfExportBannerCard(
   val context = LocalContext.current
   val college = remember { HodProfileSettingsStore.getCollege(context) }
   val neu = LocalNeumorphicColors.current
+  val actions = LocalFunctionalActionColors.current
 
   Box(
     modifier = modifier
@@ -196,8 +198,8 @@ fun OfficialPdfExportBannerCard(
         onClick = onOpenPdfExportModal,
         shape = IosSharpButtonShape,
         colors = ButtonDefaults.buttonColors(
-          containerColor = MaterialTheme.colorScheme.primary,
-          contentColor = MaterialTheme.colorScheme.onPrimary
+          containerColor = actions.exportDocs,
+          contentColor = Color.White
         ),
         modifier = Modifier
           .fillMaxWidth()
@@ -571,6 +573,7 @@ fun OfficialPdfExportDialog(
               .height(1.dp)
               .background(neuDialog.hairlineDivider)
           )
+          val actions = LocalFunctionalActionColors.current
           Row(
             modifier = Modifier
               .fillMaxWidth()
@@ -578,7 +581,7 @@ fun OfficialPdfExportDialog(
               .height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
           ) {
-            OutlinedButton(
+            Button(
               onClick = {
                 generatedBundle?.let { bundle ->
                   saveDocumentLauncher.launch(bundle.fileName)
@@ -586,7 +589,10 @@ fun OfficialPdfExportDialog(
               },
               enabled = generatedBundle != null && !isGenerating,
               shape = IosSharpButtonShape,
-              border = BorderStroke(1.5.dp, EmeraldOptimal),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = actions.exportDocs,
+                contentColor = Color.White
+              ),
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
@@ -595,13 +601,13 @@ fun OfficialPdfExportDialog(
               Icon(
                 imageVector = Icons.Default.Download,
                 contentDescription = null,
-                tint = EmeraldOptimal,
+                tint = Color.White,
                 modifier = Modifier.size(18.dp)
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
                 text = "Save PDF File",
-                color = EmeraldOptimal,
+                color = Color.White,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 softWrap = false,
@@ -621,7 +627,10 @@ fun OfficialPdfExportDialog(
               },
               enabled = generatedBundle != null && !isGenerating,
               shape = IosSharpButtonShape,
-              colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = actions.shareHandover,
+                contentColor = Color.White
+              ),
               modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
@@ -630,11 +639,13 @@ fun OfficialPdfExportDialog(
               Icon(
                 imageVector = Icons.Default.Share,
                 contentDescription = null,
+                tint = Color.White,
                 modifier = Modifier.size(18.dp)
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
                 text = "Share / Submit PDF",
+                color = Color.White,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 softWrap = false,

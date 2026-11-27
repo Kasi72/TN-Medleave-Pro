@@ -100,7 +100,9 @@ import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.LocalAppThemeMode
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
+import com.example.ui.theme.SkyPrimary
 import com.example.ui.theme.NeonAquaAccent
 import com.example.ui.theme.NeonCyanBright
 import com.example.ui.theme.NeonCyanText
@@ -117,7 +119,7 @@ data class SubTabOption(
   val index: Int,
   val title: String,
   val badge: String? = null,
-  val accentColor: Color = EmeraldOptimal
+  val accentColor: Color = SkyPrimary
 )
 
 @Composable
@@ -1242,6 +1244,7 @@ fun DualHolidayDutyColLoggerCard(
         }
       }
 
+      val dualActions = LocalFunctionalActionColors.current
       Button(
         onClick = {
           val isoRegex = Regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
@@ -1252,7 +1255,7 @@ fun DualHolidayDutyColLoggerCard(
         },
         shape = IosSharpButtonShape,
         colors = ButtonDefaults.buttonColors(
-          containerColor = EmeraldOptimal,
+          containerColor = if (alsoScheduleColNow) dualActions.verifyApprove else dualActions.createPrimary,
           contentColor = Color.White
         ),
         modifier = Modifier
@@ -1682,6 +1685,7 @@ fun PhoneCalendarIcsExportCard(
         }
       }
 
+      val calActions = LocalFunctionalActionColors.current
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -1700,7 +1704,7 @@ fun PhoneCalendarIcsExportCard(
           },
           shape = IosSharpButtonShape,
           colors = ButtonDefaults.buttonColors(
-            containerColor = EmeraldOptimal,
+            containerColor = calActions.exportDocs,
             contentColor = Color.White
           ),
           modifier = Modifier
@@ -1734,7 +1738,7 @@ fun PhoneCalendarIcsExportCard(
             }
           },
           shape = IosSharpButtonShape,
-          border = BorderStroke(1.dp, BadgeColCyan.copy(alpha = 0.50f)),
+          border = BorderStroke(1.2.dp, calActions.exportDocs),
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
@@ -2127,6 +2131,7 @@ fun WhatIfLeaveSimulatorCard(
           }
         }
 
+        val simActions = LocalFunctionalActionColors.current
         if (splicePreview.workingDaysToDebit.isNotEmpty() && !isAlert) {
           Button(
             onClick = {
@@ -2139,7 +2144,7 @@ fun WhatIfLeaveSimulatorCard(
             },
             shape = IosSharpButtonShape,
             colors = ButtonDefaults.buttonColors(
-              containerColor = EmeraldOptimal,
+              containerColor = simActions.createPrimary,
               contentColor = Color.White
             ),
             modifier = Modifier

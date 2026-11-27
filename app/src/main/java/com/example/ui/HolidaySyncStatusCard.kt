@@ -62,6 +62,7 @@ import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpWellShape
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusVerifiedGreen
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -373,6 +374,7 @@ fun HolidaySyncStatusCard(
       }
 
       // Action Buttons: [Scrape / Add G.O.] and [Sync Latest Calendar Now]
+      val actions = LocalFunctionalActionColors.current
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -382,7 +384,7 @@ fun HolidaySyncStatusCard(
         OutlinedButton(
           onClick = { showAddOrScrapeDialog = true },
           shape = IosSharpButtonShape,
-          border = BorderStroke(1.2.dp, BadgeColCyan),
+          border = BorderStroke(1.2.dp, actions.createPrimary),
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
@@ -391,13 +393,13 @@ fun HolidaySyncStatusCard(
           Icon(
             imageVector = Icons.Default.AddCircleOutline,
             contentDescription = null,
-            tint = BadgeColCyan,
+            tint = actions.createPrimary,
             modifier = Modifier.size(16.dp)
           )
           Spacer(modifier = Modifier.width(6.dp))
           Text(
             text = "Add / Scrape G.O.",
-            color = BadgeColCyan,
+            color = actions.createPrimary,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             softWrap = false,
@@ -409,7 +411,10 @@ fun HolidaySyncStatusCard(
           onClick = { onTriggerSyncNow("") },
           enabled = !syncStatus.isSyncing,
           shape = IosSharpButtonShape,
-          colors = ButtonDefaults.buttonColors(containerColor = BadgeColCyan),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = actions.editUtility,
+            contentColor = Color.White
+          ),
           modifier = Modifier
             .weight(1.25f)
             .fillMaxHeight()
@@ -587,10 +592,14 @@ private fun AddOrScrapeHolidayDialog(
             modifier = Modifier.fillMaxWidth()
           )
         }
+        val dialogActions = LocalFunctionalActionColors.current
         Button(
           onClick = { onScrapeUrlOrNote(customUrlOrGoNote) },
           shape = IosSharpButtonShape,
-          colors = ButtonDefaults.buttonColors(containerColor = BadgeColCyan),
+          colors = ButtonDefaults.buttonColors(
+            containerColor = dialogActions.editUtility,
+            contentColor = Color.White
+          ),
           modifier = Modifier.fillMaxWidth()
         ) {
           Text("Scrape & Sync via Background Service", fontWeight = FontWeight.Bold)
@@ -687,6 +696,7 @@ private fun AddOrScrapeHolidayDialog(
       }
     },
     confirmButton = {
+      val saveActions = LocalFunctionalActionColors.current
       Button(
         onClick = {
           val parsedDate = runCatching { LocalDate.parse(dateIso) }.getOrNull()
@@ -703,9 +713,13 @@ private fun AddOrScrapeHolidayDialog(
             )
           )
         },
-        shape = IosSharpButtonShape
+        shape = IosSharpButtonShape,
+        colors = ButtonDefaults.buttonColors(
+          containerColor = saveActions.createPrimary,
+          contentColor = Color.White
+        )
       ) {
-        Text("Save to Local Room DB")
+        Text("Save to Local Room DB", fontWeight = FontWeight.Bold)
       }
     },
     dismissButton = {

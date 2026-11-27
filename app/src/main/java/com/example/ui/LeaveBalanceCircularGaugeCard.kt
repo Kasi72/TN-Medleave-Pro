@@ -264,7 +264,7 @@ fun EnterpriseLeaveBalanceCircularCard(
           remainingCredits = totalPoolRem,
           remainingFraction = totalPoolRemFraction,
           usedFraction = (1f - totalPoolRemFraction).coerceIn(0f, 1f),
-          primaryColor = EmeraldOptimal,
+          primaryColor = com.example.ui.theme.SkyPrimary,
           secondaryColor = Color(0xFF38BDF8),
           usedColor = Color(0xFFF59E0B),
           statusLabel = when {
@@ -286,7 +286,7 @@ fun EnterpriseLeaveBalanceCircularCard(
           remainingFraction = clRemFraction,
           usedFraction = (1f - clRemFraction).coerceIn(0f, 1f),
           primaryColor = BadgeClGreen,
-          secondaryColor = EmeraldOptimal,
+          secondaryColor = Color(0xFF38BDF8),
           usedColor = Color(0xFFF59E0B),
           statusLabel = when {
             clRem >= 6.0 -> "HEALTHY CL BUFFER ($remPct% LEFT)"
@@ -504,9 +504,9 @@ fun EnterpriseLeaveBalanceCircularCard(
         LeaveGaugeFocusMode.entries.forEach { mode ->
           val isSelected = selectedFocus == mode
           val modeAccent = when (mode) {
-            LeaveGaugeFocusMode.TOTAL_POOL -> EmeraldOptimal
+            LeaveGaugeFocusMode.TOTAL_POOL -> com.example.ui.theme.SkyPrimary
             LeaveGaugeFocusMode.CASUAL_CL -> BadgeClGreen
-            LeaveGaugeFocusMode.RESTRICTED_RH -> Color(0xFF0284C7)
+            LeaveGaugeFocusMode.RESTRICTED_RH -> Color(0xFF0D9488)
             LeaveGaugeFocusMode.COMP_OFF_COL -> BadgeColCyan
           }
           Box(

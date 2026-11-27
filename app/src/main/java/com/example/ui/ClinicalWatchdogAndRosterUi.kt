@@ -21,8 +21,10 @@ import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.EventAvailable
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Schedule
@@ -70,6 +72,7 @@ import com.example.ui.theme.IosSharpBadgeShape
 import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpWellShape
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
@@ -92,15 +95,22 @@ fun ExpiryWatchdogAndActionCard(
   onOpenColAuditTab: () -> Unit,
   onOpenPaperworkAlert: (PendingPaperworkAlert) -> Unit,
   onClaimGhColCandidate: (GhColCaptureCandidate) -> Unit,
+  onClearLapsedCol: (ColExpiryItem) -> Unit = {},
+  onClearAllLapsedCols: (List<ColExpiryItem>) -> Unit = {},
+  onRestoreArchivedLapsedCols: () -> Unit = {},
   compactColMode: Boolean = false,
   modifier: Modifier = Modifier
 ) {
   val neu = LocalNeumorphicColors.current
+  val actions = LocalFunctionalActionColors.current
+  val lapsedItems = remember(watchdog.expiringCols) {
+    watchdog.expiringCols.filter { it.urgency == WatchdogColUrgency.EXPIRED }
+  }
   val hasUrgentCol = watchdog.criticalColCount > 0 || watchdog.expiringSoonColCount > 0 || watchdog.expiredColCount > 0
   val headerAccent = when {
     watchdog.criticalColCount > 0 || watchdog.expiredColCount > 0 -> StatusAlertRed
     watchdog.expiringSoonColCount > 0 || watchdog.paperworkAlerts.isNotEmpty() -> StatusPendingOrange
-    else -> EmeraldOptimal
+    else -> neu.primaryAccent
   }
 
   Box(
@@ -170,28 +180,80 @@ fun ExpiryWatchdogAndActionCard(
           }
         }
 
+        Spacer(modifier = Modifier.width(8.dp))
+
         val badgeCount = watchdog.totalUrgentAlerts + unclaimedGhCandidates.size
-        Box(
-          modifier = Modifier.neumorphicInset(
-            shape = IosSharpBadgeShape,
-            depth = 2.dp,
-            blurRadius = 4.dp,
-            accentTint = headerAccent,
-            accentTintAlpha = 0.12f,
-            borderColor = headerAccent.copy(alpha = 0.38f),
-            neu = neu
-          )
-        ) {
-          Text(
-            text = if (badgeCount > 0) "$badgeCount ACTION${if (badgeCount > 1) "S" else ""}" else "ALL CLEAR",
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = headerAccent,
-            maxLines = 1,
-            softWrap = false
-          )
+        if (lapsedItems.isNotEmpty()) {
+          // Interactive 1-Tap Crimson Extruded Button to Clear All Lapsed GH Credits
+          Box(
+            modifier = Modifier
+              .neumorphicExtruded(
+                shape = IosSharpBadgeShape,
+                elevation = 3.dp,
+                blurRadius = 6.dp,
+                surfaceColor = actions.destructiveAlert,
+                neu = neu
+              )
+              .clickable { onClearAllLapsedCols(lapsedItems) }
+              .padding(horizontal = 10.dp, vertical = 7.dp)
+              .testTag("clear_all_lapsed_cols_button")
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                imageVector = Icons.Default.DeleteSweep,
+                contentDescription = "Clear all lapsed credits",
+                tint = Color.White,
+                modifier = Modifier.size(13.dp)
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                text = "Clear ${lapsedItems.size} Lapsed",
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                maxLines = 1,
+                softWrap = false
+              )
+            }
+          }
+        } else {
+          val statusBadgeColor = if (badgeCount > 0) headerAccent else EmeraldOptimal
+          Box(
+            modifier = Modifier.neumorphicInset(
+              shape = IosSharpBadgeShape,
+              depth = 2.dp,
+              blurRadius = 4.dp,
+              accentTint = statusBadgeColor,
+              accentTintAlpha = 0.12f,
+              borderColor = statusBadgeColor.copy(alpha = 0.38f),
+              neu = neu
+            )
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              if (badgeCount == 0) {
+                Icon(
+                  imageVector = Icons.Default.CheckCircle,
+                  contentDescription = null,
+                  tint = statusBadgeColor,
+                  modifier = Modifier.size(12.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+              }
+              Text(
+                text = if (badgeCount > 0) "$badgeCount ACTION${if (badgeCount > 1) "S" else ""}" else "ALL CLEAR",
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = statusBadgeColor,
+                maxLines = 1,
+                softWrap = false
+              )
+            }
+          }
         }
       }
 
@@ -240,9 +302,9 @@ fun ExpiryWatchdogAndActionCard(
               modifier = Modifier
                 .neumorphicExtruded(
                   shape = IosSharpBadgeShape,
-                  elevation = 2.dp,
-                  blurRadius = 4.dp,
-                  surfaceColor = EmeraldOptimal,
+                  elevation = 2.5.dp,
+                  blurRadius = 5.dp,
+                  surfaceColor = actions.verifyApprove,
                   neu = neu
                 )
                 .clickable { onClaimGhColCandidate(topCandidate) }
@@ -330,35 +392,71 @@ fun ExpiryWatchdogAndActionCard(
                   )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Box(
-                  modifier = Modifier
-                    .neumorphicExtruded(
-                      shape = IosSharpBadgeShape,
-                      elevation = 2.dp,
-                      blurRadius = 4.dp,
-                      surfaceColor = if (item.urgency == WatchdogColUrgency.HEALTHY) BadgeColCyan else accent,
-                      neu = neu
-                    )
-                    .clickable { onOptimizeExpiringCol(item) }
-                    .padding(horizontal = 9.dp, vertical = 6.dp)
-                    .testTag("optimize_expiring_col_${item.ghDateIso}")
-                ) {
-                  Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                      imageVector = Icons.Default.AutoAwesome,
-                      contentDescription = null,
-                      tint = Color.White,
-                      modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                      text = "Use FIFO",
-                      fontSize = 10.sp,
-                      fontWeight = FontWeight.Bold,
-                      color = Color.White,
-                      maxLines = 1,
-                      softWrap = false
-                    )
+                val isExpiredItem = item.urgency == WatchdogColUrgency.EXPIRED
+                if (isExpiredItem) {
+                  // Lapsed >6-month credits cannot be claimed under TN rules — provide 1-tap Crimson Clear button
+                  Box(
+                    modifier = Modifier
+                      .neumorphicExtruded(
+                        shape = IosSharpBadgeShape,
+                        elevation = 2.5.dp,
+                        blurRadius = 5.dp,
+                        surfaceColor = actions.destructiveAlert,
+                        neu = neu
+                      )
+                      .clickable { onClearLapsedCol(item) }
+                      .padding(horizontal = 10.dp, vertical = 7.dp)
+                      .testTag("clear_lapsed_col_${item.ghDateIso}")
+                  ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear lapsed GH credit",
+                        tint = Color.White,
+                        modifier = Modifier.size(12.dp)
+                      )
+                      Spacer(modifier = Modifier.width(4.dp))
+                      Text(
+                        text = "Clear",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        maxLines = 1,
+                        softWrap = false
+                      )
+                    }
+                  }
+                } else {
+                  Box(
+                    modifier = Modifier
+                      .neumorphicExtruded(
+                        shape = IosSharpBadgeShape,
+                        elevation = 2.5.dp,
+                        blurRadius = 5.dp,
+                        surfaceColor = actions.aiOptimize,
+                        neu = neu
+                      )
+                      .clickable { onOptimizeExpiringCol(item) }
+                      .padding(horizontal = 9.dp, vertical = 7.dp)
+                      .testTag("optimize_expiring_col_${item.ghDateIso}")
+                  ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(12.dp)
+                      )
+                      Spacer(modifier = Modifier.width(4.dp))
+                      Text(
+                        text = "Use FIFO",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        softWrap = false
+                      )
+                    }
                   }
                 }
               }
@@ -403,6 +501,71 @@ fun ExpiryWatchdogAndActionCard(
               fontSize = 11.5.sp,
               color = neu.textSecondary
             )
+          }
+        }
+      }
+
+      // Archived Lapsed GH Credits Footer Strip (1-Tap Restore so historical records are never lost)
+      if (watchdog.archivedLapsedCount > 0) {
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .neumorphicInset(
+              shape = IosSharpWellShape,
+              depth = 1.8.dp,
+              blurRadius = 4.dp,
+              neu = neu
+            )
+            .padding(horizontal = 10.dp, vertical = 7.dp)
+            .testTag("archived_lapsed_cols_footer")
+        ) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              modifier = Modifier.weight(1f)
+            ) {
+              Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = null,
+                tint = neu.textSecondary,
+                modifier = Modifier.size(14.dp)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(
+                text = "${watchdog.archivedLapsedCount} lapsed GH credit${if (watchdog.archivedLapsedCount > 1) "s" else ""} cleared (kept in Ledger)",
+                fontSize = 10.5.sp,
+                color = neu.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+              modifier = Modifier
+                .neumorphicExtruded(
+                  shape = IosSharpBadgeShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  surfaceColor = actions.editUtility,
+                  neu = neu
+                )
+                .clickable { onRestoreArchivedLapsedCols() }
+                .padding(horizontal = 9.dp, vertical = 5.dp)
+                .testTag("restore_archived_lapsed_cols_button")
+            ) {
+              Text(
+                text = "Restore",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                softWrap = false
+              )
+            }
           }
         }
       }
@@ -672,6 +835,7 @@ fun CalendarDutyRosterPanel(
   modifier: Modifier = Modifier
 ) {
   val neu = LocalNeumorphicColors.current
+  val actions = LocalFunctionalActionColors.current
   var selectedType by remember { mutableStateOf(DutyShiftType.CALL_24H) }
   var shiftNote by remember { mutableStateOf("") }
   var showAddComposer by remember { mutableStateOf(false) }
@@ -731,9 +895,9 @@ fun CalendarDutyRosterPanel(
           modifier = Modifier
             .neumorphicExtruded(
               shape = IosSharpBadgeShape,
-              elevation = 2.dp,
-              blurRadius = 4.dp,
-              surfaceColor = if (showAddComposer) neu.textSecondary else BadgeOnDutyBlue,
+              elevation = 2.5.dp,
+              blurRadius = 5.dp,
+              surfaceColor = if (showAddComposer) neu.textSecondary else actions.createPrimary,
               neu = neu
             )
             .clickable { showAddComposer = !showAddComposer }
@@ -791,7 +955,10 @@ fun CalendarDutyRosterPanel(
             Button(
               onClick = { onClaimGhCol(ghCaptureCandidateForDate) },
               shape = IosSharpButtonShape,
-              colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = actions.verifyApprove,
+                contentColor = Color.White
+              ),
               modifier = Modifier.testTag("calendar_claim_gh_col_button")
             ) {
               Icon(
@@ -977,7 +1144,10 @@ fun CalendarDutyRosterPanel(
                 showAddComposer = false
               },
               shape = IosSharpButtonShape,
-              colors = ButtonDefaults.buttonColors(containerColor = BadgeOnDutyBlue),
+              colors = ButtonDefaults.buttonColors(
+                containerColor = actions.createPrimary,
+                contentColor = Color.White
+              ),
               modifier = Modifier
                 .weight(1f)
                 .testTag("save_duty_shift_button")
@@ -996,9 +1166,7 @@ fun CalendarDutyRosterPanel(
                     shape = IosSharpButtonShape,
                     elevation = 2.5.dp,
                     blurRadius = 5.dp,
-                    accentTint = BadgeColCyan,
-                    accentTintAlpha = 0.10f,
-                    borderAlpha = 0.35f,
+                    surfaceColor = actions.editUtility,
                     neu = neu
                   )
                   .clickable {
@@ -1020,7 +1188,7 @@ fun CalendarDutyRosterPanel(
                   Icon(
                     imageVector = Icons.Default.Repeat,
                     contentDescription = null,
-                    tint = BadgeColCyan,
+                    tint = Color.White,
                     modifier = Modifier.size(14.dp)
                   )
                   Spacer(modifier = Modifier.width(5.dp))
@@ -1028,7 +1196,7 @@ fun CalendarDutyRosterPanel(
                     text = "Every $dayLabel (Mo)",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = BadgeColCyan,
+                    color = Color.White,
                     maxLines = 1,
                     softWrap = false
                   )

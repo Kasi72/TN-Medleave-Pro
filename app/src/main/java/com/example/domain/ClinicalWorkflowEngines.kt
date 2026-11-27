@@ -1,5 +1,6 @@
 package com.example.domain
 
+import android.content.Context
 import com.example.data.ApprovalStage
 import com.example.data.DutyShift
 import com.example.data.DutyShiftType
@@ -69,11 +70,45 @@ data class ExpiryWatchdogSummary(
   val criticalColCount: Int,
   val expiringSoonColCount: Int,
   val expiredColCount: Int,
+  val archivedLapsedCount: Int = 0,
   val burnDown: QuotaBurnDownMetrics,
   val paperworkAlerts: List<PendingPaperworkAlert>
 ) {
   val totalUrgentAlerts: Int
-    get() = criticalColCount + expiringSoonColCount + paperworkAlerts.size
+    get() = criticalColCount + expiringSoonColCount + expiredColCount + paperworkAlerts.size
+}
+
+/**
+ * Persists user-cleared / archived lapsed (>6-month) GH-Worked credit keys per user
+ * so historical duty entries stay intact in the Service Register ledger while no longer
+ * cluttering the active 6-Month COL Expiry Watchdog.
+ */
+object LapsedColArchiveStore {
+  private const val PREFS_NAME = "lapsed_col_archive_prefs"
+  private const val KEY_PREFIX = "cleared_lapsed_keys_"
+
+  fun getClearedKeys(context: Context, userId: String): Set<String> {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    return prefs.getStringSet("$KEY_PREFIX$userId", emptySet())?.toSet().orEmpty()
+  }
+
+  fun clearItems(context: Context, userId: String, items: Collection<ColExpiryItem>): Set<String> {
+    if (items.isEmpty()) return getClearedKeys(context, userId)
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val updated = getClearedKeys(context, userId).toMutableSet()
+    items.forEach { item ->
+      if (item.recordId.isNotBlank()) updated.add(item.recordId)
+      if (item.ghDateIso.isNotBlank()) updated.add(item.ghDateIso)
+    }
+    prefs.edit().putStringSet("$KEY_PREFIX$userId", updated).apply()
+    return updated.toSet()
+  }
+
+  fun restoreAll(context: Context, userId: String): Set<String> {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    prefs.edit().remove("$KEY_PREFIX$userId").apply()
+    return emptySet()
+  }
 }
 
 data class DutyConflictWarning(
@@ -100,12 +135,14 @@ object ExpiryWatchdogEngine {
   fun evaluate(
     records: List<LeaveRecord>,
     workflowsByRecordId: Map<String, LeaveWorkflowMeta>,
-    today: LocalDate = LocalDate.now()
+    today: LocalDate = LocalDate.now(),
+    clearedLapsedRecordKeys: Set<String> = emptySet()
   ): ExpiryWatchdogSummary {
     val activeYear = today.year.coerceIn(2026, 2030)
     val audit = LeaveOptimizerEngine.auditColAndGhWorked(records)
 
     // 1. Evaluate every unclaimed GH_WORKED credit against TN Govt 6-month COL validity rule
+    var archivedLapsedCount = 0
     val expiringCols = audit.unusedGhRecords.mapNotNull { rec ->
       val ghDate = runCatching { LocalDate.parse(rec.dateIso, isoFmt) }.getOrNull() ?: return@mapNotNull null
       val expiryDate = ghDate.plusMonths(6)
@@ -115,6 +152,12 @@ object ExpiryWatchdogEngine {
         daysLeft <= 21L -> WatchdogColUrgency.CRITICAL
         daysLeft <= 60L -> WatchdogColUrgency.EXPIRING_SOON
         else -> WatchdogColUrgency.HEALTHY
+      }
+      if (urgency == WatchdogColUrgency.EXPIRED &&
+        (rec.id in clearedLapsedRecordKeys || rec.dateIso in clearedLapsedRecordKeys)
+      ) {
+        archivedLapsedCount++
+        return@mapNotNull null
       }
       ColExpiryItem(
         recordId = rec.id,
@@ -236,6 +279,7 @@ object ExpiryWatchdogEngine {
       criticalColCount = expiringCols.count { it.urgency == WatchdogColUrgency.CRITICAL },
       expiringSoonColCount = expiringCols.count { it.urgency == WatchdogColUrgency.EXPIRING_SOON },
       expiredColCount = expiringCols.count { it.urgency == WatchdogColUrgency.EXPIRED },
+      archivedLapsedCount = archivedLapsedCount,
       burnDown = burnDown,
       paperworkAlerts = paperworkAlerts.take(6)
     )

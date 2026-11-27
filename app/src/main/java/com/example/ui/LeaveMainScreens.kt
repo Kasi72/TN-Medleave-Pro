@@ -81,7 +81,9 @@ import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpMicroShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
+import com.example.ui.theme.SkyPrimary
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
 import com.example.ui.theme.StatusVerifiedGreen
@@ -101,9 +103,13 @@ fun OverviewTabScreen(
   onLogDualDutyAndCol: (dutyDateIso: String, colDateIso: String, dutyNotes: String) -> Unit = { _, _, _ -> },
   expiryWatchdog: com.example.domain.ExpiryWatchdogSummary? = null,
   unclaimedGhCandidates: List<com.example.domain.GhColCaptureCandidate> = emptyList(),
+  clearedLapsedColKeys: Set<String> = emptySet(),
   onOptimizeExpiringCol: (com.example.domain.ColExpiryItem) -> Unit = {},
   onOpenPaperworkAlert: (com.example.domain.PendingPaperworkAlert) -> Unit = {},
-  onClaimGhColCandidate: (com.example.domain.GhColCaptureCandidate) -> Unit = {}
+  onClaimGhColCandidate: (com.example.domain.GhColCaptureCandidate) -> Unit = {},
+  onClearLapsedCol: (com.example.domain.ColExpiryItem) -> Unit = {},
+  onClearAllLapsedCols: (List<com.example.domain.ColExpiryItem>) -> Unit = {},
+  onRestoreArchivedLapsedCols: () -> Unit = {}
 ) {
   val context = LocalContext.current
   val summary = state.yearSummary
@@ -331,7 +337,10 @@ fun OverviewTabScreen(
           onOptimizeExpiringCol = onOptimizeExpiringCol,
           onOpenColAuditTab = { onNavigateToTab(2) },
           onOpenPaperworkAlert = onOpenPaperworkAlert,
-          onClaimGhColCandidate = onClaimGhColCandidate
+          onClaimGhColCandidate = onClaimGhColCandidate,
+          onClearLapsedCol = onClearLapsedCol,
+          onClearAllLapsedCols = onClearAllLapsedCols,
+          onRestoreArchivedLapsedCols = onRestoreArchivedLapsedCols
         )
       }
     }
@@ -680,7 +689,7 @@ fun OverviewTabScreen(
               title = "TN Govt LTC Block Tracker",
               subtitle = "2024–2027 4-Year Block (Home Town & Anywhere in India + 60d Lifetime EL Cap)",
               badgeText = "BLOCK 24–27",
-              badgeColor = EmeraldOptimal
+              badgeColor = SkyPrimary
             )
             TnGovtLtcBlockTrackerCard(
               onShowStatusBanner = onShowStatusBanner
@@ -717,7 +726,7 @@ fun OverviewTabScreen(
             EnterpriseSectionHeader(
               indexTag = "06 • 1-TAP DUAL RECONCILIATION",
               title = "Holiday Call Duty → Comp-Off Logger",
-              subtitle = "Simultaneously registers GH Worked + In-Lieu + Paired COL with 100% green audit",
+              subtitle = "Simultaneously registers GH Worked + In-Lieu + Paired COL with 100% verified audit",
               badgeText = "3-COL SYNC",
               badgeColor = BadgeColCyan
             )
@@ -737,7 +746,7 @@ fun OverviewTabScreen(
               indexTag = "02 • CLINICAL TELEMETRY",
               title = "Psychiatry Leave Intelligence",
               badgeText = "LIVE CANVAS CHARTS",
-              badgeColor = EmeraldOptimal
+              badgeColor = SkyPrimary
             )
             PsychiatryLeaveAnalyticsSection(state = state)
           }
@@ -747,7 +756,7 @@ fun OverviewTabScreen(
         item {
           ExecutiveCollapsibleAccordionCard(
             icon = Icons.Default.Verified,
-            accent = EmeraldOptimal,
+            accent = SkyPrimary,
             title = "Tamil Nadu Leave Rules (HOD / Medical Service)",
             subtitle = "Statutory quick-reference for CL, RH, 10-day continuous cap, COL & PL",
             badgeText = "FR / TN RULES",
@@ -771,7 +780,7 @@ fun OverviewTabScreen(
               title = "Upcoming Government Holidays",
               subtitle = "Live status chips highlight 'Leave Bridge' stretch opportunities across GH & RH dates",
               badgeText = "LEAVE BRIDGE VIEW",
-              badgeColor = EmeraldOptimal,
+              badgeColor = SkyPrimary,
               onBadgeClick = onOpenHolidayDashboard
             )
             UpcomingHolidayDashboardSection(
@@ -794,8 +803,13 @@ fun OverviewTabScreen(
               badgeColor = BadgePlGold,
               onBadgeClick = { onNavigateToTab(2) }
             )
+            val activeOverviewRadarGh = remember(state.colGhAuditYear.unusedGhRecords, clearedLapsedColKeys) {
+              state.colGhAuditYear.unusedGhRecords.filterNot { rec ->
+                rec.id in clearedLapsedColKeys || rec.dateIso in clearedLapsedColKeys
+              }
+            }
             ColSixMonthExpiryRadarCard(
-              unusedGhRecords = state.colGhAuditYear.unusedGhRecords,
+              unusedGhRecords = activeOverviewRadarGh,
               onClaimFifoGhAsCol = { _ -> onNavigateToTab(2) }
             )
           }
@@ -828,7 +842,7 @@ fun OverviewTabScreen(
               title = "Native Home Screen Widget",
               subtitle = "Live 4×2 launcher widget displaying CL, RH, Free GH & next holiday bridge",
               badgeText = "APPWIDGET",
-              badgeColor = EmeraldOptimal
+              badgeColor = SkyPrimary
             )
             HomeScreenWidgetPreviewCard(
               summary2026 = state.summary2026,
@@ -1058,7 +1072,7 @@ fun LedgerTabScreen(
         index = 0,
         title = "Leave Entries",
         badge = "${displayedRecords.size}",
-        accentColor = EmeraldOptimal
+        accentColor = SkyPrimary
       ),
       SubTabOption(
         index = 1,
@@ -1432,13 +1446,18 @@ fun LedgerTabScreen(
                   color = neu.textPrimary
                 )
                 Spacer(modifier = Modifier.height(6.dp))
+                val emptyActions = LocalFunctionalActionColors.current
                 Button(
                   onClick = onOpenAddDialog,
-                  shape = IosSharpButtonShape
+                  shape = IosSharpButtonShape,
+                  colors = ButtonDefaults.buttonColors(
+                    containerColor = emptyActions.createPrimary,
+                    contentColor = Color.White
+                  )
                 ) {
                   Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                   Spacer(modifier = Modifier.width(6.dp))
-                  Text("Log Leave / Duty")
+                  Text("Log Leave / Duty", fontWeight = FontWeight.Bold)
                 }
               }
             }
@@ -1732,7 +1751,7 @@ fun OptimizerTabScreen(
         index = 0,
         title = "AI Optimizer",
         badge = "GEMINI",
-        accentColor = EmeraldOptimal
+        accentColor = SkyPrimary
       ),
       SubTabOption(
         index = 1,
@@ -2030,16 +2049,21 @@ fun OptimizerTabScreen(
                 )
               }
               Spacer(modifier = Modifier.height(10.dp))
+              val rangeActions = LocalFunctionalActionColors.current
               Button(
                 onClick = { onRunCustomRange(startInput, endInput) },
                 shape = IosSharpButtonShape,
+                colors = ButtonDefaults.buttonColors(
+                  containerColor = rangeActions.aiOptimize,
+                  contentColor = Color.White
+                ),
                 modifier = Modifier
                   .fillMaxWidth()
                   .testTag("analyze_range_button")
               ) {
                 Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Calculate Optimal Credit Mix")
+                Text("Calculate Optimal Credit Mix", fontWeight = FontWeight.Bold)
               }
 
               state.customAnalysis?.let { analysis ->
@@ -2140,7 +2164,7 @@ fun OptimizerTabScreen(
 
           ExecutiveCollapsibleAccordionCard(
             icon = Icons.Default.Verified,
-            accent = EmeraldOptimal,
+            accent = SkyPrimary,
             title = "TN Leave Rules 1933 & FR Statutory Engine",
             subtitle = "EL (+15d/half-yr), UEL-MC (540d cap), CL, COL & RH statutory citations",
             badgeText = "FR 1933",
@@ -2335,6 +2359,7 @@ private fun SmartBridgeCard(
   onApply: () -> Unit
 ) {
   val neu = LocalNeumorphicColors.current
+  val actions = LocalFunctionalActionColors.current
   Box(
     modifier = Modifier
       .fillMaxWidth()
@@ -2342,7 +2367,7 @@ private fun SmartBridgeCard(
         shape = IosSharpCardShape,
         elevation = 5.dp,
         blurRadius = 10.dp,
-        accentTint = EmeraldOptimal,
+        accentTint = actions.aiOptimize,
         accentTintAlpha = 0.03f,
         borderAlpha = 0.32f,
         neu = neu
@@ -2362,16 +2387,16 @@ private fun SmartBridgeCard(
               shape = IosSharpBadgeShape,
               depth = 1.5.dp,
               blurRadius = 3.dp,
-              accentTint = EmeraldOptimal,
+              accentTint = actions.aiOptimize,
               accentTintAlpha = 0.12f,
-              borderColor = EmeraldOptimal.copy(alpha = 0.30f),
+              borderColor = actions.aiOptimize.copy(alpha = 0.30f),
               neu = neu
             )
         ) {
           Text(
             text = "${bridge.efficiencyRatio}x MULTIPLIER • ${bridge.totalDaysOff} DAYS OFF",
             style = MaterialTheme.typography.labelMedium,
-            color = EmeraldOptimal,
+            color = actions.aiOptimize,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis,
@@ -2492,14 +2517,17 @@ private fun SmartBridgeCard(
       Button(
         onClick = onApply,
         shape = IosSharpButtonShape,
-        colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal),
+        colors = ButtonDefaults.buttonColors(
+          containerColor = actions.createPrimary,
+          contentColor = Color.White
+        ),
         modifier = Modifier
           .fillMaxWidth()
           .testTag("apply_bridge_${bridge.id}")
       ) {
         Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text("Auto-Log Recommended Credits to 2026 Ledger")
+        Text("Auto-Log Recommended Credits to 2026 Ledger", fontWeight = FontWeight.Bold)
       }
     }
   }

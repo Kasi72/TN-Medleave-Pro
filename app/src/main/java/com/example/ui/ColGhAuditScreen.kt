@@ -71,7 +71,9 @@ import com.example.ui.theme.IosSharpButtonShape
 import com.example.ui.theme.IosSharpCardShape
 import com.example.ui.theme.IosSharpWellShape
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.LocalFunctionalActionColors
 import com.example.ui.theme.LocalNeumorphicColors
+import com.example.ui.theme.SkyPrimary
 import com.example.ui.theme.StatusAlertRed
 import com.example.ui.theme.StatusPendingOrange
 import com.example.ui.theme.StatusVerifiedGreen
@@ -90,8 +92,12 @@ fun ColGhAuditTabScreen(
   onShowStatusBanner: (String) -> Unit = {},
   expiryWatchdog: com.example.domain.ExpiryWatchdogSummary? = null,
   unclaimedGhCandidates: List<com.example.domain.GhColCaptureCandidate> = emptyList(),
+  clearedLapsedColKeys: Set<String> = emptySet(),
   onOptimizeExpiringCol: (com.example.domain.ColExpiryItem) -> Unit = {},
-  onClaimGhColCandidate: (com.example.domain.GhColCaptureCandidate) -> Unit = {}
+  onClaimGhColCandidate: (com.example.domain.GhColCaptureCandidate) -> Unit = {},
+  onClearLapsedCol: (com.example.domain.ColExpiryItem) -> Unit = {},
+  onClearAllLapsedCols: (List<com.example.domain.ColExpiryItem>) -> Unit = {},
+  onRestoreArchivedLapsedCols: () -> Unit = {}
 ) {
   var showAllYears by remember { mutableStateOf(false) }
   var selectedStatusFilter by remember { mutableStateOf<ColAuditStatus?>(null) }
@@ -112,7 +118,7 @@ fun ColGhAuditTabScreen(
         index = 0,
         title = "3-Col Ledger",
         badge = "${audit.items.size}",
-        accentColor = EmeraldOptimal
+        accentColor = SkyPrimary
       ),
       SubTabOption(
         index = 1,
@@ -300,6 +306,7 @@ fun ColGhAuditTabScreen(
 
           Spacer(modifier = Modifier.height(14.dp))
 
+          val auditActions = LocalFunctionalActionColors.current
           // One-Tap Auto-Reconcile Button
           Button(
             onClick = {
@@ -307,8 +314,8 @@ fun ColGhAuditTabScreen(
             },
             shape = IosSharpButtonShape,
             colors = ButtonDefaults.buttonColors(
-              containerColor = MaterialTheme.colorScheme.primary,
-              contentColor = MaterialTheme.colorScheme.onPrimary
+              containerColor = auditActions.verifyApprove,
+              contentColor = Color.White
             ),
             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
             modifier = Modifier
@@ -346,6 +353,9 @@ fun ColGhAuditTabScreen(
           onOpenColAuditTab = { activeSubTab = 2 },
           onOpenPaperworkAlert = {},
           onClaimGhColCandidate = onClaimGhColCandidate,
+          onClearLapsedCol = onClearLapsedCol,
+          onClearAllLapsedCols = onClearAllLapsedCols,
+          onRestoreArchivedLapsedCols = onRestoreArchivedLapsedCols,
           compactColMode = true
         )
       }
@@ -573,13 +583,21 @@ fun ColGhAuditTabScreen(
               onOpenColAuditTab = {},
               onOpenPaperworkAlert = {},
               onClaimGhColCandidate = onClaimGhColCandidate,
+              onClearLapsedCol = onClearLapsedCol,
+              onClearAllLapsedCols = onClearAllLapsedCols,
+              onRestoreArchivedLapsedCols = onRestoreArchivedLapsedCols,
               compactColMode = true
             )
           }
         }
         item {
+          val activeRadarGhRecords = remember(audit.unusedGhRecords, clearedLapsedColKeys) {
+            audit.unusedGhRecords.filterNot { rec ->
+              rec.id in clearedLapsedColKeys || rec.dateIso in clearedLapsedColKeys
+            }
+          }
           ColSixMonthExpiryRadarCard(
-            unusedGhRecords = audit.unusedGhRecords,
+            unusedGhRecords = activeRadarGhRecords,
             onClaimFifoGhAsCol = { ghRec -> claimUnusedGhRecord = ghRec }
           )
         }
@@ -715,6 +733,7 @@ fun ColGhAuditTabScreen(
         }
       },
       confirmButton = {
+        val pairActions = LocalFunctionalActionColors.current
         Button(
           onClick = {
             if (customGhDate.matches(Regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))) {
@@ -723,7 +742,10 @@ fun ColGhAuditTabScreen(
             }
           },
           shape = IosSharpButtonShape,
-          colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal)
+          colors = ButtonDefaults.buttonColors(
+            containerColor = pairActions.verifyApprove,
+            contentColor = Color.White
+          )
         ) {
           Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(6.dp))
@@ -796,6 +818,7 @@ fun ColGhAuditTabScreen(
         }
       },
       confirmButton = {
+        val claimActions = LocalFunctionalActionColors.current
         Button(
           onClick = {
             if (newColDate.matches(Regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))) {
@@ -804,7 +827,10 @@ fun ColGhAuditTabScreen(
             }
           },
           shape = IosSharpButtonShape,
-          colors = ButtonDefaults.buttonColors(containerColor = EmeraldOptimal)
+          colors = ButtonDefaults.buttonColors(
+            containerColor = claimActions.verifyApprove,
+            contentColor = Color.White
+          )
         ) {
           Icon(Icons.Default.EventAvailable, contentDescription = null, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(6.dp))
