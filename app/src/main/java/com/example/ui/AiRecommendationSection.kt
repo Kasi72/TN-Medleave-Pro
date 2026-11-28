@@ -116,7 +116,12 @@ fun AiLeaveRecommendationSection(
   onSimulateInBuilder: (AiLeaveRecommendation) -> Unit = {},
   loggedDutyCount: Int = 0,
   protectLoggedDutyShifts: Boolean = true,
-  onToggleProtectLoggedDutyShifts: (Boolean) -> Unit = {}
+  onToggleProtectLoggedDutyShifts: (Boolean) -> Unit = {},
+  onToggleBlockedDate: (String) -> Unit = {},
+  onSetPinnedDate: (String, String?) -> Unit = { _, _ -> },
+  onTogglePlannedWorkHoliday: (String) -> Unit = {},
+  onClearSteeringOverrides: () -> Unit = {},
+  onRecalibrateStrategy: (isGeminiActive: Boolean, focusGoal: String) -> Unit = { _, _ -> }
 ) {
   val context = LocalContext.current
   val summary2026 = state.summary2026
@@ -144,6 +149,8 @@ fun AiLeaveRecommendationSection(
   var selectedStrategyIndex by remember { mutableIntStateOf(0) }
   var selectedPortfolioIds by remember { mutableStateOf(setOf<String>()) }
   var sanctionLetterRec by remember { mutableStateOf<AiLeaveRecommendation?>(null) }
+  var showSteeringCalendar by remember { mutableStateOf(false) }
+  var steeringDialogDateIso by remember { mutableStateOf<String?>(null) }
 
   // Handle Notification Center -> AI Optimizer deep links seamlessly
   LaunchedEffect(deepLinkGoalHint) {
@@ -335,7 +342,7 @@ fun AiLeaveRecommendationSection(
             }
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-              text = "Constraint-aware solver • $totalSyncedHolidays TN dates • Adjacency, FIFO COL, Rule-8 EL & OPD safe",
+              text = "Joint non-overlapping solver • ${effectiveUiConstraints.effectiveWeekendPolicy().shortChip} • $totalSyncedHolidays TN dates • FIFO COL & OPD safe",
               style = MaterialTheme.typography.labelSmall,
               color = neu.textSecondary
             )
@@ -469,6 +476,99 @@ fun AiLeaveRecommendationSection(
         loggedDutyCount = loggedDutyCount,
         protectLoggedDutyShifts = protectLoggedDutyShifts,
         onToggleProtectLoggedDutyShifts = onToggleProtectLoggedDutyShifts
+      )
+
+      // Expandable Interactive Date Steering Calendar + Work-Duty (+1 Virtual COL) Picker
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Box(
+          modifier = Modifier
+            .weight(1f)
+            .then(
+              if (showSteeringCalendar) {
+                Modifier.neumorphicInset(
+                  shape = IosSharpButtonShape,
+                  depth = 2.dp,
+                  blurRadius = 4.dp,
+                  accentTint = neu.primaryAccent,
+                  accentTintAlpha = 0.12f,
+                  borderColor = neu.primaryAccent.copy(alpha = 0.45f),
+                  neu = neu
+                )
+              } else {
+                Modifier.neumorphicExtruded(
+                  shape = IosSharpButtonShape,
+                  elevation = 2.dp,
+                  blurRadius = 4.dp,
+                  borderAlpha = 0.24f,
+                  neu = neu
+                )
+              }
+            )
+            .clickable { showSteeringCalendar = !showSteeringCalendar }
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .testTag("toggle_steering_calendar_btn")
+        ) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              modifier = Modifier.weight(1f)
+            ) {
+              Icon(
+                imageVector = Icons.Default.CalendarMonth,
+                contentDescription = "Steer calendar dates",
+                tint = neu.primaryAccent,
+                modifier = Modifier.size(16.dp)
+              )
+              Text(
+                text = "Steer Dates: Pin, Block or Mark Holiday Work Duty (+1 COL)",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = neu.primaryAccent,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+            }
+            Icon(
+              imageVector = if (showSteeringCalendar) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+              contentDescription = null,
+              tint = neu.primaryAccent,
+              modifier = Modifier.size(16.dp)
+            )
+          }
+        }
+      }
+
+      AnimatedVisibility(
+        visible = showSteeringCalendar,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut()
+      ) {
+        SteeringMonthCalendarCard(
+          constraints = effectiveUiConstraints,
+          records = state.allRecords,
+          recommendations = displayedRecommendations,
+          selectedYearHint = state.selectedYear,
+          onSelectDateForSteering = { iso -> steeringDialogDateIso = iso }
+        )
+      }
+
+      // Active Steering Overrides + Recalibrate Strategy Banner
+      SteeringOverridesAndRecalibrateBanner(
+        constraints = effectiveUiConstraints,
+        isGeminiActive = aiState is AiRecommendationUiState.Success,
+        onClearAllOverrides = onClearSteeringOverrides,
+        onRecalibrate = {
+          onRecalibrateStrategy(aiState is AiRecommendationUiState.Success, activeStrategyString)
+        }
       )
 
       // Multi-Plan Portfolio Impact Dock (appears when ≥1 card is selected)
@@ -701,30 +801,68 @@ fun AiLeaveRecommendationSection(
                     overflow = TextOverflow.Ellipsis
                   )
                 }
-                Box(
-                  modifier = Modifier.neumorphicInset(
-                    shape = IosSharpBadgeShape,
-                    depth = 1.5.dp,
-                    blurRadius = 3.dp,
-                    accentTint = EmeraldOptimal,
-                    accentTintAlpha = 0.14f,
-                    borderColor = EmeraldOptimal.copy(alpha = 0.45f),
-                    neu = neu
-                  )
+                Row(
+                  horizontalArrangement = Arrangement.spacedBy(6.dp),
+                  verticalAlignment = Alignment.CenterVertically
                 ) {
-                  Text(
-                    text = "${instantHolidayDbScan.size} Verified",
-                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = EmeraldOptimal,
-                    maxLines = 1,
-                    softWrap = false
-                  )
+                  if (instantHolidayDbScan.isNotEmpty()) {
+                    val allSelected = instantHolidayDbScan.all { it.id in selectedPortfolioIds }
+                    Box(
+                      modifier = Modifier
+                        .neumorphicExtruded(
+                          shape = IosSharpBadgeShape,
+                          elevation = 1.5.dp,
+                          blurRadius = 3.dp,
+                          accentTint = neu.primaryAccent,
+                          accentTintAlpha = 0.08f,
+                          borderAlpha = 0.28f,
+                          neu = neu
+                        )
+                        .clickable {
+                          selectedPortfolioIds = if (allSelected) {
+                            emptySet()
+                          } else {
+                            instantHolidayDbScan.map { it.id }.toSet()
+                          }
+                        }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .testTag("select_all_portfolio_btn")
+                    ) {
+                      Text(
+                        text = if (allSelected) "Clear All" else "Select All",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = neu.primaryAccent,
+                        maxLines = 1,
+                        softWrap = false
+                      )
+                    }
+                  }
+                  Box(
+                    modifier = Modifier.neumorphicInset(
+                      shape = IosSharpBadgeShape,
+                      depth = 1.5.dp,
+                      blurRadius = 3.dp,
+                      accentTint = EmeraldOptimal,
+                      accentTintAlpha = 0.14f,
+                      borderColor = EmeraldOptimal.copy(alpha = 0.45f),
+                      neu = neu
+                    )
+                  ) {
+                    Text(
+                      text = "${instantHolidayDbScan.size} Verified",
+                      modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                      style = MaterialTheme.typography.labelSmall,
+                      fontWeight = FontWeight.ExtraBold,
+                      color = EmeraldOptimal,
+                      maxLines = 1,
+                      softWrap = false
+                    )
+                  }
                 }
               }
               Text(
-                text = "Tap '+ Portfolio' on multiple cards to model cumulative balances, 'Hold' to mark tentatively on Calendar, or 'Simulate' to edit in Leave Builder.",
+                text = "Tap any day pill inside a card to Pin/Block, '+ Portfolio' to model cumulative balances, or 'Hold' to reserve tentatively.",
                 style = MaterialTheme.typography.bodySmall.copy(lineHeight = 18.sp),
                 color = neu.textSecondary
               )
@@ -780,7 +918,8 @@ fun AiLeaveRecommendationSection(
                   onToggleTentativeHold = { onToggleTentativeHold(rec) },
                   onSimulateInBuilder = { onSimulateInBuilder(rec) },
                   onOpenSanctionLetter = { sanctionLetterRec = rec },
-                  onCopyMemo = { copyRecommendationToClipboard(context, rec) }
+                  onCopyMemo = { copyRecommendationToClipboard(context, rec) },
+                  onSteerDate = { dateIso -> steeringDialogDateIso = dateIso }
                 )
               }
             }
@@ -874,18 +1013,59 @@ fun AiLeaveRecommendationSection(
             }
           }
 
-          // Top Re-run Toolbar
+          // Top Re-run & Select-All Toolbar
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Text(
-              text = "${aiState.recommendations.size} Verified Gemini AI Plans",
-              style = MaterialTheme.typography.labelMedium,
-              fontWeight = FontWeight.ExtraBold,
-              color = MaterialTheme.colorScheme.onSurface
-            )
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              modifier = Modifier.weight(1f)
+            ) {
+              Text(
+                text = "${aiState.recommendations.size} Verified Gemini AI Plans",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+              if (aiState.recommendations.isNotEmpty()) {
+                val allSelected = aiState.recommendations.all { it.id in selectedPortfolioIds }
+                Box(
+                  modifier = Modifier
+                    .neumorphicExtruded(
+                      shape = IosSharpBadgeShape,
+                      elevation = 1.5.dp,
+                      blurRadius = 3.dp,
+                      accentTint = neu.primaryAccent,
+                      accentTintAlpha = 0.08f,
+                      borderAlpha = 0.28f,
+                      neu = neu
+                    )
+                    .clickable {
+                      selectedPortfolioIds = if (allSelected) {
+                        emptySet()
+                      } else {
+                        aiState.recommendations.map { it.id }.toSet()
+                      }
+                    }
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                    .testTag("select_all_gemini_portfolio_btn")
+                ) {
+                  Text(
+                    text = if (allSelected) "Clear" else "Select All",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = neu.primaryAccent,
+                    maxLines = 1,
+                    softWrap = false
+                  )
+                }
+              }
+            }
             OutlinedButton(
               onClick = {
                 onUpdateConstraints(effectiveUiConstraints)
@@ -904,7 +1084,7 @@ fun AiLeaveRecommendationSection(
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
-                text = "Re-run Selected Strategy",
+                text = "Re-run Strategy",
                 style = MaterialTheme.typography.labelSmall,
                 color = actions.aiOptimize,
                 fontWeight = FontWeight.Bold
@@ -942,7 +1122,8 @@ fun AiLeaveRecommendationSection(
                 onToggleTentativeHold = { onToggleTentativeHold(rec) },
                 onSimulateInBuilder = { onSimulateInBuilder(rec) },
                 onOpenSanctionLetter = { sanctionLetterRec = rec },
-                onCopyMemo = { copyRecommendationToClipboard(context, rec) }
+                onCopyMemo = { copyRecommendationToClipboard(context, rec) },
+                onSteerDate = { dateIso -> steeringDialogDateIso = dateIso }
               )
             }
           }
@@ -955,6 +1136,18 @@ fun AiLeaveRecommendationSection(
     HodSanctionLetterDialog(
       rec = rec,
       onDismiss = { sanctionLetterRec = null }
+    )
+  }
+
+  steeringDialogDateIso?.let { dateIso ->
+    OptimizerDaySteeringDialog(
+      dateIso = dateIso,
+      constraints = effectiveUiConstraints,
+      recordsOnDate = state.allRecords.filter { it.dateIso == dateIso },
+      onSetPinnedDate = onSetPinnedDate,
+      onToggleBlockedDate = onToggleBlockedDate,
+      onTogglePlannedWorkHoliday = onTogglePlannedWorkHoliday,
+      onDismiss = { steeringDialogDateIso = null }
     )
   }
 }
@@ -1021,7 +1214,8 @@ private fun AiRecommendationItemCard(
   onToggleTentativeHold: () -> Unit,
   onSimulateInBuilder: () -> Unit,
   onOpenSanctionLetter: () -> Unit,
-  onCopyMemo: () -> Unit
+  onCopyMemo: () -> Unit,
+  onSteerDate: (String) -> Unit = {}
 ) {
   val neu = LocalNeumorphicColors.current
   var expanded by remember(rec.id) { mutableStateOf(rank <= 1) }
@@ -1269,6 +1463,12 @@ private fun AiRecommendationItemCard(
         if (rec.isHalfDayBridge) {
           IntelligenceStatusTag(label = "0.5 CL HALF-DAY", accent = EmeraldOptimal)
         }
+        if (rec.usesVirtualCol) {
+          IntelligenceStatusTag(label = "VIRTUAL +1 COL", accent = BadgeColCyan)
+        }
+        if (rec.pinnedDatesUsed.isNotEmpty()) {
+          IntelligenceStatusTag(label = "${rec.pinnedDatesUsed.size} PINNED", accent = HoldIndigoBadge)
+        }
         if (rec.hasOpdConflict) {
           IntelligenceStatusTag(label = "OPD OVERLAP", accent = StatusPendingOrange)
         } else if (rec.opdImpactNote.isNotBlank()) {
@@ -1276,8 +1476,11 @@ private fun AiRecommendationItemCard(
         }
       }
 
-      // Visual Color-Coded Timeline Strip (instant bridge geometry understanding)
-      BridgeVisualTimelineStrip(dailyPlan = rec.dailyPlan)
+      // Visual Color-Coded Timeline Strip (tap any day pill to Pin/Block/Mark Work Duty)
+      BridgeVisualTimelineStrip(
+        dailyPlan = rec.dailyPlan,
+        onDayClick = { dayPlan -> onSteerDate(dayPlan.dateIso) }
+      )
 
       // Always-Visible Callout: EXACT DATES TO APPLY FOR LEAVE
       if (rec.exactDatesToApply.isNotEmpty()) {

@@ -239,8 +239,10 @@ data class SmartLeaveBridge(
 data class BridgeDayStep(
   val dateIso: String,
   val dayLabel: String,
-  val badgeType: String, // "WEEKEND", "GH", "RH", "LEAVE_CREDIT"
-  val description: String
+  val badgeType: String, // "WEEKEND", "GH", "RH", "LEAVE_CREDIT", "COL", "EL", "HALF_CL"
+  val description: String,
+  val linkedCreditId: String? = null,
+  val isVirtualCredit: Boolean = false
 )
 
 enum class ColAuditStatus(val label: String) {

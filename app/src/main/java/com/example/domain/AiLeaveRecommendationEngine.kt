@@ -33,7 +33,10 @@ data class AiBridgeDayPlan(
   val description: String,
   val isHalfDay: Boolean = false,
   val isAlreadyLogged: Boolean = false,
-  val isProtectedOpdDay: Boolean = false
+  val isProtectedOpdDay: Boolean = false,
+  val linkedCreditId: String? = null,
+  val isVirtualCredit: Boolean = false,
+  val isPinned: Boolean = false
 )
 
 data class AiLeaveRecommendation(
@@ -58,7 +61,9 @@ data class AiLeaveRecommendation(
   val ltcOdSynergyNote: String = "",
   val isHalfDayBridge: Boolean = false,
   val isElBridge: Boolean = false,
-  val verificationStatus: String = "VERIFIED_RULES"
+  val verificationStatus: String = "VERIFIED_RULES",
+  val usesVirtualCol: Boolean = false,
+  val pinnedDatesUsed: List<String> = emptyList()
 ) {
   fun toSmartLeaveBridge(): SmartLeaveBridge {
     val steps = dailyPlan.map { day ->
@@ -81,7 +86,9 @@ data class AiLeaveRecommendation(
         dateIso = day.dateIso,
         dayLabel = day.dayLabel,
         badgeType = mappedBadge,
-        description = descWithPrefix
+        description = descWithPrefix,
+        linkedCreditId = day.linkedCreditId,
+        isVirtualCredit = day.isVirtualCredit
       )
     }
     val complianceFull = buildString {
@@ -292,6 +299,7 @@ object AiLeaveRecommendationEngine {
     var cl26 = 0.0
     var rh26 = 0
     var col = 0
+    var virtualCol = 0
     var el = 0
     var cl27 = 0.0
     var rh27 = 0
@@ -317,15 +325,21 @@ object AiLeaveRecommendationEngine {
             if (year == 2026) cl26 += delta else cl27 += delta
           }
           "RH" -> if (year == 2026) rh26++ else rh27++
-          "COL" -> col++
+          "COL" -> {
+            col++
+            if (step.isVirtualCredit || step.linkedCreditId?.startsWith("virtual-credit-") == true) {
+              virtualCol++
+            }
+          }
           "EL" -> el++
         }
       }
     }
 
+    val effectiveColPool = colGhAuditAllYears.availableUnusedGhCount + constraints.plannedToWorkHolidays.size
     val remCl26 = (summary2026.clRemaining - cl26).coerceAtLeast(0.0)
     val remRh26 = (summary2026.rhRemaining - rh26).coerceAtLeast(0)
-    val remCol = (colGhAuditAllYears.availableUnusedGhCount - col).coerceAtLeast(0)
+    val remCol = (effectiveColPool - col).coerceAtLeast(0)
     val baseCl27 = summary2027?.clRemaining ?: 12.0
     val baseRh27 = summary2027?.rhRemaining ?: 3
     val remCl27 = (baseCl27 - cl27).coerceAtLeast(0.0)
@@ -334,7 +348,7 @@ object AiLeaveRecommendationEngine {
     val exceedsMsg = buildList {
       if (cl26 > summary2026.clRemaining) add("2026 CL overdrawn (${formatHalf(cl26)}/${formatHalf(summary2026.clRemaining)})")
       if (rh26 > summary2026.rhRemaining) add("2026 RH overdrawn ($rh26/${summary2026.rhRemaining})")
-      if (col > colGhAuditAllYears.availableUnusedGhCount) add("COL exceeds ${colGhAuditAllYears.availableUnusedGhCount} GH credits")
+      if (col > effectiveColPool) add("COL exceeds $effectiveColPool GH credits")
       if (cl27 > baseCl27) add("2027 CL overdrawn")
       if (rh27 > baseRh27) add("2027 RH overdrawn")
       if (overlapDetected) add("Selected plans share overlapping leave dates")
@@ -363,15 +377,16 @@ object AiLeaveRecommendationEngine {
       dec2026LapseSavedDays = (cl26 + rh26),
       violatesClReserve = violatesReserve,
       hasOverlappingDates = overlapDetected,
-      exceedsQuotaMessage = exceedsMsg
+      exceedsQuotaMessage = exceedsMsg,
+      virtualColUsed = virtualCol
     )
   }
 
   /**
-   * Core Phase-1 Constraint Solver:
-   * Evaluates upcoming 2026–2027 bridges with adjacency-aware 10-day & EL-collision checks,
-   * half-day 0.5 CL extensions, EL Mon–Fri prefix/suffix spells, 180-day COL FIFO expiry decay,
-   * protected OPD day filtering, CL safety reserve floors, and sequential portfolio accounting.
+   * Core Whole-Year Joint Portfolio Solver:
+   * Delegates to [PortfolioCalendarSolver] for strictly non-overlapping, expiry-bound FIFO/Virtual COL,
+   * 2nd-Saturday+Sunday default calendar parity, pin/block overrides, spread/proximity scoring,
+   * TN 10-day ceiling, and Rule-8 EL prefix/suffix boundary compliance.
    */
   fun scanHolidayDatabaseForLongWeekends(
     summary2026: YearCreditSummary,
@@ -381,705 +396,17 @@ object AiLeaveRecommendationEngine {
     summary2027: YearCreditSummary? = null,
     referenceDate: LocalDate = LocalDate.now(),
     constraints: OptimizerConstraints = OptimizerConstraints()
-  ): List<AiLeaveRecommendation> {
-    val today = if (referenceDate.year < 2026) LocalDate.of(2026, 11, 26) else referenceDate
-    val effective = parseNaturalLanguageConstraints(constraints, "$focusGoal ${constraints.customNaturalPrompt}")
+  ): List<AiLeaveRecommendation> = PortfolioCalendarSolver.solveJointPortfolio(
+    summary2026 = summary2026,
+    colGhAuditAllYears = colGhAuditAllYears,
+    records = records,
+    focusGoal = focusGoal,
+    summary2027 = summary2027,
+    referenceDate = referenceDate,
+    constraints = constraints
+  )
 
-    val horizonStart = when (effective.horizonMode) {
-      OptimizerHorizon.Q1_Q2_2027 -> maxOf(today, LocalDate.of(2027, 1, 1))
-      else -> today
-    }
-    val horizonEnd = when (effective.horizonMode) {
-      OptimizerHorizon.NEXT_60_DAYS -> today.plusDays(60)
-      OptimizerHorizon.REST_OF_2026 -> LocalDate.of(2026, 12, 31)
-      OptimizerHorizon.Q1_Q2_2027 -> LocalDate.of(2027, 6, 30)
-      OptimizerHorizon.FULL_HORIZON -> LocalDate.of(2027, 12, 31)
-    }
-
-    val allGh = TnHolidays2027Catalog.allSyncedPublicHolidays()
-    val allRh = TnHolidays2027Catalog.allSyncedRestrictedHolidays()
-    val ghMap = allGh.associateBy { it.dateIso }
-    val rhMap = allRh.associateBy { it.dateIso }
-
-    val recordsByDate = records.groupBy { it.dateIso }
-    val existingLeaveDates = records.filter {
-      it.category in setOf(LeaveCategory.CL, LeaveCategory.RH, LeaveCategory.COL, LeaveCategory.PL, LeaveCategory.EL, LeaveCategory.ML)
-    }.map { it.dateIso }.toSet()
-    val existingRegularDates = records.filter {
-      it.category == LeaveCategory.EL || it.category == LeaveCategory.ML
-    }.map { it.dateIso }.toSet()
-    val existingCasualFamilyDates = records.filter {
-      it.category in setOf(LeaveCategory.CL, LeaveCategory.RH, LeaveCategory.COL, LeaveCategory.PL)
-    }.map { it.dateIso }.toSet()
-
-    val unusedGhSorted = colGhAuditAllYears.unusedGhRecords
-      .sortedBy { it.dateIso }
-    val goalLower = (focusGoal + " " + effective.customNaturalPrompt).lowercase(Locale.US)
-    val preferZeroCl = effective.strictZeroCl || goalLower.contains("zero-cl") || goalLower.contains("rh + col")
-    val preferFifoCol = effective.prioritizeExpiringCol || goalLower.contains("fifo") || goalLower.contains("expiring gh")
-    val preferMegabridges = goalLower.contains("megabridge") || goalLower.contains("festival")
-
-    fun isFreeCalendarDay(date: LocalDate): Boolean {
-      val iso = date.format(isoFmt)
-      val isSat = effective.includeSaturdays && date.dayOfWeek == DayOfWeek.SATURDAY
-      return ghMap.containsKey(iso) || date.dayOfWeek == DayOfWeek.SUNDAY || isSat
-    }
-
-    fun isFestivalDay(date: LocalDate): Boolean {
-      val iso = date.format(isoFmt)
-      return ghMap.containsKey(iso) || rhMap.containsKey(iso)
-    }
-
-    /**
-     * Checks adjacency against already-logged leaves in [records] so the 10-day continuous
-     * absence cap and EL+CL non-combination rules cannot be violated by bordering an existing spell.
-     */
-    fun checkAdjacencyAndCollision(
-      start: LocalDate,
-      end: LocalDate,
-      isElSpell: Boolean
-    ): Pair<Boolean, Int> {
-      // Check internal collisions
-      var d = start
-      while (!d.isAfter(end)) {
-        val iso = d.format(isoFmt)
-        val recs = recordsByDate[iso].orEmpty()
-        if (isElSpell && recs.any { it.category in setOf(LeaveCategory.CL, LeaveCategory.RH, LeaveCategory.COL) }) {
-          return false to 0
-        }
-        if (!isElSpell && recs.any { it.category == LeaveCategory.EL || it.category == LeaveCategory.ML }) {
-          return false to 0
-        }
-        if (recs.any { it.category == LeaveCategory.GH_WORKED || it.category == LeaveCategory.ON_DUTY }) {
-          return false to 0
-        }
-        d = d.plusDays(1)
-      }
-
-      // Walk backwards & forwards across contiguous weekends/GHs and existing logged leaves
-      var combinedStart = start
-      var guard = 0
-      while (guard < 16) {
-        val prev = combinedStart.minusDays(1)
-        val prevIso = prev.format(isoFmt)
-        val touchesIncompatible = if (isElSpell) prevIso in existingCasualFamilyDates else prevIso in existingRegularDates
-        if (touchesIncompatible) return false to 0
-        if (isFreeCalendarDay(prev) || prevIso in existingLeaveDates) {
-          combinedStart = prev
-          guard++
-        } else {
-          break
-        }
-      }
-
-      var combinedEnd = end
-      guard = 0
-      while (guard < 16) {
-        val next = combinedEnd.plusDays(1)
-        val nextIso = next.format(isoFmt)
-        val touchesIncompatible = if (isElSpell) nextIso in existingCasualFamilyDates else nextIso in existingRegularDates
-        if (touchesIncompatible) return false to 0
-        if (isFreeCalendarDay(next) || nextIso in existingLeaveDates) {
-          combinedEnd = next
-          guard++
-        } else {
-          break
-        }
-      }
-
-      val trueContinuousStretch = ChronoUnit.DAYS.between(combinedStart, combinedEnd).toInt() + 1
-      if (!isElSpell && effective.enforce10DayCap && trueContinuousStretch > TamilNaduLeaveRulesService.CL_MAX_STRETCH_INCLUDING_HOLIDAYS) {
-        return false to trueContinuousStretch
-      }
-      return true to trueContinuousStretch
-    }
-
-    fun pickExpiringColForDate(
-      targetDate: LocalDate,
-      usedGhIds: Set<String>
-    ): Pair<LeaveRecord, Long>? {
-      val candidates = unusedGhSorted.filter { it.id !in usedGhIds }.mapNotNull { gh ->
-        val ghDate = runCatching { LocalDate.parse(gh.dateIso, isoFmt) }.getOrNull() ?: return@mapNotNull null
-        val ageDays = ChronoUnit.DAYS.between(ghDate, targetDate)
-        if (ageDays in 0..TamilNaduLeaveRulesService.COL_EXPIRY_WINDOW_DAYS) {
-          gh to (TamilNaduLeaveRulesService.COL_EXPIRY_WINDOW_DAYS - ageDays)
-        } else {
-          null
-        }
-      }
-      // FIFO: consume the earliest-expiring valid GH Worked credit first!
-      return candidates.minByOrNull { it.second }
-    }
-
-    fun buildDynamicWindow(
-      start: LocalDate,
-      end: LocalDate,
-      halfDayTargetIso: String? = null
-    ): AiLeaveRecommendation? {
-      if (start.isBefore(horizonStart) || end.isAfter(horizonEnd) || end.isBefore(start)) return null
-      val totalDays = ChronoUnit.DAYS.between(start, end).toInt() + 1
-      val maxCap = if (effective.enforce10DayCap) 10 else 14
-      if (totalDays < 3 || totalDays > maxCap) return null
-
-      val (safeAdjacency, trueCombinedStretch) = checkAdjacencyAndCollision(start, end, isElSpell = false)
-      if (!safeAdjacency) return null
-
-      // Enforce safety reserve floor per year
-      val availCl2026 = (summary2026.clRemaining - effective.reserveClFloor).coerceAtLeast(0.0)
-      val availCl2027 = ((summary2027?.clRemaining ?: 12.0) - effective.reserveClFloor).coerceAtLeast(0.0)
-      var remCl2026 = availCl2026
-      var remRh2026 = summary2026.rhRemaining
-      var remCl2027 = availCl2027
-      var remRh2027 = summary2027?.rhRemaining ?: 3
-      val usedGhIds = mutableSetOf<String>()
-
-      var creditsUsed = 0.0
-      var freeDays = 0
-      var minColDaysToExpiry: Long? = null
-      var opdConflictCount = 0
-      val opdConflictDays = mutableListOf<String>()
-      val applyDates = mutableListOf<String>()
-      val dailySteps = mutableListOf<AiBridgeDayPlan>()
-      val anchorNames = mutableListOf<String>()
-
-      var cursor = start
-      while (!cursor.isAfter(end)) {
-        val iso = cursor.format(isoFmt)
-        val dayShort = "${cursor.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}, ${
-          cursor.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
-        } ${cursor.dayOfMonth}"
-        val ghItem: TnHolidayItem? = ghMap[iso]
-        val rhItem: TnHolidayItem? = rhMap[iso]
-        val isWeekend = cursor.dayOfWeek == DayOfWeek.SUNDAY ||
-          (effective.includeSaturdays && cursor.dayOfWeek == DayOfWeek.SATURDAY)
-        val existingDayRecs = recordsByDate[iso].orEmpty()
-        val alreadyLogged = existingDayRecs.any {
-          it.category in setOf(LeaveCategory.CL, LeaveCategory.RH, LeaveCategory.COL, LeaveCategory.PL)
-        }
-        val isOpdDay = cursor.dayOfWeek in effective.protectedDaysOfWeek ||
-          iso in effective.protectedDatesIso
-
-        val is2026 = cursor.year == 2026
-        val canUseRh = if (is2026) remRh2026 > 0 else remRh2027 > 0
-        val canUseFullCl = if (is2026) remCl2026 >= 1.0 else remCl2027 >= 1.0
-        val canUseHalfCl = if (is2026) remCl2026 >= 0.5 else remCl2027 >= 0.5
-        val colCandidate = pickExpiringColForDate(cursor, usedGhIds)
-
-        when {
-          ghItem != null -> {
-            freeDays++
-            anchorNames.add(ghItem.nameEnglish.substringBefore(" ("))
-            dailySteps.add(
-              AiBridgeDayPlan(
-                dateIso = iso,
-                dayLabel = dayShort,
-                creditType = "GH",
-                description = "FREE GH: ${ghItem.nameEnglish} (${ghItem.nameTamil})"
-              )
-            )
-          }
-          isWeekend -> {
-            freeDays++
-            val wkndDesc = if (rhItem != null) {
-              "FREE Weekend • ${rhItem.nameEnglish}"
-            } else {
-              "FREE ${cursor.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH)} Weekend"
-            }
-            dailySteps.add(
-              AiBridgeDayPlan(
-                dateIso = iso,
-                dayLabel = dayShort,
-                creditType = "WEEKEND",
-                description = wkndDesc
-              )
-            )
-          }
-          alreadyLogged -> {
-            val loggedType = existingDayRecs.first().category.code
-            dailySteps.add(
-              AiBridgeDayPlan(
-                dateIso = iso,
-                dayLabel = dayShort,
-                creditType = loggedType,
-                description = "ALREADY LOGGED: ${existingDayRecs.first().category.shortLabel}",
-                isAlreadyLogged = true,
-                isProtectedOpdDay = isOpdDay
-              )
-            )
-          }
-          halfDayTargetIso == iso && effective.allowHalfDayCl && !preferZeroCl && canUseHalfCl -> {
-            val session = if (cursor.dayOfWeek == DayOfWeek.MONDAY) "FN" else "AN"
-            creditsUsed += 0.5
-            if (is2026) remCl2026 -= 0.5 else remCl2027 -= 0.5
-            if (isOpdDay) {
-              opdConflictCount++
-              opdConflictDays.add(dayShort)
-            }
-            applyDates.add("$iso — Apply 0.5 CL ($session Half-Day Bridge)")
-            dailySteps.add(
-              AiBridgeDayPlan(
-                dateIso = iso,
-                dayLabel = dayShort,
-                creditType = "HALF_CL",
-                description = "APPLY 0.5 CL ($session Half-Day Bridge)",
-                isHalfDay = true,
-                isProtectedOpdDay = isOpdDay
-              )
-            )
-          }
-          rhItem != null && canUseRh && !preferFifoCol -> {
-            creditsUsed += 1.0
-            if (is2026) remRh2026-- else remRh2027--
-            if (isOpdDay) {
-              opdConflictCount++
-              opdConflictDays.add(dayShort)
-            }
-            val cleanRhName = rhItem.nameEnglish.substringBefore(" (")
-            anchorNames.add(cleanRhName)
-            applyDates.add("$iso — Apply 1 RH ($cleanRhName)")
-            dailySteps.add(
-              AiBridgeDayPlan(
-                dateIso = iso,
-                dayLabel = dayShort,
-                creditType = "RH",
-                description = "APPLY 1 RH: ${rhItem.nameEnglish}",
-                isProtectedOpdDay = isOpdDay
-              )
-            )
-          }
-          colCandidate != null && (preferFifoCol || preferZeroCl || !canUseFullCl || rhItem == null) -> {
-            val (pairedGh, daysLeftToExpiry) = colCandidate
-            usedGhIds.add(pairedGh.id)
-            creditsUsed += 1.0
-            minColDaysToExpiry = minOf(minColDaysToExpiry ?: daysLeftToExpiry, daysLeftToExpiry)
-            if (isOpdDay) {
-              opdConflictCount++
-              opdConflictDays.add(dayShort)
-            }
-            applyDates.add("$iso — Apply 1 COL (vs GH ${pairedGh.dateIso}, ${daysLeftToExpiry}d left)")
-            dailySteps.add(
-              AiBridgeDayPlan(
-                dateIso = iso,
-                dayLabel = dayShort,
-                creditType = "COL",
-                description = "APPLY 1 COL (FIFO vs GH ${pairedGh.dateIso})",
-                isProtectedOpdDay = isOpdDay
-              )
-            )
-          }
-          rhItem != null && canUseRh -> {
-            creditsUsed += 1.0
-            if (is2026) remRh2026-- else remRh2027--
-            if (isOpdDay) {
-              opdConflictCount++
-              opdConflictDays.add(dayShort)
-            }
-            val cleanRhName = rhItem.nameEnglish.substringBefore(" (")
-            anchorNames.add(cleanRhName)
-            applyDates.add("$iso — Apply 1 RH ($cleanRhName)")
-            dailySteps.add(
-              AiBridgeDayPlan(
-                dateIso = iso,
-                dayLabel = dayShort,
-                creditType = "RH",
-                description = "APPLY 1 RH: ${rhItem.nameEnglish}",
-                isProtectedOpdDay = isOpdDay
-              )
-            )
-          }
-          else -> {
-            if (preferZeroCl) return null
-            if (!canUseFullCl) {
-              if (effective.allowHalfDayCl && canUseHalfCl && (cursor == start || cursor == end)) {
-                val session = if (cursor.dayOfWeek == DayOfWeek.MONDAY) "FN" else "AN"
-                creditsUsed += 0.5
-                if (is2026) remCl2026 -= 0.5 else remCl2027 -= 0.5
-                if (isOpdDay) {
-                  opdConflictCount++
-                  opdConflictDays.add(dayShort)
-                }
-                applyDates.add("$iso — Apply 0.5 CL ($session Half-Day)")
-                dailySteps.add(
-                  AiBridgeDayPlan(
-                    dateIso = iso,
-                    dayLabel = dayShort,
-                    creditType = "HALF_CL",
-                    description = "APPLY 0.5 CL ($session Half-Day)",
-                    isHalfDay = true,
-                    isProtectedOpdDay = isOpdDay
-                  )
-                )
-              } else {
-                return null
-              }
-            } else {
-              creditsUsed += 1.0
-              if (is2026) remCl2026 -= 1.0 else remCl2027 -= 1.0
-              if (isOpdDay) {
-                opdConflictCount++
-                opdConflictDays.add(dayShort)
-              }
-              applyDates.add("$iso — Apply 1 CL")
-              dailySteps.add(
-                AiBridgeDayPlan(
-                  dateIso = iso,
-                  dayLabel = dayShort,
-                  creditType = "CL",
-                  description = "APPLY 1 CL (Casual Leave Bridge)",
-                  isProtectedOpdDay = isOpdDay
-                )
-              )
-            }
-          }
-        }
-        cursor = cursor.plusDays(1)
-      }
-
-      if (creditsUsed < 0.5 || creditsUsed > 4.5 || freeDays < 2 || applyDates.isEmpty()) return null
-
-      val mult = ((totalDays.toDouble() / creditsUsed) * 10.0).roundToInt() / 10.0
-      if (mult < 1.8) return null
-
-      val rhUsedCount = dailySteps.count { it.creditType == "RH" && !it.isAlreadyLogged }
-      val colUsedCount = dailySteps.count { it.creditType == "COL" && !it.isAlreadyLogged }
-      val fullClUsedCount = dailySteps.count { it.creditType == "CL" && !it.isAlreadyLogged }
-      val halfClUsedCount = dailySteps.count { it.creditType == "HALF_CL" && !it.isAlreadyLogged }
-      val isHalfBridge = halfClUsedCount > 0
-
-      val mixParts = buildList {
-        if (rhUsedCount > 0) add("$rhUsedCount RH")
-        if (colUsedCount > 0) add("$colUsedCount COL")
-        if (fullClUsedCount > 0) add("$fullClUsedCount CL")
-        if (halfClUsedCount > 0) add("${halfClUsedCount * 0.5} CL (½d)")
-        add("$freeDays Free GH/Weekend")
-      }
-
-      val distinctAnchors = anchorNames.distinct().take(2)
-      val halfTag = if (isHalfBridge) " (½-Day Flex)" else ""
-      val headlineFestival = when {
-        start.monthValue == 12 && start.year == 2026 && end.year == 2027 ->
-          "Christmas → New Year ${totalDays}-Day Grand Finale$halfTag"
-        start.monthValue == 1 && start.dayOfMonth in 12..17 && start.year == 2027 ->
-          "Pongal 2027 ${totalDays}-Day Harvest Megabridge$halfTag"
-        distinctAnchors.isNotEmpty() ->
-          "${distinctAnchors.joinToString(" & ")} ${totalDays}-Day Bridge$halfTag"
-        else ->
-          "${start.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)} ${start.year} ${totalDays}-Day Break$halfTag"
-      }
-
-      val startIso = start.format(isoFmt)
-      val endIso = end.format(isoFmt)
-
-      val actualCl26Left = (remCl2026 + effective.reserveClFloor).coerceAtMost(summary2026.clRemaining)
-      val actualCl27Left = (remCl2027 + effective.reserveClFloor).coerceAtMost(summary2027?.clRemaining ?: 12.0)
-      val actualColLeft = (unusedGhSorted.size - colUsedCount).coerceAtLeast(0)
-      val balanceNote = if (end.year == 2026) {
-        "2026 Left: ${formatHalf(actualCl26Left)} CL • $remRh2026 RH • $actualColLeft Free GH"
-      } else {
-        "2027 Left: ${formatHalf(actualCl27Left)} CL • $remRh2027 RH • $actualColLeft Free GH"
-      }
-
-      val urgencyTag = when {
-        colUsedCount > 0 && minColDaysToExpiry != null && minColDaysToExpiry <= 45L ->
-          "URGENT COL (${minColDaysToExpiry}d left)"
-        colUsedCount > 0 && minColDaysToExpiry != null ->
-          "FIFO COL (${minColDaysToExpiry}d validity)"
-        start.year == 2026 && (fullClUsedCount + rhUsedCount > 0) ->
-          "SAVES DEC 31 LAPSE"
-        else -> ""
-      }
-
-      val opdNote = when {
-        effective.protectedDaysOfWeek.isEmpty() && effective.protectedDatesIso.isEmpty() -> ""
-        opdConflictCount == 0 -> "Duty/OPD-Safe: Zero protected clinical shifts touched"
-        else -> "Duty/OPD Notice: Touches ${opdConflictDays.joinToString(", ")} — arrange cover"
-      }
-
-      val rationale = buildString {
-        append("Unlocks $totalDays consecutive days off (${startIso} → ${endIso}) for ${formatHalf(creditsUsed)} credit(s) [${mult}x ROI]. ")
-        if (colUsedCount > 0) {
-          append("Consumes expiring GH-Worked credit FIFO before 180-day expiry. ")
-        }
-        if (effective.reserveClFloor > 0.0 && fullClUsedCount + halfClUsedCount > 0) {
-          append("Protects your ≥${formatHalf(effective.reserveClFloor)} CL emergency reserve. ")
-        } else if (rhUsedCount > 0 && fullClUsedCount == 0 && halfClUsedCount == 0) {
-          append("Zero CL debit by leveraging notified TN Restricted Holiday.")
-        } else if (start.year == 2026) {
-          append("Prevents 2026 credits from lapsing on Dec 31.")
-        }
-      }.trim()
-
-      return AiLeaveRecommendation(
-        id = "db_opt_${startIso}_${endIso}${if (isHalfBridge) "_half" else ""}",
-        title = headlineFestival,
-        startDateIso = startIso,
-        endDateIso = endIso,
-        totalDaysOff = totalDays,
-        leaveCreditsUsed = creditsUsed,
-        freeDaysUnlocked = freeDays,
-        efficiencyMultiplier = mult,
-        exactDatesToApply = applyDates,
-        creditMixSummary = mixParts.joinToString(" + "),
-        projectedBalanceAfter = balanceNote,
-        whyOptimalForHod = rationale,
-        tnRuleComplianceCheck = "Verified ≤10d Continuous Stretch ($trueCombinedStretch d incl. ledger adjacency) • 0 debit for $freeDays Weekend/GH days.",
-        dailyPlan = dailySteps,
-        expiryUrgencyTag = urgencyTag,
-        opdImpactNote = opdNote,
-        hasOpdConflict = opdConflictCount > 0,
-        isHalfDayBridge = isHalfBridge,
-        verificationStatus = "VERIFIED_RULES"
-      )
-    }
-
-    fun buildOptimalElBridge(monStart: LocalDate, weeks: Int = 1): AiLeaveRecommendation? {
-      if (!effective.allowElBridges) return null
-      val friEnd = monStart.plusDays((weeks * 7L) - 3L) // Mon..Fri = 5d for 1 wk
-      // Snap prefix & suffix free days OUTSIDE the EL spell (Rule 8!)
-      var visualStart = monStart
-      while (visualStart.isAfter(horizonStart) && isFreeCalendarDay(visualStart.minusDays(1))) {
-        visualStart = visualStart.minusDays(1)
-      }
-      var visualEnd = friEnd
-      while (visualEnd.isBefore(horizonEnd) && isFreeCalendarDay(visualEnd.plusDays(1))) {
-        visualEnd = visualEnd.plusDays(1)
-      }
-      if (visualStart.isBefore(horizonStart) || visualEnd.isAfter(horizonEnd)) return null
-
-      val (safeAdj, _) = checkAdjacencyAndCollision(visualStart, visualEnd, isElSpell = true)
-      if (!safeAdj) return null
-
-      val totalDays = ChronoUnit.DAYS.between(visualStart, visualEnd).toInt() + 1
-      val dailySteps = mutableListOf<AiBridgeDayPlan>()
-      val applyDates = mutableListOf<String>()
-      var elDebited = 0
-      var freeDays = 0
-      var opdConflictCount = 0
-      val opdConflictDays = mutableListOf<String>()
-
-      var d = visualStart
-      while (!d.isAfter(visualEnd)) {
-        val iso = d.format(isoFmt)
-        val dayShort = "${d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)}, ${
-          d.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
-        } ${d.dayOfMonth}"
-        val ghItem = ghMap[iso]
-        val isPrefOrSuf = d.isBefore(monStart) || d.isAfter(friEnd)
-        val isOpdDay = d.dayOfWeek in effective.protectedDaysOfWeek ||
-          iso in effective.protectedDatesIso
-        when {
-          isPrefOrSuf && ghItem != null -> {
-            freeDays++
-            dailySteps.add(AiBridgeDayPlan(iso, dayShort, "GH", "FREE Prefix/Suffix GH: ${ghItem.nameEnglish}"))
-          }
-          isPrefOrSuf -> {
-            freeDays++
-            dailySteps.add(AiBridgeDayPlan(iso, dayShort, "WEEKEND", "FREE Prefix/Suffix Weekend (0 EL Debit)"))
-          }
-          else -> {
-            // Inside [monStart..friEnd] — Rule 8 debits every day inside EL bounds
-            elDebited++
-            if (isOpdDay) {
-              opdConflictCount++
-              opdConflictDays.add(dayShort)
-            }
-            val note = if (ghItem != null) "APPLY 1 EL (Intervening GH inside spell)" else "APPLY 1 EL (Rule 8)"
-            applyDates.add("$iso — Apply 1 EL")
-            dailySteps.add(
-              AiBridgeDayPlan(
-                dateIso = iso,
-                dayLabel = dayShort,
-                creditType = "EL",
-                description = note,
-                isProtectedOpdDay = isOpdDay
-              )
-            )
-          }
-        }
-        d = d.plusDays(1)
-      }
-
-      if (elDebited <= 0 || freeDays < 4) return null
-      val mult = ((totalDays.toDouble() / elDebited) * 10.0).roundToInt() / 10.0
-      val startIso = visualStart.format(isoFmt)
-      val endIso = visualEnd.format(isoFmt)
-      val opdNote = when {
-        effective.protectedDaysOfWeek.isEmpty() && effective.protectedDatesIso.isEmpty() -> ""
-        opdConflictCount == 0 -> "Duty/OPD-Safe: Zero protected clinical shifts touched"
-        else -> "Duty/OPD Notice: Touches ${opdConflictDays.joinToString(", ")} — arrange cover"
-      }
-
-      return AiLeaveRecommendation(
-        id = "db_el_${startIso}_$endIso",
-        title = "Rule-8 Optimal EL ${totalDays}-Day Break (${monStart.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)})",
-        startDateIso = startIso,
-        endDateIso = endIso,
-        totalDaysOff = totalDays,
-        leaveCreditsUsed = elDebited.toDouble(),
-        freeDaysUnlocked = freeDays,
-        efficiencyMultiplier = mult,
-        exactDatesToApply = applyDates,
-        creditMixSummary = "$elDebited EL + $freeDays Free Prefixed/Suffixed Days",
-        projectedBalanceAfter = "0 CL/RH used — preserves full CL emergency reserve",
-        whyOptimalForHod = "Starts Monday & ends Friday so $freeDays weekend/GH days are prefixed & suffixed FREE under TN Leave Rule 8 (zero trapped weekend debits).",
-        tnRuleComplianceCheck = "TN Leave Rules 1933 Rule 8 Compliant: Zero weekends trapped inside EL boundaries; not combined with CL.",
-        dailyPlan = dailySteps,
-        expiryUrgencyTag = "0 CL USED • EL BOUNDARY OPTIMAL",
-        opdImpactNote = opdNote,
-        hasOpdConflict = opdConflictCount > 0,
-        ltcOdSynergyNote = "Eligible to pair with 2024–2027 LTC Block & up to 10d EL Encashment.",
-        isElBridge = true,
-        verificationStatus = "VERIFIED_RULES"
-      )
-    }
-
-    // Collect upcoming GH/RH festival anchors
-    val upcomingAnchors = (allGh + allRh)
-      .mapNotNull { runCatching { LocalDate.parse(it.dateIso, isoFmt) }.getOrNull() }
-      .filter { !it.isBefore(horizonStart) && !it.isAfter(horizonEnd) }
-      .distinct()
-      .sorted()
-
-    val candidateWindows = linkedSetOf<Pair<LocalDate, LocalDate>>()
-    for (anchor in upcomingAnchors) {
-      for (back in 0..4) {
-        for (fwd in 0..5) {
-          var s = anchor.minusDays(back.toLong())
-          var e = anchor.plusDays(fwd.toLong())
-          while (s.isAfter(horizonStart) && isFreeCalendarDay(s.minusDays(1))) {
-            s = s.minusDays(1)
-          }
-          while (e.isBefore(horizonEnd) && isFreeCalendarDay(e.plusDays(1))) {
-            e = e.plusDays(1)
-          }
-          val len = ChronoUnit.DAYS.between(s, e).toInt() + 1
-          if (len in 3..10 && !s.isBefore(horizonStart) && !e.isAfter(horizonEnd) &&
-            (isFestivalDay(s) || isFreeCalendarDay(s) || isFestivalDay(e) || isFreeCalendarDay(e))
-          ) {
-            candidateWindows.add(s to e)
-          }
-        }
-      }
-    }
-
-    // Also evaluate pure Fri+Mon / Thu+Fri weekend-adjacent slots when FIFO COL or Dec 31 burn-down needs options
-    var weekCursor = horizonStart
-    while (!weekCursor.isAfter(horizonEnd.minusDays(3))) {
-      if (weekCursor.dayOfWeek == DayOfWeek.FRIDAY) {
-        var s = weekCursor
-        while (s.isAfter(horizonStart) && isFreeCalendarDay(s.minusDays(1))) s = s.minusDays(1)
-        var e = weekCursor.plusDays(2) // Sun
-        while (e.isBefore(horizonEnd) && isFreeCalendarDay(e.plusDays(1))) e = e.plusDays(1)
-        if (!s.isBefore(horizonStart) && !e.isAfter(horizonEnd)) {
-          candidateWindows.add(s to e)
-        }
-      }
-      weekCursor = weekCursor.plusDays(1)
-    }
-
-    val builtCandidates = mutableListOf<AiLeaveRecommendation>()
-    candidateWindows.forEach { (s, e) ->
-      buildDynamicWindow(s, e, halfDayTargetIso = null)?.let { builtCandidates.add(it) }
-      if (effective.allowHalfDayCl && !preferZeroCl) {
-        if (!isFreeCalendarDay(s)) {
-          buildDynamicWindow(s, e, halfDayTargetIso = s.format(isoFmt))?.let { builtCandidates.add(it) }
-        }
-        if (!isFreeCalendarDay(e) && e != s) {
-          buildDynamicWindow(s, e, halfDayTargetIso = e.format(isoFmt))?.let { builtCandidates.add(it) }
-        }
-      }
-    }
-
-    // Add EL Rule-8 Mon..Fri candidates when enabled
-    if (effective.allowElBridges) {
-      var monCursor = horizonStart
-      while (monCursor.dayOfWeek != DayOfWeek.MONDAY && !monCursor.isAfter(horizonEnd)) {
-        monCursor = monCursor.plusDays(1)
-      }
-      var elAdded = 0
-      while (!monCursor.isAfter(horizonEnd.minusDays(6)) && elAdded < 10) {
-        val nextWeekMon = monCursor
-        val adjacentHolidayBoost = isFreeCalendarDay(nextWeekMon.minusDays(3)) ||
-          isFreeCalendarDay(nextWeekMon.plusDays(5)) ||
-          ghMap.containsKey(nextWeekMon.format(isoFmt)) ||
-          elAdded < 3
-        if (adjacentHolidayBoost) {
-          buildOptimalElBridge(nextWeekMon, weeks = 1)?.let {
-            builtCandidates.add(it)
-            elAdded++
-          }
-        }
-        monCursor = monCursor.plusWeeks(2)
-      }
-    }
-
-    fun scoreRec(rec: AiLeaveRecommendation): Double {
-      val colCount = rec.dailyPlan.count { it.creditType == "COL" && !it.isAlreadyLogged }
-      val clCount = rec.dailyPlan.count { (it.creditType == "CL" || it.creditType == "HALF_CL") && !it.isAlreadyLogged }
-      val rhCount = rec.dailyPlan.count { it.creditType == "RH" && !it.isAlreadyLogged }
-      val recStart = runCatching { LocalDate.parse(rec.startDateIso, isoFmt) }.getOrDefault(today)
-      val daysAway = ChronoUnit.DAYS.between(today, recStart).coerceAtLeast(0L)
-      val recencyBoost = when {
-        daysAway <= 30 -> 1.8
-        daysAway <= 60 -> 1.3
-        daysAway <= 120 -> 0.75
-        else -> 0.15
-      }
-      val year2026LapseBoost = if (recStart.year == 2026 && (clCount > 0 || rhCount > 0)) 2.1 else 0.0
-      val opdPenalty = if (rec.hasOpdConflict) -2.4 else 0.75
-      val elBonus = if (rec.isElBridge && effective.allowElBridges) 2.5 else 0.0
-      val colUrgencyBonus = if (rec.expiryUrgencyTag.contains("URGENT COL")) 3.5 else 0.0
-
-      return when {
-        preferFifoCol ->
-          (colCount * 4.8) + colUrgencyBonus + (rec.efficiencyMultiplier * 1.4) + recencyBoost + opdPenalty + elBonus
-        preferZeroCl ->
-          (if (clCount == 0) 6.0 else -6.0) + (rhCount * 1.4) + (colCount * 1.4) + (rec.efficiencyMultiplier * 1.5) + recencyBoost + opdPenalty
-        preferMegabridges ->
-          (rec.totalDaysOff * 1.65) + rec.efficiencyMultiplier + (if (rec.totalDaysOff >= 5) 3.2 else 0.0) + recencyBoost + year2026LapseBoost + opdPenalty + elBonus
-        else ->
-          (rec.efficiencyMultiplier * 1.9) + (rec.totalDaysOff * 0.45) + recencyBoost + year2026LapseBoost + colUrgencyBonus + opdPenalty + elBonus - (clCount * 0.15)
-      }
-    }
-
-    val ranked = builtCandidates.sortedWith(
-      compareByDescending<AiLeaveRecommendation> { scoreRec(it) }
-        .thenByDescending { it.efficiencyMultiplier }
-        .thenByDescending { it.totalDaysOff }
-        .thenBy { it.startDateIso }
-    )
-
-    // Pick up to 5 diverse recommendations and run sequential portfolio credit allocation
-    val selected = mutableListOf<AiLeaveRecommendation>()
-    for (cand in ranked) {
-      if (selected.size >= 5) break
-      val candStart = LocalDate.parse(cand.startDateIso, isoFmt)
-      val candEnd = LocalDate.parse(cand.endDateIso, isoFmt)
-      val overlapsHeavily = selected.any { existing ->
-        val exStart = LocalDate.parse(existing.startDateIso, isoFmt)
-        val exEnd = LocalDate.parse(existing.endDateIso, isoFmt)
-        val overlapDays = maxOf(
-          0L,
-          minOf(candEnd.toEpochDay(), exEnd.toEpochDay()) - maxOf(candStart.toEpochDay(), exStart.toEpochDay()) + 1L
-        )
-        overlapDays >= 2L
-      }
-      val sameMonthCount = selected.count { it.startDateIso.take(7) == cand.startDateIso.take(7) }
-      if (!overlapsHeavily && sameMonthCount < 2) {
-        selected.add(cand)
-      }
-    }
-
-    return annotatePortfolioBalances(
-      plans = selected.ifEmpty { ranked.take(5) },
-      summary2026 = summary2026,
-      summary2027 = summary2027,
-      colGhAuditAllYears = colGhAuditAllYears,
-      constraints = effective
-    )
-  }
-
-  private fun annotatePortfolioBalances(
+  internal fun annotatePortfolioBalances(
     plans: List<AiLeaveRecommendation>,
     summary2026: YearCreditSummary,
     summary2027: YearCreditSummary?,
@@ -1096,12 +423,20 @@ object AiLeaveRecommendationEngine {
         colGhAuditAllYears = colGhAuditAllYears,
         constraints = constraints
       )
+      val singleBalNote = if (plan.startDateIso.startsWith("2026")) {
+        "2026 Left: ${formatHalf(impact.remainingCl2026)} CL • ${impact.remainingRh2026} RH • ${impact.remainingColPool} COL Pool"
+      } else {
+        "2027 Left: ${formatHalf(impact.remainingCl2027)} CL • ${impact.remainingRh2027} RH • ${impact.remainingColPool} COL Pool"
+      }
       val cumulativeNote = if (running.size == 1) {
         "If #1 booked → '26 Left: ${formatHalf(impact.remainingCl2026)} CL • ${impact.remainingRh2026} RH • ${impact.remainingColPool} GH"
       } else {
         "Cumulative #1–#${running.size} (${impact.totalDaysOffUnlocked}d off) → '26 Left: ${formatHalf(impact.remainingCl2026)} CL • ${impact.remainingRh2026} RH • '27 Left: ${formatHalf(impact.remainingCl2027)} CL • ${impact.remainingColPool} GH"
       }
-      plan.copy(portfolioBalanceAfter = cumulativeNote)
+      plan.copy(
+        projectedBalanceAfter = plan.projectedBalanceAfter.ifBlank { singleBalNote },
+        portfolioBalanceAfter = cumulativeNote
+      )
     }
   }
 
@@ -1173,19 +508,28 @@ object AiLeaveRecommendationEngine {
         }
       }
 
+      val pinnedStr = if (effective.pinnedDates.isEmpty()) "None" else effective.pinnedDates.entries.joinToString(", ") { "${it.key}:${it.value}" }
+      val blockedStr = if (effective.blockedDatesIso.isEmpty()) "None" else effective.blockedDatesIso.sorted().joinToString(", ")
+      val virtualDutyStr = if (effective.plannedToWorkHolidays.isEmpty()) "None" else effective.plannedToWorkHolidays.sorted().joinToString(", ")
+
       val prompt = """
         Today's date is $todayIso.
         Officer Profile: $officerContextNote.
-        Analyze the synced TN Government Holiday DB ($todayIso through 2027-12-31) alongside the deterministic pre-verified candidates and constraints below to produce 4 to 5 optimal, non-conflicting leave plans.
+        Analyze the synced TN Government Holiday DB ($todayIso through 2027-12-31) alongside the pre-solved STRICT NON-OVERLAPPING JOINT PORTFOLIO candidates and constraints below to produce 4 to 6 conflict-free, jointly affordable leave plans.
 
-        SELECTED OPTIMIZATION STRATEGY & CONSTRAINTS:
+        SELECTED OPTIMIZATION STRATEGY & STEERING CONSTRAINTS:
         - Strategy Focus: "$focusGoal"
         - Custom User Ask: "${effective.customNaturalPrompt.ifBlank { "None" }}"
+        - Weekend Off Schedule: ${effective.effectiveWeekendPolicy().label} (CRITICAL: Non-weekend Saturdays are working days unless marked GH!)
+        - Monthly Spread Mode: ${effective.spreadMode.label} | Proximity Mode: ${effective.proximityMode.label}
         - Emergency CL Safety Reserve Floor: Keep ≥ ${formatHalf(effective.reserveClFloor)} CL untouched
         - Strict Zero-CL Mode: ${effective.strictZeroCl}
         - Allow Earned Leave (EL Rule 8 Prefix/Suffix): ${effective.allowElBridges}
         - Allow Half-Day 0.5 CL (FN/AN): ${effective.allowHalfDayCl}
         - Protected OPD / Clinical Duty Weekdays (prefer avoiding): $opdDaysStr
+        - Pinned Dates (MUST be included): $pinnedStr
+        - Blocked Dates (MUST NEVER schedule leave): $blockedStr
+        - Planned Holiday Work Duties (+1 Virtual COL each, 180d expiry): $virtualDutyStr
         - Horizon Window: ${effective.horizonMode.label}
 
         LIVE REMAINING LEAVE CREDITS:
@@ -1197,7 +541,7 @@ object AiLeaveRecommendationEngine {
         UPCOMING LEAVES ALREADY LOGGED BY OFFICER:
         $upcomingLoggedLeaves
 
-        VERIFIED ALGORITHMIC CANDIDATES FROM SOLVER:
+        JOINT NON-OVERLAPPING SOLVER PORTFOLIO CANDIDATES:
         $preScannedText
 
         UPCOMING SYNCED TN GOVERNMENT PUBLIC HOLIDAYS (GH):
@@ -1207,11 +551,12 @@ object AiLeaveRecommendationEngine {
         $upcomingRhText
 
         INSTRUCTIONS:
-        1. Prefer the verified algorithmic candidates when valid, or refine credit pairings strictly obeying TN Leave Rules 1933 & FR Annexure VII.
-        2. Every recommended date must be >= $todayIso and respect the ${formatHalf(effective.reserveClFloor)} CL reserve floor.
-        3. Use exact creditType values from ["WEEKEND", "GH", "RH", "CL", "HALF_CL", "COL", "EL"].
-        4. Format `exactDatesToApply` items as `YYYY-MM-DD — Apply 1 <RH|COL|CL|EL> (<Reason>)` or `YYYY-MM-DD — Apply 0.5 CL (<Session>)`.
-        5. Explain clearly in `executiveSummary` and `whyOptimalForHod` how the sequence preserves CL reserves, respects OPD days, and avoids Dec 31 / 180-day COL expiry.
+        1. Treat the joint solver candidates as a conflict-free portfolio base; refine titles, rationales, and narrative ranking strictly WITHOUT overlapping dates or double-spending CL/RH/COL across cards.
+        2. Every recommended date must be >= $todayIso, NOT in Blocked Dates, honor all Pinned Dates, and follow ${effective.effectiveWeekendPolicy().label} strictly.
+        3. Respect the ${formatHalf(effective.reserveClFloor)} CL reserve floor and Strict Zero-CL=$effective.strictZeroCl.
+        4. Use exact creditType values from ["WEEKEND", "GH", "RH", "CL", "HALF_CL", "COL", "EL"].
+        5. Format `exactDatesToApply` items as `YYYY-MM-DD — Apply 1 <RH|COL|CL|EL> (<Reason>)` or `YYYY-MM-DD — Apply 0.5 CL (<Session>)`.
+        6. Explain clearly in `executiveSummary` and `whyOptimalForHod` how the portfolio conserves quotas jointly, protects OPD shifts, honors pinned/virtual-duty credits, and avoids Dec 31 / 180-day COL expiry.
       """.trimIndent()
 
       val responseText = runGeminiWithResilientTimeout(prompt)
@@ -1247,14 +592,24 @@ object AiLeaveRecommendationEngine {
     }
   }
 
+  private data class VerifierColCredit(
+    val id: String,
+    val earnedDate: LocalDate,
+    val earnedDateIso: String,
+    val expiryDate: LocalDate,
+    val isVirtual: Boolean,
+    var consumed: Boolean = false
+  )
+
   /**
-   * Deterministic post-validation gate over Gemini AI output:
-   * - Filters out hallucinated past dates or invalid RL dates
-   * - Re-verifies 10-day adjacency stretch and EL/CL non-combination against [records]
-   * - Recomputes exact credit debits, free days, efficiency multiplier, OPD conflict flags,
-   *   and sequential portfolio balances; merges verified fallback plans if any Gemini card failed validation.
+   * Zero-Trust Deterministic Portfolio Verifier over Gemini AI output:
+   * - Enforces exact [WeekendPolicy] (e.g., 2nd Saturday & Sundays only), blocked dates, and strictZeroCl
+   * - Re-verifies 10-day continuous ceiling & EL/CL isolation against both [records] and earlier cards
+   * - Tracks cumulative 2026/2027 CL, RH, EL, and FIFO 180-day COL credit pools (real + virtual) across ALL cards
+   *   so zero credits can ever be double-spent or overdrawn
+   * - Guarantees pinned dates remain honored by merging verified solver blocks if Gemini dropped or broke any card.
    */
-  private fun validateAndRepairGeminiRecommendations(
+  internal fun validateAndRepairGeminiRecommendations(
     raw: AiRecommendationUiState.Success,
     deterministicFallback: List<AiLeaveRecommendation>,
     summary2026: YearCreditSummary,
@@ -1267,69 +622,165 @@ object AiLeaveRecommendationEngine {
     val ghMap = TnHolidays2027Catalog.allSyncedPublicHolidays().associateBy { it.dateIso }
     val rhMap = TnHolidays2027Catalog.allSyncedRestrictedHolidays().associateBy { it.dateIso }
     val existingByDate = records.groupBy { it.dateIso }
-    val unusedGhSorted = colGhAuditAllYears.unusedGhRecords.sortedBy { it.dateIso }
+    val weekendPolicy = constraints.effectiveWeekendPolicy()
+    val horizonEnd = when (constraints.horizonMode) {
+      OptimizerHorizon.NEXT_60_DAYS -> today.plusDays(60)
+      OptimizerHorizon.REST_OF_2026 -> LocalDate.of(2026, 12, 31)
+      OptimizerHorizon.Q1_Q2_2027 -> LocalDate.of(2027, 6, 30)
+      OptimizerHorizon.FULL_HORIZON -> LocalDate.of(2027, 12, 31)
+    }
 
-    val validatedList = raw.recommendations.mapNotNull { rec ->
-      val start = runCatching { LocalDate.parse(rec.startDateIso, isoFmt) }.getOrNull() ?: return@mapNotNull null
-      val end = runCatching { LocalDate.parse(rec.endDateIso, isoFmt) }.getOrNull() ?: return@mapNotNull null
-      if (start.isBefore(today) || end.isBefore(start)) return@mapNotNull null
+    // Cumulative portfolio state across all emitted cards
+    var remCl2026 = if (constraints.strictZeroCl) 0.0 else (summary2026.clRemaining - constraints.reserveClFloor).coerceAtLeast(0.0)
+    var remCl2027 = if (constraints.strictZeroCl) 0.0 else ((summary2027?.clRemaining ?: 12.0) - constraints.reserveClFloor).coerceAtLeast(0.0)
+    var remRh2026 = summary2026.rhRemaining.coerceAtLeast(0)
+    var remRh2027 = (summary2027?.rhRemaining ?: 3).coerceAtLeast(0)
+    val colPool = mutableListOf<VerifierColCredit>().apply {
+      colGhAuditAllYears.unusedGhRecords.forEach { gh ->
+        val gd = runCatching { LocalDate.parse(gh.dateIso, isoFmt) }.getOrNull() ?: return@forEach
+        val exp = gd.plusDays(TamilNaduLeaveRulesService.COL_EXPIRY_WINDOW_DAYS.toLong())
+        if (!exp.isBefore(today)) {
+          add(VerifierColCredit(gh.id.ifBlank { "gh-${gh.dateIso}" }, gd, gh.dateIso, exp, isVirtual = false))
+        }
+      }
+      constraints.plannedToWorkHolidays.forEach { workIso ->
+        val gd = runCatching { LocalDate.parse(workIso, isoFmt) }.getOrNull() ?: return@forEach
+        val exp = gd.plusDays(TamilNaduLeaveRulesService.COL_EXPIRY_WINDOW_DAYS.toLong())
+        if (!exp.isBefore(today)) {
+          add(VerifierColCredit("virtual-credit-$workIso", gd, workIso, exp, isVirtual = true))
+        }
+      }
+      sortWith(compareBy<VerifierColCredit> { it.expiryDate }.thenBy { it.earnedDate })
+    }
+    val usedActionDates = mutableSetOf<String>()
 
-      val isElPlan = rec.dailyPlan.any { it.creditType.equals("EL", ignoreCase = true) }
+    fun tryVerifyCard(rec: AiLeaveRecommendation): AiLeaveRecommendation? {
+      val start = runCatching { LocalDate.parse(rec.startDateIso, isoFmt) }.getOrNull() ?: return null
+      val end = runCatching { LocalDate.parse(rec.endDateIso, isoFmt) }.getOrNull() ?: return null
+      if (start.isBefore(today) || end.isAfter(horizonEnd) || end.isBefore(start)) return null
+
+      // Snapshot budgets so rejected cards roll back cleanly without corrupting shared pools
+      var snapCl26 = remCl2026
+      var snapCl27 = remCl2027
+      var snapRh26 = remRh2026
+      var snapRh27 = remRh2027
+      val reservedCredits = mutableListOf<VerifierColCredit>()
+      val cardActionDates = mutableSetOf<String>()
+
       val totalDays = ChronoUnit.DAYS.between(start, end).toInt() + 1
-      if (!isElPlan && constraints.enforce10DayCap && totalDays > 10) return@mapNotNull null
+      val containsEl = rec.dailyPlan.any { it.creditType.equals("EL", ignoreCase = true) }
+      if (!containsEl && constraints.enforce10DayCap && totalDays > 10) return null
 
-      // Validate day steps deterministically
       var freeDays = 0
       var creditsDebited = 0.0
       var opdConflicts = 0
       val opdConflictLabels = mutableListOf<String>()
       val verifiedSteps = mutableListOf<AiBridgeDayPlan>()
       val repairedApplyLines = mutableListOf<String>()
+      var usesVirtualCol = false
+      val pinnedInCard = mutableListOf<String>()
 
-      rec.dailyPlan.forEach { step ->
-        val d = runCatching { LocalDate.parse(step.dateIso, isoFmt) }.getOrNull() ?: return@forEach
+      for (step in rec.dailyPlan) {
+        val d = runCatching { LocalDate.parse(step.dateIso, isoFmt) }.getOrNull() ?: continue
         val iso = d.format(isoFmt)
+        if (d.isBefore(today) || d.isAfter(horizonEnd)) return null
+
         val gh = ghMap[iso]
         val rh = rhMap[iso]
-        val isWknd = d.dayOfWeek == DayOfWeek.SUNDAY ||
-          (constraints.includeSaturdays && d.dayOfWeek == DayOfWeek.SATURDAY)
-        val isOpd = d.dayOfWeek in constraints.protectedDaysOfWeek ||
-          iso in constraints.protectedDatesIso
+        val isWorkedHol = iso in constraints.plannedToWorkHolidays
+        val isWknd = weekendPolicy.isWeekend(d)
+        val isOpd = d.dayOfWeek in constraints.protectedDaysOfWeek || iso in constraints.protectedDatesIso
         val loggedRecs = existingByDate[iso].orEmpty()
         val alreadyLogged = loggedRecs.any {
           it.category in setOf(LeaveCategory.CL, LeaveCategory.RH, LeaveCategory.COL, LeaveCategory.PL, LeaveCategory.EL)
         }
 
-        val requestedType = step.creditType.uppercase(Locale.US)
+        val rawType = step.creditType.uppercase(Locale.US)
+        val isPinnedDay = iso in constraints.pinnedDates
+
         val resolvedType = when {
-          gh != null && requestedType != "EL" -> "GH"
-          isWknd && requestedType != "EL" -> "WEEKEND"
-          requestedType == "RH" && rh == null -> {
-            // Gemini put RH on a non-RL date — safely repair to COL if available, else CL
-            val validCol = unusedGhSorted.any { g ->
-              val gd = runCatching { LocalDate.parse(g.dateIso, isoFmt) }.getOrNull()
-              gd != null && ChronoUnit.DAYS.between(gd, d) in 0..180
+          gh != null && !isWorkedHol && rawType != "EL" -> "GH"
+          isWknd && !isWorkedHol && rawType != "EL" -> "WEEKEND"
+          else -> {
+            // Leave slot checks
+            if (!alreadyLogged && (iso in constraints.blockedDatesIso || isWorkedHol)) {
+              return null
             }
-            if (validCol) "COL" else "CL"
+            when (rawType) {
+              "RH" -> if (rh != null && !isWorkedHol) "RH" else {
+                val eligibleCol = colPool.firstOrNull { !it.consumed && it !in reservedCredits && !d.isBefore(it.earnedDate) && !d.isAfter(it.expiryDate) }
+                when {
+                  eligibleCol != null -> "COL"
+                  !constraints.strictZeroCl -> "CL"
+                  else -> return null
+                }
+              }
+              "HALF_CL" -> if (constraints.strictZeroCl || !constraints.allowHalfDayCl) return null else "HALF_CL"
+              "CL" -> if (constraints.strictZeroCl) return null else "CL"
+              "EL" -> if (!constraints.allowElBridges && !isPinnedDay) return null else "EL"
+              else -> rawType
+            }
           }
-          else -> requestedType
         }
 
         val isHalf = resolvedType == "HALF_CL" || step.isHalfDay || step.description.contains("0.5", ignoreCase = true)
+        var stepLinkedCreditId: String? = null
+        var stepIsVirtual = false
+
         when (resolvedType) {
           "GH", "WEEKEND" -> freeDays++
-          "HALF_CL" -> if (!alreadyLogged) creditsDebited += 0.5
-          "CL", "RH", "COL", "EL" -> if (!alreadyLogged) creditsDebited += if (isHalf) 0.5 else 1.0
-        }
+          else -> {
+            if (!alreadyLogged) {
+              if (iso in usedActionDates || !cardActionDates.add(iso)) return null
+              val cost = if (isHalf) 0.5 else 1.0
+              val is2026 = d.year == 2026
+              when (resolvedType) {
+                "RH" -> {
+                  if (is2026) {
+                    if (snapRh26 <= 0) return null
+                    snapRh26--
+                  } else {
+                    if (snapRh27 <= 0) return null
+                    snapRh27--
+                  }
+                }
+                "COL" -> {
+                  val preferredId = step.linkedCreditId
+                  val match = colPool.firstOrNull { c ->
+                    !c.consumed && c !in reservedCredits &&
+                      !d.isBefore(c.earnedDate) && !d.isAfter(c.expiryDate) &&
+                      (preferredId == null || c.id == preferredId)
+                  } ?: colPool.firstOrNull { c ->
+                    !c.consumed && c !in reservedCredits &&
+                      !d.isBefore(c.earnedDate) && !d.isAfter(c.expiryDate)
+                  } ?: return null
+                  reservedCredits.add(match)
+                  stepLinkedCreditId = match.id
+                  stepIsVirtual = match.isVirtual
+                  if (stepIsVirtual) usesVirtualCol = true
+                }
+                "HALF_CL", "CL" -> {
+                  if (is2026) {
+                    if (snapCl26 < cost && !isPinnedDay) return null
+                    snapCl26 = (snapCl26 - cost).coerceAtLeast(0.0)
+                  } else {
+                    if (snapCl27 < cost && !isPinnedDay) return null
+                    snapCl27 = (snapCl27 - cost).coerceAtLeast(0.0)
+                  }
+                }
+              }
 
-        if (resolvedType !in setOf("GH", "WEEKEND") && !alreadyLogged) {
-          if (isOpd) {
-            opdConflicts++
-            opdConflictLabels.add(step.dayLabel)
+              creditsDebited += cost
+              if (isPinnedDay) pinnedInCard.add(iso)
+              if (isOpd) {
+                opdConflicts++
+                opdConflictLabels.add(step.dayLabel)
+              }
+              val unitStr = if (isHalf) "0.5 CL" else "1 $resolvedType"
+              val descHint = rh?.nameEnglish?.substringBefore(" (") ?: step.description.take(28)
+              repairedApplyLines.add("$iso — Apply $unitStr ($descHint)")
+            }
           }
-          val unitStr = if (isHalf) "0.5 CL" else "1 $resolvedType"
-          val descHint = rh?.nameEnglish?.substringBefore(" (") ?: step.description.take(28)
-          repairedApplyLines.add("$iso — Apply $unitStr ($descHint)")
         }
 
         verifiedSteps.add(
@@ -1337,31 +788,46 @@ object AiLeaveRecommendationEngine {
             creditType = resolvedType,
             isHalfDay = isHalf,
             isAlreadyLogged = alreadyLogged,
-            isProtectedOpdDay = isOpd && resolvedType !in setOf("GH", "WEEKEND")
+            isProtectedOpdDay = isOpd && resolvedType !in setOf("GH", "WEEKEND"),
+            linkedCreditId = stepLinkedCreditId ?: step.linkedCreditId,
+            isVirtualCredit = stepIsVirtual || step.isVirtualCredit,
+            isPinned = isPinnedDay || step.isPinned
           )
         )
       }
 
-      if (verifiedSteps.isEmpty() || creditsDebited <= 0.0) return@mapNotNull null
+      if (verifiedSteps.isEmpty() || creditsDebited <= 0.0 || cardActionDates.isEmpty()) return null
 
-      // Check TN Rule 10-day adjacency against existing ledger
+      // Enforce TN non-combination (no EL adjacent to CL/RH/COL) and 10-day ceiling
+      val isElPlan = verifiedSteps.any { it.creditType == "EL" && !it.isAlreadyLogged }
+      if (!isElPlan && verifiedSteps.any { it.creditType == "EL" }) return null
       if (!isElPlan && constraints.enforce10DayCap) {
         val adjBefore = (1..6).takeWhile { off ->
           val p = start.minusDays(off.toLong())
           val pIso = p.format(isoFmt)
-          ghMap.containsKey(pIso) || p.dayOfWeek == DayOfWeek.SUNDAY ||
-            (constraints.includeSaturdays && p.dayOfWeek == DayOfWeek.SATURDAY) ||
+          val pWorked = pIso in constraints.plannedToWorkHolidays
+          (!pWorked && (ghMap.containsKey(pIso) || weekendPolicy.isWeekend(p))) ||
+            pIso in usedActionDates ||
             existingByDate[pIso]?.any { it.category in setOf(LeaveCategory.CL, LeaveCategory.RH, LeaveCategory.COL) } == true
         }.size
         val adjAfter = (1..6).takeWhile { off ->
           val n = end.plusDays(off.toLong())
           val nIso = n.format(isoFmt)
-          ghMap.containsKey(nIso) || n.dayOfWeek == DayOfWeek.SUNDAY ||
-            (constraints.includeSaturdays && n.dayOfWeek == DayOfWeek.SATURDAY) ||
+          val nWorked = nIso in constraints.plannedToWorkHolidays
+          (!nWorked && (ghMap.containsKey(nIso) || weekendPolicy.isWeekend(n))) ||
+            nIso in usedActionDates ||
             existingByDate[nIso]?.any { it.category in setOf(LeaveCategory.CL, LeaveCategory.RH, LeaveCategory.COL) } == true
         }.size
-        if (totalDays + adjBefore + adjAfter > 10) return@mapNotNull null
+        if (totalDays + adjBefore + adjAfter > 10) return null
       }
+
+      // Commit budget deductions
+      remCl2026 = snapCl26
+      remCl2027 = snapCl27
+      remRh2026 = snapRh26
+      remRh2027 = snapRh27
+      reservedCredits.forEach { it.consumed = true }
+      usedActionDates.addAll(cardActionDates)
 
       val mult = ((totalDays / creditsDebited) * 10.0).roundToInt() / 10.0
       val opdNote = when {
@@ -1371,12 +837,13 @@ object AiLeaveRecommendationEngine {
       }
       val hasCol = verifiedSteps.any { it.creditType == "COL" && !it.isAlreadyLogged }
       val urgency = when {
+        usesVirtualCol -> "VIRTUAL +1 COL PLAN"
         hasCol -> "FIFO COL TRACKED"
         start.year == 2026 -> "SAVES DEC 31 LAPSE"
         else -> ""
       }
 
-      rec.copy(
+      return rec.copy(
         totalDaysOff = totalDays,
         leaveCreditsUsed = creditsDebited,
         freeDaysUnlocked = freeDays,
@@ -1389,19 +856,38 @@ object AiLeaveRecommendationEngine {
         isHalfDayBridge = verifiedSteps.any { it.isHalfDay },
         isElBridge = isElPlan,
         ltcOdSynergyNote = if (isElPlan) "Eligible for 2024–27 LTC & 10d EL Encashment" else "",
-        verificationStatus = "GEMINI + TN RULES VERIFIED"
+        verificationStatus = "GEMINI + TN RULES VERIFIED",
+        usesVirtualCol = usesVirtualCol,
+        pinnedDatesUsed = pinnedInCard
       )
-    }.toMutableList()
-
-    // Backfill with deterministic solver picks if any Gemini pick failed statutory verification
-    for (fb in deterministicFallback) {
-      if (validatedList.size >= 4) break
-      val overlaps = validatedList.any { it.startDateIso == fb.startDateIso && it.endDateIso == fb.endDateIso }
-      if (!overlaps) validatedList.add(fb)
     }
 
+    val validatedList = raw.recommendations.mapNotNull { tryVerifyCard(it) }.toMutableList()
+
+    // Ensure every pinned date from user steering is honored; if Gemini missed any pin, backfill from solver
+    val coveredPins = validatedList.flatMap { it.pinnedDatesUsed }.toSet()
+    val missingPins = constraints.pinnedDates.keys.filter { it !in coveredPins && it !in constraints.blockedDatesIso }
+    if (missingPins.isNotEmpty()) {
+      deterministicFallback
+        .filter { fb -> fb.dailyPlan.any { it.dateIso in missingPins } }
+        .forEach { fb ->
+          if (validatedList.size < 8) {
+            tryVerifyCard(fb)?.let { validatedList.add(it) }
+          }
+        }
+    }
+
+    // Backfill remaining capacity from deterministic solver without double-spending or overlapping
+    for (fb in deterministicFallback) {
+      if (validatedList.size >= 6) break
+      tryVerifyCard(fb)?.let { validatedList.add(it) }
+    }
+
+    // Fallback safety: if Gemini failed completely or returned zero usable plans, present the conflict-free solver portfolio
+    val finalPlans = if (validatedList.isEmpty()) deterministicFallback else validatedList.sortedBy { it.startDateIso }
+
     val annotated = annotatePortfolioBalances(
-      plans = validatedList.take(5),
+      plans = finalPlans,
       summary2026 = summary2026,
       summary2027 = summary2027,
       colGhAuditAllYears = colGhAuditAllYears,

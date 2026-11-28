@@ -79,6 +79,9 @@ import com.example.domain.HodSanctionLetterGenerator
 import com.example.domain.OptimizerConstraints
 import com.example.domain.OptimizerHorizon
 import com.example.domain.PortfolioImpactSummary
+import com.example.domain.ProximityMode
+import com.example.domain.SpreadMode
+import com.example.domain.WeekendPolicy
 import com.example.ui.theme.BadgeClGreen
 import com.example.ui.theme.BadgeColCyan
 import com.example.ui.theme.BadgeElNeutral
@@ -122,7 +125,11 @@ fun OptimizerConstraintControlPanel(
     if (constraints.allowElBridges) count++
     if (constraints.strictZeroCl) count++
     if (constraints.horizonMode != OptimizerHorizon.FULL_HORIZON) count++
+    if (constraints.effectiveWeekendPolicy() != WeekendPolicy.SECOND_SATURDAY_AND_SUNDAY) count++
+    if (constraints.spreadMode != SpreadMode.BALANCED) count++
+    if (constraints.proximityMode != ProximityMode.BRIDGE) count++
     if (constraints.protectedDaysOfWeek.isNotEmpty()) count++
+    if (constraints.hasSteeringOverrides) count++
     if (constraints.customNaturalPrompt.isNotBlank()) count++
     count
   }
@@ -507,6 +514,198 @@ fun OptimizerConstraintControlPanel(
             }
           }
 
+          // Weekend Policy Selector (Default: 2nd Saturday & Sundays Only)
+          Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+              text = "WEEKEND SCHEDULE (DEPT RULE)",
+              fontSize = 10.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = neu.primaryAccent,
+              letterSpacing = 0.5.sp
+            )
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+              val activeWeekend = constraints.effectiveWeekendPolicy()
+              WeekendPolicy.entries.forEach { policy ->
+                val selected = activeWeekend == policy
+                Box(
+                  modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 42.dp)
+                    .then(
+                      if (selected) {
+                        Modifier.neumorphicExtruded(
+                          shape = IosSharpMicroShape,
+                          elevation = 2.dp,
+                          blurRadius = 4.dp,
+                          surfaceColor = neu.primaryAccent,
+                          neu = neu
+                        )
+                      } else {
+                        Modifier.neumorphicExtruded(
+                          shape = IosSharpMicroShape,
+                          elevation = 1.5.dp,
+                          blurRadius = 3.dp,
+                          borderAlpha = 0.22f,
+                          neu = neu
+                        )
+                      }
+                    )
+                    .clickable {
+                      onUpdateConstraints(
+                        constraints.copy(
+                          weekendPolicy = policy,
+                          includeSaturdays = false
+                        )
+                      )
+                    }
+                    .padding(vertical = 7.dp, horizontal = 4.dp)
+                    .testTag("weekend_policy_${policy.name}"),
+                  contentAlignment = Alignment.Center
+                ) {
+                  Text(
+                    text = policy.shortChip,
+                    fontFamily = JetBrainsMonoFontFamily,
+                    fontSize = 9.5.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (selected) Color.White else neu.textPrimary,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                  )
+                }
+              }
+            }
+          }
+
+          // Monthly Spread & Proximity Mode Toggles
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            Column(
+              modifier = Modifier.weight(1f),
+              verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+              Text(
+                text = "MONTHLY SPREAD",
+                fontSize = 9.5.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = EmeraldOptimal,
+                letterSpacing = 0.4.sp
+              )
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+              ) {
+                SpreadMode.entries.forEach { mode ->
+                  val selected = constraints.spreadMode == mode
+                  Box(
+                    modifier = Modifier
+                      .weight(1f)
+                      .heightIn(min = 40.dp)
+                      .then(
+                        if (selected) {
+                          Modifier.neumorphicExtruded(
+                            shape = IosSharpMicroShape,
+                            elevation = 2.dp,
+                            blurRadius = 4.dp,
+                            surfaceColor = EmeraldOptimal,
+                            neu = neu
+                          )
+                        } else {
+                          Modifier.neumorphicExtruded(
+                            shape = IosSharpMicroShape,
+                            elevation = 1.5.dp,
+                            blurRadius = 3.dp,
+                            borderAlpha = 0.22f,
+                            neu = neu
+                          )
+                        }
+                      )
+                      .clickable { onUpdateConstraints(constraints.copy(spreadMode = mode)) }
+                      .padding(vertical = 7.dp, horizontal = 4.dp)
+                      .testTag("spread_mode_${mode.name}"),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Text(
+                      text = mode.shortChip,
+                      fontFamily = JetBrainsMonoFontFamily,
+                      fontSize = 9.5.sp,
+                      fontWeight = FontWeight.ExtraBold,
+                      color = if (selected) Color.White else neu.textPrimary,
+                      maxLines = 1,
+                      softWrap = false,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                  }
+                }
+              }
+            }
+
+            Column(
+              modifier = Modifier.weight(1f),
+              verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+              Text(
+                text = "PLACEMENT MODE",
+                fontSize = 9.5.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = ElVioletAccent,
+                letterSpacing = 0.4.sp
+              )
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+              ) {
+                ProximityMode.entries.forEach { mode ->
+                  val selected = constraints.proximityMode == mode
+                  Box(
+                    modifier = Modifier
+                      .weight(1f)
+                      .heightIn(min = 40.dp)
+                      .then(
+                        if (selected) {
+                          Modifier.neumorphicExtruded(
+                            shape = IosSharpMicroShape,
+                            elevation = 2.dp,
+                            blurRadius = 4.dp,
+                            surfaceColor = ElVioletAccent,
+                            neu = neu
+                          )
+                        } else {
+                          Modifier.neumorphicExtruded(
+                            shape = IosSharpMicroShape,
+                            elevation = 1.5.dp,
+                            blurRadius = 3.dp,
+                            borderAlpha = 0.22f,
+                            neu = neu
+                          )
+                        }
+                      )
+                      .clickable { onUpdateConstraints(constraints.copy(proximityMode = mode)) }
+                      .padding(vertical = 7.dp, horizontal = 4.dp)
+                      .testTag("proximity_mode_${mode.name}"),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Text(
+                      text = mode.shortChip,
+                      fontFamily = JetBrainsMonoFontFamily,
+                      fontSize = 9.5.sp,
+                      fontWeight = FontWeight.ExtraBold,
+                      color = if (selected) Color.White else neu.textPrimary,
+                      maxLines = 1,
+                      softWrap = false,
+                      overflow = TextOverflow.Ellipsis
+                    )
+                  }
+                }
+              }
+            }
+          }
+
           // Protected Clinical OPD / Duty Weekdays
           Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
@@ -612,7 +811,8 @@ fun OptimizerConstraintControlPanel(
 @Composable
 fun BridgeVisualTimelineStrip(
   dailyPlan: List<AiBridgeDayPlan>,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  onDayClick: ((AiBridgeDayPlan) -> Unit)? = null
 ) {
   val neu = LocalNeumorphicColors.current
   if (dailyPlan.isEmpty()) return
@@ -629,7 +829,7 @@ fun BridgeVisualTimelineStrip(
       val (blockColor, shortCode, isDebit) = when (upperType) {
         "GH" -> Triple(BadgePlGold, "GH", false)
         "WEEKEND" -> Triple(Color(0xFF64748B), "WK", false)
-        "COL" -> Triple(BadgeColCyan, "COL", true)
+        "COL" -> Triple(BadgeColCyan, if (day.isVirtualCredit) "+COL" else "COL", true)
         "RH" -> Triple(Color(0xFF0D9488), "RH", true)
         "HALF_CL" -> Triple(EmeraldOptimal, "½CL", true)
         "EL" -> Triple(ElVioletAccent, "EL", true)
@@ -640,19 +840,21 @@ fun BridgeVisualTimelineStrip(
       val dayShort = day.dayLabel.substringBefore(",").trim().take(3)
       val dayNum = day.dateIso.takeLast(2).trimStart('0').ifEmpty { day.dayLabel.takeLast(2) }
       val textAccent = if (upperType == "GH" && !neu.isDark) Color(0xFFB45309) else blockColor
+      val borderAccent = if (day.isPinned) HoldIndigoAccent else blockColor
 
       Box(
         modifier = Modifier
-          .width(46.dp)
+          .width(48.dp)
+          .heightIn(min = 50.dp)
           .then(
             if (isDebit) {
               Modifier.neumorphicInset(
                 shape = IosSharpMicroShape,
                 depth = 1.8.dp,
                 blurRadius = 3.5.dp,
-                accentTint = blockColor,
-                accentTintAlpha = 0.14f,
-                borderColor = blockColor.copy(alpha = 0.50f),
+                accentTint = borderAccent,
+                accentTintAlpha = if (day.isPinned) 0.18f else 0.14f,
+                borderColor = borderAccent.copy(alpha = if (day.isPinned) 0.72f else 0.50f),
                 neu = neu
               )
             } else {
@@ -667,6 +869,15 @@ fun BridgeVisualTimelineStrip(
               )
             }
           )
+          .then(
+            if (onDayClick != null) {
+              Modifier
+                .clickable { onDayClick(day) }
+                .testTag("timeline_day_pill_${day.dateIso}")
+            } else {
+              Modifier
+            }
+          )
           .padding(horizontal = 3.dp, vertical = 5.dp)
       ) {
         if (day.isProtectedOpdDay) {
@@ -676,6 +887,15 @@ fun BridgeVisualTimelineStrip(
               .size(5.dp)
               .clip(CircleShape)
               .background(StatusPendingOrange)
+          )
+        }
+        if (day.isPinned) {
+          Box(
+            modifier = Modifier
+              .align(Alignment.TopStart)
+              .size(5.dp)
+              .clip(CircleShape)
+              .background(HoldIndigoAccent)
           )
         }
         Column(
@@ -706,12 +926,12 @@ fun BridgeVisualTimelineStrip(
             modifier = Modifier
               .clip(IosSharpMicroShape)
               .background(if (isDebit) blockColor else blockColor.copy(alpha = 0.18f))
-              .padding(horizontal = 4.dp, vertical = 1.dp)
+              .padding(horizontal = 3.5.dp, vertical = 1.dp)
           ) {
             Text(
               text = shortCode,
               fontFamily = JetBrainsMonoFontFamily,
-              fontSize = 8.sp,
+              fontSize = 7.5.sp,
               lineHeight = 9.5.sp,
               fontWeight = FontWeight.ExtraBold,
               color = if (isDebit) Color.White else textAccent,
@@ -834,6 +1054,15 @@ fun PortfolioImpactSummaryDock(
           modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
+        )
+      }
+
+      if (impact.virtualColUsed > 0) {
+        Text(
+          text = "Uses ${impact.virtualColUsed} Virtual +1 COL credit(s) from Planned Work Duty (auto-logs GH Worked + COL + In Lieu on commit).",
+          style = MaterialTheme.typography.labelSmall,
+          fontWeight = FontWeight.SemiBold,
+          color = BadgeColCyan
         )
       }
 

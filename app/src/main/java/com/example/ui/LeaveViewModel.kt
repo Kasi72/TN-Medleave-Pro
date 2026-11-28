@@ -32,6 +32,7 @@ import com.example.domain.HolidaySyncStatus
 import com.example.domain.LapsedColArchiveStore
 import com.example.domain.LeaveOptimizerEngine
 import com.example.domain.OptimizerConstraints
+import com.example.domain.OptimizerSteeringStore
 import com.example.domain.SanctionSlipVault
 import com.example.domain.TentativeHoldRecord
 import com.example.domain.TentativePlanStore
@@ -112,14 +113,22 @@ class LeaveViewModel(
 
   private val _holidayDbVersion = MutableStateFlow(0L)
 
+  private val initialSteering = OptimizerSteeringStore.read(appContext)
   private val _optimizerConstraints = MutableStateFlow(
     OptimizerConstraints(
       reserveClFloor = HodProfileSettingsStore.getSafetyClReserveDefault(appContext),
       allowHalfDayCl = true,
       prioritizeExpiringCol = HodProfileSettingsStore.isEnforceFifoColEnabled(appContext),
-      includeSaturdays = HodProfileSettingsStore.isIncludeSaturdayBridgeEnabled(appContext),
+      includeSaturdays = false,
       enforce10DayCap = HodProfileSettingsStore.isEnforce10DayCapEnabled(appContext),
-      protectedDaysOfWeek = HodProfileSettingsStore.getProtectedOpdDays(appContext)
+      protectedDaysOfWeek = HodProfileSettingsStore.getProtectedOpdDays(appContext),
+      weekendPolicy = initialSteering.weekendPolicy,
+      spreadMode = initialSteering.spreadMode,
+      proximityMode = initialSteering.proximityMode,
+      blockedDatesIso = initialSteering.blockedDatesIso,
+      pinnedDates = initialSteering.pinnedDates,
+      plannedToWorkHolidays = initialSteering.plannedToWorkHolidays,
+      hasPendingRecalc = false
     )
   )
   val optimizerConstraints: StateFlow<OptimizerConstraints> = _optimizerConstraints.asStateFlow()
@@ -474,18 +483,132 @@ class LeaveViewModel(
   }
 
   fun updateOptimizerConstraints(updated: OptimizerConstraints) {
-    _optimizerConstraints.value = updated
+    val normalized = updated.copy(includeSaturdays = false)
+    _optimizerConstraints.value = normalized
+    OptimizerSteeringStore.save(appContext, normalized)
   }
 
   fun syncOptimizerSettingsFromStore() {
     val cur = _optimizerConstraints.value
-    _optimizerConstraints.value = cur.copy(
+    val updated = cur.copy(
       prioritizeExpiringCol = HodProfileSettingsStore.isEnforceFifoColEnabled(appContext),
-      includeSaturdays = HodProfileSettingsStore.isIncludeSaturdayBridgeEnabled(appContext),
+      includeSaturdays = false,
       enforce10DayCap = HodProfileSettingsStore.isEnforce10DayCapEnabled(appContext),
       protectedDaysOfWeek = HodProfileSettingsStore.getProtectedOpdDays(appContext),
       reserveClFloor = if (cur.reserveClFloor == 0.0) HodProfileSettingsStore.getSafetyClReserveDefault(appContext) else cur.reserveClFloor
     )
+    _optimizerConstraints.value = updated
+    OptimizerSteeringStore.save(appContext, updated)
+  }
+
+  fun toggleBlockedDate(dateIso: String) {
+    val cur = _optimizerConstraints.value
+    val nextBlocked = cur.blockedDatesIso.toMutableSet()
+    val nextPinned = cur.pinnedDates.toMutableMap()
+    val nextWorkHolidays = cur.plannedToWorkHolidays.toMutableSet()
+    val wasBlocked = dateIso in nextBlocked
+    if (wasBlocked) {
+      nextBlocked.remove(dateIso)
+    } else {
+      nextBlocked.add(dateIso)
+      nextPinned.remove(dateIso)
+      nextWorkHolidays.remove(dateIso)
+    }
+    val updated = cur.copy(
+      blockedDatesIso = nextBlocked,
+      pinnedDates = nextPinned,
+      plannedToWorkHolidays = nextWorkHolidays,
+      hasPendingRecalc = true
+    )
+    _optimizerConstraints.value = updated
+    OptimizerSteeringStore.save(appContext, updated)
+    _statusBanner.value = if (wasBlocked) {
+      "Unblocked $dateIso for leave planning."
+    } else {
+      "Blocked $dateIso (clinical priority) — tap Recalibrate Strategy if using Gemini view."
+    }
+  }
+
+  fun setPinnedDate(dateIso: String, pinType: String?) {
+    val cur = _optimizerConstraints.value
+    val nextBlocked = cur.blockedDatesIso.toMutableSet()
+    val nextPinned = cur.pinnedDates.toMutableMap()
+    val nextWorkHolidays = cur.plannedToWorkHolidays.toMutableSet()
+    if (pinType.isNullOrBlank()) {
+      nextPinned.remove(dateIso)
+    } else {
+      nextPinned[dateIso] = pinType.uppercase(java.util.Locale.US)
+      nextBlocked.remove(dateIso)
+      nextWorkHolidays.remove(dateIso)
+    }
+    val updated = cur.copy(
+      blockedDatesIso = nextBlocked,
+      pinnedDates = nextPinned,
+      plannedToWorkHolidays = nextWorkHolidays,
+      hasPendingRecalc = true
+    )
+    _optimizerConstraints.value = updated
+    OptimizerSteeringStore.save(appContext, updated)
+    _statusBanner.value = if (pinType.isNullOrBlank()) {
+      "Removed pin on $dateIso."
+    } else {
+      "Pinned $dateIso as ${pinType.uppercase(java.util.Locale.US)} — solver prioritized!"
+    }
+  }
+
+  fun togglePlannedWorkHoliday(dateIso: String) {
+    val cur = _optimizerConstraints.value
+    val nextBlocked = cur.blockedDatesIso.toMutableSet()
+    val nextPinned = cur.pinnedDates.toMutableMap()
+    val nextWorkHolidays = cur.plannedToWorkHolidays.toMutableSet()
+    val wasPlanned = dateIso in nextWorkHolidays
+    if (wasPlanned) {
+      nextWorkHolidays.remove(dateIso)
+    } else {
+      nextWorkHolidays.add(dateIso)
+      nextBlocked.remove(dateIso)
+      nextPinned.remove(dateIso)
+    }
+    val updated = cur.copy(
+      blockedDatesIso = nextBlocked,
+      pinnedDates = nextPinned,
+      plannedToWorkHolidays = nextWorkHolidays,
+      hasPendingRecalc = true
+    )
+    _optimizerConstraints.value = updated
+    OptimizerSteeringStore.save(appContext, updated)
+    _statusBanner.value = if (wasPlanned) {
+      "Removed Holiday Work Duty plan on $dateIso."
+    } else {
+      "Planned Holiday Work Duty on $dateIso (+1 Virtual COL banked for 180-day pairing)!"
+    }
+  }
+
+  fun clearAllSteeringOverrides() {
+    val updated = _optimizerConstraints.value.copy(
+      blockedDatesIso = emptySet(),
+      pinnedDates = emptyMap(),
+      plannedToWorkHolidays = emptySet(),
+      hasPendingRecalc = false
+    )
+    _optimizerConstraints.value = updated
+    OptimizerSteeringStore.save(appContext, updated)
+    _statusBanner.value = "Cleared all pinned, blocked, and planned work-duty date overrides."
+  }
+
+  fun recalibrateOptimizerStrategy(
+    runGemini: Boolean,
+    state: LeaveUiState.Success? = uiState.value as? LeaveUiState.Success,
+    focusGoal: String? = null
+  ) {
+    val updated = _optimizerConstraints.value.copy(includeSaturdays = false, hasPendingRecalc = false)
+    _optimizerConstraints.value = updated
+    OptimizerSteeringStore.save(appContext, updated)
+    if (runGemini && state != null && !focusGoal.isNullOrBlank()) {
+      generateAiLeaveRecommendations(focusGoal = focusGoal, state = state, constraints = updated)
+    } else {
+      _statusBanner.value = "Recalibrated conflict-free leave portfolio with your latest date steering."
+    }
   }
 
   fun toggleTentativeHoldForBridge(rec: AiLeaveRecommendation) {
@@ -800,6 +923,7 @@ class LeaveViewModel(
               colGhAuditAllYears = st.colGhAuditAllYears,
               records = st.allRecords,
               focusGoal = "Consume Expiring GH Worked (FIFO COL)",
+              summary2027 = LeaveOptimizerEngine.computeYearSummary(st.allRecords, 2027L),
               constraints = _optimizerConstraints.value.copy(prioritizeExpiringCol = true)
             ).firstOrNull()
           }
@@ -862,7 +986,9 @@ class LeaveViewModel(
     constraints: OptimizerConstraints = _optimizerConstraints.value
   ) {
     if (_aiRecommendationState.value is AiRecommendationUiState.Loading) return
-    _optimizerConstraints.value = constraints
+    val cleanConstraints = constraints.copy(includeSaturdays = false, hasPendingRecalc = false)
+    _optimizerConstraints.value = cleanConstraints
+    OptimizerSteeringStore.save(appContext, cleanConstraints)
     _aiRecommendationState.value = AiRecommendationUiState.Loading
     viewModelScope.launch {
       val summary2027 = LeaveOptimizerEngine.computeYearSummary(state.allRecords, 2027L)
@@ -873,7 +999,7 @@ class LeaveViewModel(
         colGhAuditAllYears = state.colGhAuditAllYears,
         records = state.allRecords,
         summary2027 = summary2027,
-        constraints = constraints,
+        constraints = cleanConstraints,
         officerContextNote = officerContext
       )
       result.onSuccess { successState ->
@@ -918,6 +1044,12 @@ class LeaveViewModel(
     var skippedDuplicates = 0
     var lastAddedYear: Long? = null
     val appliedDateSet = mutableSetOf<String>()
+    val realizedVirtualWorkDates = mutableSetOf<String>()
+    val existingGhDates = currentSuccess?.allRecords
+      ?.filter { it.category == LeaveCategory.GH_WORKED }
+      ?.map { it.dateIso }
+      ?.toMutableSet()
+      ?: mutableSetOf()
 
     bridge.dayByDayBreakdown.forEach { step ->
       if (!isoRegex.matches(step.dateIso.trim())) return@forEach
@@ -946,49 +1078,104 @@ class LeaveViewModel(
         }
         "COL" -> {
           if (!step.description.contains("Already Logged", ignoreCase = true)) {
-            val colLocal = runCatching { java.time.LocalDate.parse(cleanDate) }.getOrNull()
-            val fifoGhIdx = unusedGhQueue.indexOfFirst { gh ->
-              val gd = runCatching { java.time.LocalDate.parse(gh.dateIso) }.getOrNull()
-              gd == null || colLocal == null || java.time.temporal.ChronoUnit.DAYS.between(gd, colLocal) in 0..180
-            }
-            val fifoGh = if (fifoGhIdx >= 0) unusedGhQueue[fifoGhIdx] else unusedGhQueue.firstOrNull()
-            val res = repository.addLeaveRecord(
-              leaveType = "COL",
-              dateIso = cleanDate,
-              year = year,
-              pairedDateIso = fifoGh?.dateIso.orEmpty(),
-              notes = if (fifoGh != null) {
-                "AI Smart Bridge (${bridge.title}) paired FIFO w/ GH ${fifoGh.dateIso}"
-              } else {
-                "AI Smart Bridge (${bridge.title}): ${step.description}"
-              },
-              highlightStatus = if (fifoGh != null) "VERIFIED_GREEN" else "ALERT_RED"
-            )
-            if (res.isSuccess) {
-              added++
-              lastAddedYear = year
-              appliedDateSet.add(cleanDate)
-              if (fifoGh != null) {
-                unusedGhQueue.remove(fifoGh)
-                // Cross-year integrity: IN_LIEU keeps the GH Worked year so COL/In-Lieu audit balances cleanly across 2026->2027
-                repository.addLeaveRecord(
-                  leaveType = "IN_LIEU",
-                  dateIso = fifoGh.dateIso,
-                  year = fifoGh.year,
-                  pairedDateIso = cleanDate,
-                  notes = "In Lieu of GH Worked (${fifoGh.dateIso}) for AI Bridge COL $cleanDate",
-                  highlightStatus = "VERIFIED_GREEN"
-                )
-                repository.updateLeaveRecord(
-                  fifoGh.copy(
+            val linkedId = step.linkedCreditId
+            val isVirtual = step.isVirtualCredit || (linkedId?.startsWith("virtual-credit-") == true)
+            if (isVirtual && linkedId != null) {
+              val virtualDutyDate = linkedId.removePrefix("virtual-credit-").trim()
+              val dutyYear = virtualDutyDate.take(4).toLongOrNull() ?: year
+              val res = repository.addLeaveRecord(
+                leaveType = "COL",
+                dateIso = cleanDate,
+                year = year,
+                pairedDateIso = virtualDutyDate,
+                notes = "AI Smart Bridge (${bridge.title}) vs Planned Work Duty $virtualDutyDate",
+                highlightStatus = "VERIFIED_GREEN"
+              )
+              if (res.isSuccess) {
+                added++
+                lastAddedYear = year
+                appliedDateSet.add(cleanDate)
+                if (isoRegex.matches(virtualDutyDate) && virtualDutyDate !in existingGhDates) {
+                  repository.addLeaveRecord(
+                    leaveType = "GH_WORKED",
+                    dateIso = virtualDutyDate,
+                    year = dutyYear,
                     pairedDateIso = cleanDate,
-                    notes = "GH Worked availed as AI Bridge COL on $cleanDate",
+                    notes = "Planned Holiday Work Duty (${bridge.title}) paired with COL $cleanDate",
                     highlightStatus = "VERIFIED_GREEN"
                   )
-                )
+                  existingGhDates.add(virtualDutyDate)
+                }
+                if (isoRegex.matches(virtualDutyDate)) {
+                  repository.addLeaveRecord(
+                    leaveType = "IN_LIEU",
+                    dateIso = virtualDutyDate,
+                    year = dutyYear,
+                    pairedDateIso = cleanDate,
+                    notes = "In Lieu of Planned Work Duty ($virtualDutyDate) for AI Bridge COL $cleanDate",
+                    highlightStatus = "VERIFIED_GREEN"
+                  )
+                  realizedVirtualWorkDates.add(virtualDutyDate)
+                }
+              } else {
+                skippedDuplicates++
               }
             } else {
-              skippedDuplicates++
+              val colLocal = runCatching { java.time.LocalDate.parse(cleanDate) }.getOrNull()
+              val exactIdx = if (!linkedId.isNullOrBlank()) {
+                unusedGhQueue.indexOfFirst { gh ->
+                  gh.id == linkedId || "gh-${gh.dateIso}" == linkedId
+                }
+              } else {
+                -1
+              }
+              val fifoGhIdx = if (exactIdx >= 0) {
+                exactIdx
+              } else {
+                unusedGhQueue.indexOfFirst { gh ->
+                  val gd = runCatching { java.time.LocalDate.parse(gh.dateIso) }.getOrNull()
+                  gd == null || colLocal == null || java.time.temporal.ChronoUnit.DAYS.between(gd, colLocal) in 0..180
+                }
+              }
+              val fifoGh = if (fifoGhIdx >= 0) unusedGhQueue[fifoGhIdx] else unusedGhQueue.firstOrNull()
+              val res = repository.addLeaveRecord(
+                leaveType = "COL",
+                dateIso = cleanDate,
+                year = year,
+                pairedDateIso = fifoGh?.dateIso.orEmpty(),
+                notes = if (fifoGh != null) {
+                  "AI Smart Bridge (${bridge.title}) paired FIFO w/ GH ${fifoGh.dateIso}"
+                } else {
+                  "AI Smart Bridge (${bridge.title}): ${step.description}"
+                },
+                highlightStatus = if (fifoGh != null) "VERIFIED_GREEN" else "ALERT_RED"
+              )
+              if (res.isSuccess) {
+                added++
+                lastAddedYear = year
+                appliedDateSet.add(cleanDate)
+                if (fifoGh != null) {
+                  unusedGhQueue.remove(fifoGh)
+                  // Cross-year integrity: IN_LIEU keeps the GH Worked year so COL/In-Lieu audit balances cleanly across 2026->2027
+                  repository.addLeaveRecord(
+                    leaveType = "IN_LIEU",
+                    dateIso = fifoGh.dateIso,
+                    year = fifoGh.year,
+                    pairedDateIso = cleanDate,
+                    notes = "In Lieu of GH Worked (${fifoGh.dateIso}) for AI Bridge COL $cleanDate",
+                    highlightStatus = "VERIFIED_GREEN"
+                  )
+                  repository.updateLeaveRecord(
+                    fifoGh.copy(
+                      pairedDateIso = cleanDate,
+                      notes = "GH Worked availed as AI Bridge COL on $cleanDate",
+                      highlightStatus = "VERIFIED_GREEN"
+                    )
+                  )
+                }
+              } else {
+                skippedDuplicates++
+              }
             }
           } else {
             skippedDuplicates++
@@ -1069,6 +1256,20 @@ class LeaveViewModel(
         _tentativeHolds.value = updatedHolds
         TentativePlanStore.saveHolds(appContext, updatedHolds)
       }
+    }
+
+    if (realizedVirtualWorkDates.isNotEmpty() || appliedDateSet.any { it in _optimizerConstraints.value.pinnedDates }) {
+      val cur = _optimizerConstraints.value
+      val nextPins = cur.pinnedDates.toMutableMap().apply {
+        appliedDateSet.forEach { remove(it) }
+      }
+      val nextVirtualWork = cur.plannedToWorkHolidays - realizedVirtualWorkDates
+      val updated = cur.copy(
+        pinnedDates = nextPins,
+        plannedToWorkHolidays = nextVirtualWork
+      )
+      _optimizerConstraints.value = updated
+      OptimizerSteeringStore.save(appContext, updated)
     }
 
     if (lastAddedYear != null) {
@@ -1215,6 +1416,7 @@ class LeaveViewModel(
             colGhAuditAllYears = st.colGhAuditAllYears,
             records = st.allRecords,
             focusGoal = "Consume Expiring GH Worked (FIFO COL)",
+            summary2027 = LeaveOptimizerEngine.computeYearSummary(st.allRecords, 2027L),
             constraints = _optimizerConstraints.value.copy(prioritizeExpiringCol = true)
           ).firstOrNull()
         }

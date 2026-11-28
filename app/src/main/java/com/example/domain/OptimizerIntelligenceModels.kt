@@ -17,22 +17,70 @@ enum class OptimizerHorizon(val label: String, val shortChip: String) {
   FULL_HORIZON("Full 2026–2027", "All '26–27")
 }
 
+enum class WeekendPolicy(val label: String, val shortChip: String) {
+  SECOND_SATURDAY_AND_SUNDAY("2nd Sat & Sun (TN Govt)", "2nd Sat+Sun"),
+  ALL_SATURDAYS_AND_SUNDAY("All Sat & Sun", "Sat+Sun"),
+  SUNDAY_ONLY("Sundays Only", "Sun Only");
+
+  fun isWeekend(date: LocalDate): Boolean = when (this) {
+    SECOND_SATURDAY_AND_SUNDAY ->
+      date.dayOfWeek == DayOfWeek.SUNDAY ||
+        (date.dayOfWeek == DayOfWeek.SATURDAY && date.dayOfMonth in 8..14)
+    ALL_SATURDAYS_AND_SUNDAY ->
+      date.dayOfWeek == DayOfWeek.SUNDAY || date.dayOfWeek == DayOfWeek.SATURDAY
+    SUNDAY_ONLY ->
+      date.dayOfWeek == DayOfWeek.SUNDAY
+  }
+}
+
+enum class SpreadMode(val label: String, val shortChip: String, val penalty: Double) {
+  BALANCED("Balanced ROI", "Balanced", 1.5),
+  SPREAD_EVENLY("Spread Evenly", "Spread", 3.0)
+}
+
+enum class ProximityMode(val label: String, val shortChip: String) {
+  BRIDGE("Bridge Weekends", "Bridge"),
+  MID_WEEK("Mid-Week Breaks", "Mid-Week")
+}
+
 data class OptimizerConstraints(
   val reserveClFloor: Double = 0.0,
   val allowElBridges: Boolean = false,
   val allowHalfDayCl: Boolean = true,
   val strictZeroCl: Boolean = false,
   val prioritizeExpiringCol: Boolean = true,
-  val includeSaturdays: Boolean = true,
+  val includeSaturdays: Boolean = false,
   val enforce10DayCap: Boolean = true,
   val horizonMode: OptimizerHorizon = OptimizerHorizon.FULL_HORIZON,
   val protectedDaysOfWeek: Set<DayOfWeek> = emptySet(),
   val protectedDatesIso: Set<String> = emptySet(),
-  val customNaturalPrompt: String = ""
+  val customNaturalPrompt: String = "",
+  val weekendPolicy: WeekendPolicy = WeekendPolicy.SECOND_SATURDAY_AND_SUNDAY,
+  val spreadMode: SpreadMode = SpreadMode.BALANCED,
+  val proximityMode: ProximityMode = ProximityMode.BRIDGE,
+  val blockedDatesIso: Set<String> = emptySet(),
+  val pinnedDates: Map<String, String> = emptyMap(), // YYYY-MM-DD -> "AUTO" | "CL" | "RH" | "COL" | "EL"
+  val plannedToWorkHolidays: Set<String> = emptySet(), // YYYY-MM-DD
+  val hasPendingRecalc: Boolean = false
 ) {
+  fun effectiveWeekendPolicy(): WeekendPolicy =
+    if (includeSaturdays && weekendPolicy == WeekendPolicy.SECOND_SATURDAY_AND_SUNDAY) {
+      WeekendPolicy.ALL_SATURDAYS_AND_SUNDAY
+    } else {
+      weekendPolicy
+    }
+
+  fun isWeekendDay(date: LocalDate): Boolean = effectiveWeekendPolicy().isWeekend(date)
+
+  val hasSteeringOverrides: Boolean
+    get() = blockedDatesIso.isNotEmpty() || pinnedDates.isNotEmpty() || plannedToWorkHolidays.isNotEmpty()
+
   fun buildStrategySummary(baseFocusTitle: String): String {
     val parts = mutableListOf<String>()
     if (baseFocusTitle.isNotBlank()) parts.add(baseFocusTitle)
+    parts.add("Wknd: ${effectiveWeekendPolicy().shortChip}")
+    if (spreadMode != SpreadMode.BALANCED) parts.add(spreadMode.label)
+    if (proximityMode != ProximityMode.BRIDGE) parts.add(proximityMode.label)
     if (reserveClFloor > 0.0) {
       val clStr = if (reserveClFloor % 1.0 == 0.0) reserveClFloor.toInt().toString() else String.format(Locale.US, "%.1f", reserveClFloor)
       parts.add("Reserve ≥$clStr CL")
@@ -50,11 +98,95 @@ data class OptimizerConstraints(
     if (protectedDatesIso.isNotEmpty()) {
       parts.add("Shield ${protectedDatesIso.size} Roster Duty Date(s)")
     }
+    if (pinnedDates.isNotEmpty()) parts.add("${pinnedDates.size} Pinned")
+    if (blockedDatesIso.isNotEmpty()) parts.add("${blockedDatesIso.size} Blocked")
+    if (plannedToWorkHolidays.isNotEmpty()) parts.add("+${plannedToWorkHolidays.size} Virtual COL")
     parts.add("Horizon: ${horizonMode.label}")
     if (customNaturalPrompt.isNotBlank()) {
       parts.add("Custom Ask: \"${customNaturalPrompt.trim()}\"")
     }
     return parts.joinToString(" • ")
+  }
+}
+
+data class OptimizerSteeringSnapshot(
+  val weekendPolicy: WeekendPolicy = WeekendPolicy.SECOND_SATURDAY_AND_SUNDAY,
+  val spreadMode: SpreadMode = SpreadMode.BALANCED,
+  val proximityMode: ProximityMode = ProximityMode.BRIDGE,
+  val blockedDatesIso: Set<String> = emptySet(),
+  val pinnedDates: Map<String, String> = emptyMap(),
+  val plannedToWorkHolidays: Set<String> = emptySet()
+)
+
+object OptimizerSteeringStore {
+  private const val PREFS_NAME = "tn_medleave_optimizer_steering_v1"
+  private const val KEY_JSON = "steering_snapshot_json"
+
+  fun read(context: Context): OptimizerSteeringSnapshot {
+    val raw = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      .getString(KEY_JSON, null) ?: return OptimizerSteeringSnapshot()
+    return runCatching {
+      val obj = JSONObject(raw)
+      val weekend = runCatching {
+        WeekendPolicy.valueOf(obj.optString("weekendPolicy", WeekendPolicy.SECOND_SATURDAY_AND_SUNDAY.name))
+      }.getOrDefault(WeekendPolicy.SECOND_SATURDAY_AND_SUNDAY)
+      val spread = runCatching {
+        SpreadMode.valueOf(obj.optString("spreadMode", SpreadMode.BALANCED.name))
+      }.getOrDefault(SpreadMode.BALANCED)
+      val proximity = runCatching {
+        ProximityMode.valueOf(obj.optString("proximityMode", ProximityMode.BRIDGE.name))
+      }.getOrDefault(ProximityMode.BRIDGE)
+
+      val blocked = linkedSetOf<String>()
+      obj.optJSONArray("blockedDatesIso")?.let { arr ->
+        for (i in 0 until arr.length()) {
+          val v = arr.optString(i, "").trim()
+          if (v.isNotEmpty()) blocked.add(v)
+        }
+      }
+
+      val pinned = linkedMapOf<String, String>()
+      obj.optJSONObject("pinnedDates")?.let { pinObj ->
+        pinObj.keys().forEach { k ->
+          val v = pinObj.optString(k, "AUTO").trim()
+          if (k.isNotBlank() && v.isNotEmpty()) pinned[k] = v
+        }
+      }
+
+      val workHolidays = linkedSetOf<String>()
+      obj.optJSONArray("plannedToWorkHolidays")?.let { arr ->
+        for (i in 0 until arr.length()) {
+          val v = arr.optString(i, "").trim()
+          if (v.isNotEmpty()) workHolidays.add(v)
+        }
+      }
+
+      OptimizerSteeringSnapshot(
+        weekendPolicy = weekend,
+        spreadMode = spread,
+        proximityMode = proximity,
+        blockedDatesIso = blocked,
+        pinnedDates = pinned,
+        plannedToWorkHolidays = workHolidays
+      )
+    }.getOrDefault(OptimizerSteeringSnapshot())
+  }
+
+  fun save(context: Context, constraints: OptimizerConstraints) {
+    val obj = JSONObject().apply {
+      put("weekendPolicy", constraints.effectiveWeekendPolicy().name)
+      put("spreadMode", constraints.spreadMode.name)
+      put("proximityMode", constraints.proximityMode.name)
+      put("blockedDatesIso", JSONArray(constraints.blockedDatesIso.sorted()))
+      put("pinnedDates", JSONObject().apply {
+        constraints.pinnedDates.toSortedMap().forEach { (k, v) -> put(k, v) }
+      })
+      put("plannedToWorkHolidays", JSONArray(constraints.plannedToWorkHolidays.sorted()))
+    }
+    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      .edit()
+      .putString(KEY_JSON, obj.toString())
+      .apply()
   }
 }
 
@@ -76,7 +208,8 @@ data class PortfolioImpactSummary(
   val dec2026LapseSavedDays: Double,
   val violatesClReserve: Boolean,
   val hasOverlappingDates: Boolean,
-  val exceedsQuotaMessage: String? = null
+  val exceedsQuotaMessage: String? = null,
+  val virtualColUsed: Int = 0
 )
 
 data class BuilderPreloadRequest(

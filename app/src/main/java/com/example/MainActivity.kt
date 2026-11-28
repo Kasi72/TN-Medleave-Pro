@@ -709,7 +709,18 @@ fun MainFeatureHost(
               onBuilderPreloadConsumed = { viewModel.consumeBuilderPreload() },
               dutyShifts = dutyShifts,
               protectLoggedDutyShifts = protectLoggedDutyShifts,
-              onToggleProtectLoggedDutyShifts = { enabled -> viewModel.toggleProtectLoggedDutyShifts(enabled) }
+              onToggleProtectLoggedDutyShifts = { enabled -> viewModel.toggleProtectLoggedDutyShifts(enabled) },
+              onToggleBlockedDate = { dateIso -> viewModel.toggleBlockedDate(dateIso) },
+              onSetPinnedDate = { dateIso, pinType -> viewModel.setPinnedDate(dateIso, pinType) },
+              onTogglePlannedWorkHoliday = { dateIso -> viewModel.togglePlannedWorkHoliday(dateIso) },
+              onClearSteeringOverrides = { viewModel.clearAllSteeringOverrides() },
+              onRecalibrateStrategy = { isGeminiActive, focusGoal ->
+                viewModel.recalibrateOptimizerStrategy(
+                  runGemini = isGeminiActive,
+                  state = state,
+                  focusGoal = focusGoal
+                )
+              }
             )
             4 -> IosCalendarTabScreen(
               state = state,

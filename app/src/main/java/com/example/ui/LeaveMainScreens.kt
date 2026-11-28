@@ -1717,7 +1717,12 @@ fun OptimizerTabScreen(
   onBuilderPreloadConsumed: () -> Unit = {},
   dutyShifts: List<com.example.data.DutyShift> = emptyList(),
   protectLoggedDutyShifts: Boolean = true,
-  onToggleProtectLoggedDutyShifts: (Boolean) -> Unit = {}
+  onToggleProtectLoggedDutyShifts: (Boolean) -> Unit = {},
+  onToggleBlockedDate: (String) -> Unit = {},
+  onSetPinnedDate: (String, String?) -> Unit = { _, _ -> },
+  onTogglePlannedWorkHoliday: (String) -> Unit = {},
+  onClearSteeringOverrides: () -> Unit = {},
+  onRecalibrateStrategy: (isGeminiActive: Boolean, focusGoal: String) -> Unit = { _, _ -> }
 ) {
   val neu = LocalNeumorphicColors.current
   var startInput by remember { mutableStateOf("2026-12-24") }
@@ -1906,7 +1911,12 @@ fun OptimizerTabScreen(
             },
             loggedDutyCount = dutyShifts.size,
             protectLoggedDutyShifts = protectLoggedDutyShifts,
-            onToggleProtectLoggedDutyShifts = onToggleProtectLoggedDutyShifts
+            onToggleProtectLoggedDutyShifts = onToggleProtectLoggedDutyShifts,
+            onToggleBlockedDate = onToggleBlockedDate,
+            onSetPinnedDate = onSetPinnedDate,
+            onTogglePlannedWorkHoliday = onTogglePlannedWorkHoliday,
+            onClearSteeringOverrides = onClearSteeringOverrides,
+            onRecalibrateStrategy = onRecalibrateStrategy
           )
         }
       }
